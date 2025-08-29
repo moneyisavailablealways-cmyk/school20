@@ -92,6 +92,171 @@ export type Database = {
           },
         ]
       }
+      fee_structures: {
+        Row: {
+          academic_year_id: string | null
+          amount: number
+          class_id: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          fee_type: string
+          id: string
+          is_active: boolean | null
+          name: string
+          payment_schedule: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          amount: number
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          fee_type: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          payment_schedule: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          amount?: number
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          fee_type?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          payment_schedule?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_structures_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_structures_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_items: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string | null
+          student_fee_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id?: string | null
+          student_fee_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string | null
+          student_fee_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_student_fee_id_fkey"
+            columns: ["student_fee_id"]
+            isOneToOne: false
+            referencedRelation: "student_fees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          academic_year_id: string | null
+          balance_amount: number
+          created_at: string
+          due_date: string
+          id: string
+          invoice_number: string
+          issued_date: string | null
+          notes: string | null
+          paid_amount: number | null
+          status: string
+          student_id: string | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          balance_amount: number
+          created_at?: string
+          due_date: string
+          id?: string
+          invoice_number: string
+          issued_date?: string | null
+          notes?: string | null
+          paid_amount?: number | null
+          status?: string
+          student_id?: string | null
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          balance_amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          invoice_number?: string
+          issued_date?: string | null
+          notes?: string | null
+          paid_amount?: number | null
+          status?: string
+          student_id?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_student_relationships: {
         Row: {
           created_at: string | null
@@ -127,6 +292,76 @@ export type Database = {
           },
           {
             foreignKeyName: "parent_student_relationships_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          payment_date: string | null
+          payment_method: string
+          payment_reference: string
+          processed_by: string | null
+          status: string
+          student_id: string | null
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_method: string
+          payment_reference: string
+          processed_by?: string | null
+          status?: string
+          student_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string
+          payment_reference?: string
+          processed_by?: string | null
+          status?: string
+          student_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -175,6 +410,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      scholarships: {
+        Row: {
+          academic_year_id: string | null
+          created_at: string
+          criteria: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          max_recipients: number | null
+          name: string
+          type: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          academic_year_id?: string | null
+          created_at?: string
+          criteria?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_recipients?: number | null
+          name: string
+          type: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          academic_year_id?: string | null
+          created_at?: string
+          criteria?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_recipients?: number | null
+          name?: string
+          type?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scholarships_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sections: {
         Row: {
@@ -286,6 +571,124 @@ export type Database = {
           },
         ]
       }
+      student_fees: {
+        Row: {
+          amount: number
+          created_at: string
+          discount_amount: number | null
+          due_date: string
+          fee_structure_id: string | null
+          final_amount: number
+          id: string
+          scholarship_amount: number | null
+          status: string
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          discount_amount?: number | null
+          due_date: string
+          fee_structure_id?: string | null
+          final_amount: number
+          id?: string
+          scholarship_amount?: number | null
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          discount_amount?: number | null
+          due_date?: string
+          fee_structure_id?: string | null
+          final_amount?: number
+          id?: string
+          scholarship_amount?: number | null
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_fees_fee_structure_id_fkey"
+            columns: ["fee_structure_id"]
+            isOneToOne: false
+            referencedRelation: "fee_structures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_fees_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_scholarships: {
+        Row: {
+          academic_year_id: string | null
+          amount: number
+          awarded_date: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          scholarship_id: string | null
+          status: string
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          amount: number
+          awarded_date?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          scholarship_id?: string | null
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          amount?: number
+          awarded_date?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          scholarship_id?: string | null
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_scholarships_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_scholarships_scholarship_id_fkey"
+            columns: ["scholarship_id"]
+            isOneToOne: false
+            referencedRelation: "scholarships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_scholarships_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           address: string | null
@@ -350,7 +753,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_invoice_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       user_role:

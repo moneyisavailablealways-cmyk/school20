@@ -117,8 +117,8 @@ const FeeStructures = () => {
         fee_type: formData.fee_type,
         payment_schedule: formData.payment_schedule,
         due_date: formData.due_date || null,
-        academic_year_id: formData.academic_year_id || null,
-        class_id: formData.class_id || null,
+        academic_year_id: formData.academic_year_id === "all" ? null : formData.academic_year_id || null,
+        class_id: formData.class_id === "all" ? null : formData.class_id || null,
       };
 
       if (editingFee) {
@@ -155,8 +155,8 @@ const FeeStructures = () => {
         fee_type: '',
         payment_schedule: '',
         due_date: '',
-        academic_year_id: '',
-        class_id: '',
+        academic_year_id: 'all',
+        class_id: 'all',
       });
       fetchData();
     } catch (error: any) {
@@ -178,8 +178,8 @@ const FeeStructures = () => {
       fee_type: fee.fee_type,
       payment_schedule: fee.payment_schedule,
       due_date: fee.due_date || '',
-      academic_year_id: fee.academic_year_id || '',
-      class_id: fee.class_id || '',
+      academic_year_id: fee.academic_year_id || 'all',
+      class_id: fee.class_id || 'all',
     });
     setIsDialogOpen(true);
   };
@@ -291,8 +291,8 @@ const FeeStructures = () => {
                 fee_type: '',
                 payment_schedule: '',
                 due_date: '',
-                academic_year_id: '',
-                class_id: '',
+                academic_year_id: 'all',
+                class_id: 'all',
               });
             }}>
               <Plus className="h-4 w-4 mr-2" />
@@ -384,7 +384,7 @@ const FeeStructures = () => {
                     <SelectValue placeholder="Select academic year" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Years</SelectItem>
+                    <SelectItem value="all">All Years</SelectItem>
                     {academicYears.map((year) => (
                       <SelectItem key={year.id} value={year.id}>
                         {year.name}
@@ -401,7 +401,7 @@ const FeeStructures = () => {
                     <SelectValue placeholder="Select class" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Classes</SelectItem>
+                    <SelectItem value="all">All Classes</SelectItem>
                     {classes.map((cls) => (
                       <SelectItem key={cls.id} value={cls.id}>
                         {cls.name} (Level {cls.level})

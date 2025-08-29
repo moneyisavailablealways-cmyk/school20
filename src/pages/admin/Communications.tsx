@@ -66,11 +66,17 @@ const Communications = () => {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [announcementForm, setAnnouncementForm] = useState({
+  const [announcementForm, setAnnouncementForm] = useState<{
+    title: string;
+    content: string;
+    target_audience: string[];
+    priority: 'low' | 'normal' | 'high' | 'urgent';
+    expiry_date: string;
+  }>({
     title: '',
     content: '',
-    target_audience: [] as string[],
-    priority: 'normal' as const,
+    target_audience: [],
+    priority: 'normal',
     expiry_date: '',
   });
 

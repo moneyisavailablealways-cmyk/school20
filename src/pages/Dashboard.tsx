@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +48,7 @@ const roleColors = {
 
 const Dashboard = () => {
   const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
 
   if (!profile) {
     return (
@@ -63,7 +65,7 @@ const Dashboard = () => {
     switch (profile.role) {
       case 'admin':
         return [
-          { icon: Users, label: 'Manage Users', description: 'Add and manage system users' },
+          { icon: Users, label: 'Manage Users', description: 'Add and manage system users', action: '/admin' },
           { icon: Settings, label: 'System Settings', description: 'Configure system preferences' },
           { icon: BarChart3, label: 'Reports', description: 'View system reports and analytics' },
           { icon: Calendar, label: 'Academic Calendar', description: 'Manage school calendar' },
@@ -157,7 +159,11 @@ const Dashboard = () => {
         {/* Quick Actions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {quickActions.map((action, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card 
+              key={index} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => action.action && navigate(action.action)}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <action.icon className="h-8 w-8 text-primary" />

@@ -60,6 +60,8 @@ const Dashboard = () => {
       navigate('/head-teacher', { replace: true });
     } else if (profile?.role === 'teacher') {
       navigate('/teacher', { replace: true });
+    } else if (profile?.role === 'bursar') {
+      navigate('/bursar', { replace: true });
     } else if (profile?.role === 'student') {
       navigate('/student', { replace: true });
     }

@@ -10,6 +10,7 @@ import TeacherLayout from "@/components/TeacherLayout";
 import StudentLayout from "@/components/StudentLayout";
 import PrincipalLayout from "@/components/PrincipalLayout";
 import HeadTeacherLayout from "@/components/HeadTeacherLayout";
+import BursarLayout from "@/components/BursarLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -29,6 +30,8 @@ import ApprovalsCenter from "./pages/principal/ApprovalsCenter";
 import HeadTeacherDashboard from "./pages/head-teacher/HeadTeacherDashboard";
 import TeacherSupervision from "./pages/head-teacher/TeacherSupervision";
 import MarksApproval from "./pages/head-teacher/MarksApproval";
+import BursarDashboard from "./pages/bursar/BursarDashboard";
+import FeeStructures from "./pages/bursar/FeeStructures";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -108,18 +111,17 @@ const App = () => (
               <Route index element={<StudentDashboard />} />
             </Route>
             
-            {/* Principal Routes */}
+            {/* Bursar Routes */}
             <Route 
-              path="/principal" 
+              path="/bursar" 
               element={
-                <ProtectedRoute allowedRoles={['principal']}>
-                  <PrincipalLayout />
+                <ProtectedRoute allowedRoles={['bursar', 'admin', 'principal']}>
+                  <BursarLayout />
                 </ProtectedRoute>
               }
             >
-              <Route index element={<PrincipalDashboard />} />
-              <Route path="performance" element={<PerformanceAnalytics />} />
-              <Route path="approvals" element={<ApprovalsCenter />} />
+              <Route index element={<BursarDashboard />} />
+              <Route path="fee-structures" element={<FeeStructures />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

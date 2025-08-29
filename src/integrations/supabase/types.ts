@@ -733,6 +733,63 @@ export type Database = {
           },
         ]
       }
+      parent_enrollments: {
+        Row: {
+          academic_year_id: string | null
+          authorized_pickup: boolean | null
+          contact_preferences: Json | null
+          created_at: string
+          emergency_contact_priority: number | null
+          enrollment_date: string
+          id: string
+          notes: string | null
+          parent_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          authorized_pickup?: boolean | null
+          contact_preferences?: Json | null
+          created_at?: string
+          emergency_contact_priority?: number | null
+          enrollment_date?: string
+          id?: string
+          notes?: string | null
+          parent_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          authorized_pickup?: boolean | null
+          contact_preferences?: Json | null
+          created_at?: string
+          emergency_contact_priority?: number | null
+          enrollment_date?: string
+          id?: string
+          notes?: string | null
+          parent_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_parent_enrollments_academic_year_id"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_parent_enrollments_parent_id"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_student_relationships: {
         Row: {
           created_at: string | null
@@ -1279,6 +1336,122 @@ export type Database = {
             foreignKeyName: "students_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subjects: {
+        Row: {
+          code: string | null
+          created_at: string
+          credits: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_core: boolean | null
+          level: number | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          credits?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_core?: boolean | null
+          level?: number | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          credits?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_core?: boolean | null
+          level?: number | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teacher_enrollments: {
+        Row: {
+          academic_year_id: string | null
+          class_id: string | null
+          created_at: string
+          end_date: string | null
+          id: string
+          notes: string | null
+          role_type: string
+          start_date: string
+          status: string
+          subject_id: string | null
+          teacher_id: string
+          updated_at: string
+          workload_hours: number | null
+        }
+        Insert: {
+          academic_year_id?: string | null
+          class_id?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          role_type?: string
+          start_date?: string
+          status?: string
+          subject_id?: string | null
+          teacher_id: string
+          updated_at?: string
+          workload_hours?: number | null
+        }
+        Update: {
+          academic_year_id?: string | null
+          class_id?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          role_type?: string
+          start_date?: string
+          status?: string
+          subject_id?: string | null
+          teacher_id?: string
+          updated_at?: string
+          workload_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_teacher_enrollments_academic_year_id"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_teacher_enrollments_class_id"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_teacher_enrollments_subject_id"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_teacher_enrollments_teacher_id"
+            columns: ["teacher_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

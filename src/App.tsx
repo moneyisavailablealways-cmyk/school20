@@ -20,6 +20,11 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import StudentManagement from "./pages/admin/StudentManagement";
 import AcademicStructure from "./pages/admin/AcademicStructure";
+import Admissions from "./pages/admin/Admissions";
+import Timetable from "./pages/admin/Timetable";
+import Reports from "./pages/admin/Reports";
+import Communications from "./pages/admin/Communications";
+import Settings from "./pages/admin/Settings";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import MyClasses from "./pages/teacher/MyClasses";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
@@ -72,6 +77,11 @@ const App = () => (
               <Route path="users" element={<UserManagement />} />
               <Route path="students" element={<StudentManagement />} />
               <Route path="academic" element={<AcademicStructure />} />
+              <Route path="admissions" element={<Admissions />} />
+              <Route path="timetable" element={<Timetable />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="communications" element={<Communications />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
             
             {/* Teacher Routes */}

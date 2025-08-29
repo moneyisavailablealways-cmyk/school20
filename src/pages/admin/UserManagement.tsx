@@ -129,28 +129,33 @@ const UserManagement = () => {
 
   const createUser = async (data: CreateUserForm) => {
     try {
-      // Create user via Supabase Auth with password
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: data.email,
-        password: data.password,
-        email_confirm: true,
-        user_metadata: {
-          first_name: data.firstName,
-          last_name: data.lastName,
-          role: data.role,
+      // Get the current user's session
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) {
+        throw new Error('No valid session found');
+      }
+
+      // Call our edge function to create the user
+      const response = await fetch('/functions/v1/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`,
         },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          role: data.role,
+        }),
       });
 
-      if (authError) throw authError;
+      const result = await response.json();
 
-      // Update the profile with phone number if provided
-      if (data.phone && authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ phone: data.phone })
-          .eq('user_id', authData.user.id);
-
-        if (profileError) throw profileError;
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create user');
       }
 
       toast({

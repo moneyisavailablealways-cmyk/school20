@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          first_name: string
+          id: string
+          is_active: boolean | null
+          last_name: string
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          first_name: string
+          id?: string
+          is_active?: boolean | null
+          last_name: string
+          phone?: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          first_name?: string
+          id?: string
+          is_active?: boolean | null
+          last_name?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +64,15 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role:
+        | "admin"
+        | "principal"
+        | "head_teacher"
+        | "teacher"
+        | "bursar"
+        | "librarian"
+        | "student"
+        | "parent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +199,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: [
+        "admin",
+        "principal",
+        "head_teacher",
+        "teacher",
+        "bursar",
+        "librarian",
+        "student",
+        "parent",
+      ],
+    },
   },
 } as const

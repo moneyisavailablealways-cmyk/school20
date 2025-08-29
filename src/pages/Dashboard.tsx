@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +49,17 @@ const roleColors = {
 const Dashboard = () => {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect based on user role
+    if (profile?.role === 'admin' || profile?.role === 'principal') {
+      navigate('/admin', { replace: true });
+    } else if (profile?.role === 'teacher' || profile?.role === 'head_teacher') {
+      navigate('/teacher', { replace: true });
+    } else if (profile?.role === 'student') {
+      navigate('/student', { replace: true });
+    }
+  }, [profile, navigate]);
 
   if (!profile) {
     return (

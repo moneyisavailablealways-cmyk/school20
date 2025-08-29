@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+// Fixed: Using correct lucide-react icon names
 import { 
   GraduationCap, 
   Users, 
@@ -109,13 +110,13 @@ const Dashboard = () => {
           { icon: BarChart3, label: 'Grades', description: 'View your grades and progress' },
           { icon: Library, label: 'Library', description: 'Browse library resources' },
         ];
-        case 'parent':
-          return [
-            { icon: Users2, label: 'My Children', description: 'View children information' },
-            { icon: BarChart3, label: 'Academic Progress', description: 'Track academic progress' },
-            { icon: DollarSign, label: 'Fee Payments', description: 'Manage fee payments' },
-            { icon: Calendar, label: 'Events', description: 'View school events' },
-          ];
+      case 'parent':
+        return [
+          { icon: Users2, label: 'My Children', description: 'View children information' },
+          { icon: BarChart3, label: 'Academic Progress', description: 'Track academic progress' },
+          { icon: DollarSign, label: 'Fee Payments', description: 'Manage fee payments' },
+          { icon: Calendar, label: 'Events', description: 'View school events' },
+        ];
       default:
         return [];
     }

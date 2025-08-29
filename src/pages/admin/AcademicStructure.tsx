@@ -206,7 +206,7 @@ const AcademicStructure = () => {
         ...classForm,
         level: parseInt(classForm.level),
         max_students: parseInt(classForm.max_students),
-        academic_year_id: classForm.academic_year_id || null,
+        academic_year_id: classForm.academic_year_id === 'none' ? null : classForm.academic_year_id || null,
       };
 
       if (selectedClass) {
@@ -325,7 +325,7 @@ const AcademicStructure = () => {
   };
 
   const resetClassForm = () => {
-    setClassForm({ name: '', level: '', max_students: '40', academic_year_id: '' });
+    setClassForm({ name: '', level: '', max_students: '40', academic_year_id: 'none' });
     setSelectedClass(null);
   };
 
@@ -350,7 +350,7 @@ const AcademicStructure = () => {
       name: cls.name,
       level: cls.level.toString(),
       max_students: cls.max_students.toString(),
-      academic_year_id: cls.academic_year_id || '',
+      academic_year_id: cls.academic_year_id || 'none',
     });
     setIsClassDialogOpen(true);
   };
@@ -633,7 +633,7 @@ const AcademicStructure = () => {
                               <SelectValue placeholder="Select academic year" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">No specific year</SelectItem>
+                              <SelectItem value="none">No specific year</SelectItem>
                               {academicYears.map((year) => (
                                 <SelectItem key={year.id} value={year.id}>
                                   {year.name}

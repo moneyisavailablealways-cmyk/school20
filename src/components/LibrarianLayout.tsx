@@ -1,14 +1,16 @@
 import React from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
+  BookOpen, 
   Users, 
+  BarChart3, 
   Calendar, 
-  FileText, 
-  CreditCard, 
-  Bell, 
+  Settings,
   Home,
   LogOut,
-  User
+  Library,
+  Bookmark,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,16 +28,15 @@ import {
 } from "@/components/ui/sidebar";
 
 const navigation = [
-  { name: 'Dashboard', href: '/parent', icon: Home },
-  { name: 'My Children', href: '/parent/children', icon: Users },
-  { name: 'Attendance', href: '/parent/attendance', icon: Calendar },
-  { name: 'Reports & Grades', href: '/parent/reports', icon: FileText },
-  { name: 'Fees & Payments', href: '/parent/payments', icon: CreditCard },
-  { name: 'Appointments', href: '/parent/appointments', icon: Calendar },
-  { name: 'Announcements', href: '/parent/announcements', icon: Bell },
+  { name: 'Dashboard', href: '/librarian', icon: Home },
+  { name: 'Catalog', href: '/librarian/catalog', icon: BookOpen },
+  { name: 'Transactions', href: '/librarian/transactions', icon: Users },
+  { name: 'Reservations', href: '/librarian/reservations', icon: Bookmark },
+  { name: 'Fines', href: '/librarian/fines', icon: AlertTriangle },
+  { name: 'Reports', href: '/librarian/reports', icon: BarChart3 },
 ];
 
-const ParentLayout = () => {
+const LibrarianLayout = () => {
   const { signOut, profile } = useAuth();
   const location = useLocation();
 
@@ -54,9 +55,9 @@ const ParentLayout = () => {
           <SidebarContent>
             <div className="p-4 border-b">
               <div className="flex items-center gap-2">
-                <User className="h-8 w-8 text-primary" />
+                <Library className="h-8 w-8 text-primary" />
                 <div>
-                  <h2 className="font-bold text-foreground">Parent Portal</h2>
+                  <h2 className="font-bold text-foreground">Library Portal</h2>
                   <p className="text-sm text-muted-foreground">
                     {profile?.first_name} {profile?.last_name}
                   </p>
@@ -65,7 +66,7 @@ const ParentLayout = () => {
             </div>
             
             <SidebarGroup>
-              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+              <SidebarGroupLabel>Library Management</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {navigation.map((item) => (
@@ -100,7 +101,7 @@ const ParentLayout = () => {
             <div className="flex h-14 items-center px-4">
               <SidebarTrigger />
               <div className="ml-4">
-                <h1 className="text-lg font-semibold text-foreground">Parent Dashboard</h1>
+                <h1 className="text-lg font-semibold text-foreground">Library Management</h1>
               </div>
             </div>
           </header>
@@ -114,4 +115,4 @@ const ParentLayout = () => {
   );
 };
 
-export default ParentLayout;
+export default LibrarianLayout;

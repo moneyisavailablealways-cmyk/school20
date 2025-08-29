@@ -12,7 +12,7 @@ import PrincipalLayout from "@/components/PrincipalLayout";
 import HeadTeacherLayout from "@/components/HeadTeacherLayout";
 import BursarLayout from "@/components/BursarLayout";
 import ParentLayout from "@/components/ParentLayout";
-import LibraryLayout from "@/components/LibraryLayout";
+import LibrarianLayout from "@/components/LibrarianLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -35,7 +35,8 @@ import MarksApproval from "./pages/head-teacher/MarksApproval";
 import BursarDashboard from "./pages/bursar/BursarDashboard";
 import FeeStructures from "./pages/bursar/FeeStructures";
 import ParentDashboard from "./pages/parent/ParentDashboard";
-import LibraryDashboard from "./pages/library/LibraryDashboard";
+import LibrarianDashboard from "./pages/librarian/LibrarianDashboard";
+import LibraryCatalog from "./pages/librarian/LibraryCatalog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -140,16 +141,17 @@ const App = () => (
               <Route index element={<ParentDashboard />} />
             </Route>
 
-            {/* Library Routes */}
+            {/* Librarian Routes */}
             <Route 
-              path="/library" 
+              path="/librarian" 
               element={
                 <ProtectedRoute allowedRoles={['librarian', 'admin', 'principal']}>
-                  <LibraryLayout />
+                  <LibrarianLayout />
                 </ProtectedRoute>
               }
             >
-              <Route index element={<LibraryDashboard />} />
+              <Route index element={<LibrarianDashboard />} />
+              <Route path="catalog" element={<LibraryCatalog />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

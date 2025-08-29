@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminLayout from "@/components/AdminLayout";
 import TeacherLayout from "@/components/TeacherLayout";
 import StudentLayout from "@/components/StudentLayout";
+import PrincipalLayout from "@/components/PrincipalLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -21,6 +22,9 @@ import TeacherStudents from "./pages/teacher/TeacherStudents";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
 import Schedule from "./pages/teacher/Schedule";
 import StudentDashboard from "./pages/student/StudentDashboard";
+import PrincipalDashboard from "./pages/principal/PrincipalDashboard";
+import PerformanceAnalytics from "./pages/principal/PerformanceAnalytics";
+import ApprovalsCenter from "./pages/principal/ApprovalsCenter";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -84,6 +88,20 @@ const App = () => (
               }
             >
               <Route index element={<StudentDashboard />} />
+            </Route>
+            
+            {/* Principal Routes */}
+            <Route 
+              path="/principal" 
+              element={
+                <ProtectedRoute allowedRoles={['principal']}>
+                  <PrincipalLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<PrincipalDashboard />} />
+              <Route path="performance" element={<PerformanceAnalytics />} />
+              <Route path="approvals" element={<ApprovalsCenter />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

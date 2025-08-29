@@ -52,8 +52,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     // Redirect based on user role
-    if (profile?.role === 'admin' || profile?.role === 'principal') {
+    if (profile?.role === 'admin') {
       navigate('/admin', { replace: true });
+    } else if (profile?.role === 'principal') {
+      navigate('/principal', { replace: true });
     } else if (profile?.role === 'teacher' || profile?.role === 'head_teacher') {
       navigate('/teacher', { replace: true });
     } else if (profile?.role === 'student') {

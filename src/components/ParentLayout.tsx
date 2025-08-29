@@ -25,6 +25,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
+// Force refresh by adding timestamp comment: 2025-01-29-16:30
 const navigation = [
   { name: 'Dashboard', href: '/parent', icon: Home },
   { name: 'My Children', href: '/parent/children', icon: Users },

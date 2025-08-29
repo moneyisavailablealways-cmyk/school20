@@ -9,6 +9,7 @@ import AdminLayout from "@/components/AdminLayout";
 import TeacherLayout from "@/components/TeacherLayout";
 import StudentLayout from "@/components/StudentLayout";
 import PrincipalLayout from "@/components/PrincipalLayout";
+import HeadTeacherLayout from "@/components/HeadTeacherLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -25,6 +26,9 @@ import StudentDashboard from "./pages/student/StudentDashboard";
 import PrincipalDashboard from "./pages/principal/PrincipalDashboard";
 import PerformanceAnalytics from "./pages/principal/PerformanceAnalytics";
 import ApprovalsCenter from "./pages/principal/ApprovalsCenter";
+import HeadTeacherDashboard from "./pages/head-teacher/HeadTeacherDashboard";
+import TeacherSupervision from "./pages/head-teacher/TeacherSupervision";
+import MarksApproval from "./pages/head-teacher/MarksApproval";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,7 +70,7 @@ const App = () => (
             <Route 
               path="/teacher" 
               element={
-                <ProtectedRoute allowedRoles={['teacher', 'head_teacher', 'admin', 'principal']}>
+                <ProtectedRoute allowedRoles={['teacher', 'admin', 'principal']}>
                   <TeacherLayout />
                 </ProtectedRoute>
               }
@@ -76,6 +80,20 @@ const App = () => (
               <Route path="students" element={<TeacherStudents />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="profile" element={<TeacherProfile />} />
+            </Route>
+            
+            {/* Head Teacher Routes */}
+            <Route 
+              path="/head-teacher" 
+              element={
+                <ProtectedRoute allowedRoles={['head_teacher', 'admin', 'principal']}>
+                  <HeadTeacherLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<HeadTeacherDashboard />} />
+              <Route path="supervision" element={<TeacherSupervision />} />
+              <Route path="marks" element={<MarksApproval />} />
             </Route>
             
             {/* Student Routes */}

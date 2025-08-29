@@ -56,7 +56,9 @@ const Dashboard = () => {
       navigate('/admin', { replace: true });
     } else if (profile?.role === 'principal') {
       navigate('/principal', { replace: true });
-    } else if (profile?.role === 'teacher' || profile?.role === 'head_teacher') {
+    } else if (profile?.role === 'head_teacher') {
+      navigate('/head-teacher', { replace: true });
+    } else if (profile?.role === 'teacher') {
       navigate('/teacher', { replace: true });
     } else if (profile?.role === 'student') {
       navigate('/student', { replace: true });

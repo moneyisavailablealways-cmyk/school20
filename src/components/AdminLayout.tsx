@@ -29,6 +29,7 @@ import {
   Home,
   UserPlus,
   Building,
+  Heart,
 } from 'lucide-react';
 
 const adminMenuItems = [
@@ -41,6 +42,16 @@ const adminMenuItems = [
     title: 'User Management',
     url: '/admin/users',
     icon: Users,
+  },
+  {
+    title: 'Teacher Management',
+    url: '/admin/teachers',
+    icon: GraduationCap,
+  },
+  {
+    title: 'Parent Management',
+    url: '/admin/parents',
+    icon: Heart,
   },
   {
     title: 'Student Management',

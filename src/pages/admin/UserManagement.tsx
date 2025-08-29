@@ -71,7 +71,12 @@ const createUserSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   phone: z.string().optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().min(6, 'Please confirm your password'),
   role: z.enum(['admin', 'principal', 'head_teacher', 'teacher', 'bursar', 'librarian', 'student', 'parent']),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 type CreateUserForm = z.infer<typeof createUserSchema>;
@@ -91,6 +96,8 @@ const UserManagement = () => {
       firstName: '',
       lastName: '',
       phone: '',
+      password: '',
+      confirmPassword: '',
       role: 'student',
     },
   });
@@ -122,9 +129,10 @@ const UserManagement = () => {
 
   const createUser = async (data: CreateUserForm) => {
     try {
-      // Create user via Supabase Auth
+      // Create user via Supabase Auth with password
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: data.email,
+        password: data.password,
         email_confirm: true,
         user_metadata: {
           first_name: data.firstName,
@@ -147,7 +155,7 @@ const UserManagement = () => {
 
       toast({
         title: 'Success',
-        description: 'User created successfully',
+        description: 'User created successfully with login credentials',
       });
 
       setIsCreateDialogOpen(false);
@@ -289,6 +297,35 @@ const UserManagement = () => {
                     </FormItem>
                   )}
                 />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter password" type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Confirm password" type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}

@@ -25,6 +25,8 @@ import Timetable from "./pages/admin/Timetable";
 import Reports from "./pages/admin/Reports";
 import Communications from "./pages/admin/Communications";
 import Settings from "./pages/admin/Settings";
+import TeacherManagement from "./pages/admin/TeacherManagement";
+import ParentManagement from "./pages/admin/ParentManagement";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import MyClasses from "./pages/teacher/MyClasses";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
@@ -75,6 +77,8 @@ const App = () => (
             >
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<UserManagement />} />
+              <Route path="teachers" element={<TeacherManagement />} />
+              <Route path="parents" element={<ParentManagement />} />
               <Route path="students" element={<StudentManagement />} />
               <Route path="academic" element={<AcademicStructure />} />
               <Route path="admissions" element={<Admissions />} />

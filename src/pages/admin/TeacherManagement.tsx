@@ -1,0 +1,294 @@
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import {
+  GraduationCap,
+  Search,
+  Filter,
+  Edit,
+  Phone,
+  Mail,
+  Calendar,
+  Users,
+} from 'lucide-react';
+
+interface Teacher {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  role: string;
+  is_active: boolean;
+  avatar_url?: string;
+  created_at: string;
+}
+
+const TeacherManagement = () => {
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadTeachers();
+  }, []);
+
+  const loadTeachers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('role', ['teacher', 'head_teacher'])
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTeachers(data || []);
+    } catch (error) {
+      console.error('Error loading teachers:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load teachers',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleTeacherStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: !currentStatus })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Teacher ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+      });
+
+      loadTeachers();
+    } catch (error: any) {
+      console.error('Error updating teacher status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update teacher status',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const filteredTeachers = teachers.filter(teacher => {
+    const matchesSearch = 
+      teacher.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      teacher.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      teacher.email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && teacher.is_active) ||
+      (statusFilter === 'inactive' && !teacher.is_active);
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Teacher Management</h1>
+          <p className="text-muted-foreground">
+            Manage teaching staff and their information
+          </p>
+        </div>
+        <Button className="gap-2" onClick={() => window.location.href = '/admin/users'}>
+          <GraduationCap className="h-4 w-4" />
+          Add Teacher
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Teachers</CardTitle>
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{teachers.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Teachers</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{teachers.filter(t => t.is_active).length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Head Teachers</CardTitle>
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{teachers.filter(t => t.role === 'head_teacher').length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search teachers..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            <Select value={statusFilter} onValueChange={(value: 'all' | 'active' | 'inactive') => setStatusFilter(value)}>
+              <SelectTrigger className="w-40">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Teachers Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <GraduationCap className="h-5 w-5" />
+            Teachers ({filteredTeachers.length})
+          </CardTitle>
+          <CardDescription>
+            Teaching staff members and their details
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Teacher</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredTeachers.map((teacher) => (
+                <TableRow key={teacher.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={teacher.avatar_url} />
+                        <AvatarFallback>
+                          {teacher.first_name[0]}{teacher.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">
+                          {teacher.first_name} {teacher.last_name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{teacher.email}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={teacher.role === 'head_teacher' ? 'default' : 'secondary'}>
+                      {teacher.role === 'head_teacher' ? 'Head Teacher' : 'Teacher'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="h-3 w-3" />
+                        {teacher.email}
+                      </div>
+                      {teacher.phone && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="h-3 w-3" />
+                          {teacher.phone}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={teacher.is_active ? 'default' : 'secondary'}>
+                      {teacher.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(teacher.created_at).toLocaleDateString()}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={teacher.is_active ? "destructive" : "default"}
+                        onClick={() => toggleTeacherStatus(teacher.user_id, teacher.is_active)}
+                      >
+                        {teacher.is_active ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          
+          {filteredTeachers.length === 0 && (
+            <div className="text-center py-8">
+              <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No teachers found matching your criteria</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default TeacherManagement;

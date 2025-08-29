@@ -42,6 +42,10 @@ import ApprovalsCenter from "./pages/principal/ApprovalsCenter";
 import HeadTeacherDashboard from "./pages/head-teacher/HeadTeacherDashboard";
 import TeacherSupervision from "./pages/head-teacher/TeacherSupervision";
 import MarksApproval from "./pages/head-teacher/MarksApproval";
+import DisciplineRecords from "./pages/head-teacher/DisciplineRecords";
+import TimetableManagement from "./pages/head-teacher/TimetableManagement";
+import AcademicReports from "./pages/head-teacher/AcademicReports";
+import HeadTeacherProfile from "./pages/head-teacher/HeadTeacherProfile";
 import BursarDashboard from "./pages/bursar/BursarDashboard";
 import FeeStructures from "./pages/bursar/FeeStructures";
 import ParentDashboard from "./pages/parent/ParentDashboard";
@@ -121,6 +125,10 @@ const App = () => (
               <Route index element={<HeadTeacherDashboard />} />
               <Route path="supervision" element={<TeacherSupervision />} />
               <Route path="marks" element={<MarksApproval />} />
+              <Route path="discipline" element={<DisciplineRecords />} />
+              <Route path="timetable" element={<TimetableManagement />} />
+              <Route path="reports" element={<AcademicReports />} />
+              <Route path="profile" element={<HeadTeacherProfile />} />
             </Route>
             
             {/* Student Routes */}

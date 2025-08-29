@@ -11,6 +11,8 @@ import StudentLayout from "@/components/StudentLayout";
 import PrincipalLayout from "@/components/PrincipalLayout";
 import HeadTeacherLayout from "@/components/HeadTeacherLayout";
 import BursarLayout from "@/components/BursarLayout";
+import ParentLayout from "@/components/ParentLayout";
+import LibraryLayout from "@/components/LibraryLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -32,6 +34,8 @@ import TeacherSupervision from "./pages/head-teacher/TeacherSupervision";
 import MarksApproval from "./pages/head-teacher/MarksApproval";
 import BursarDashboard from "./pages/bursar/BursarDashboard";
 import FeeStructures from "./pages/bursar/FeeStructures";
+import ParentDashboard from "./pages/parent/ParentDashboard";
+import LibraryDashboard from "./pages/library/LibraryDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -122,6 +126,30 @@ const App = () => (
             >
               <Route index element={<BursarDashboard />} />
               <Route path="fee-structures" element={<FeeStructures />} />
+            </Route>
+
+            {/* Parent Routes */}
+            <Route 
+              path="/parent" 
+              element={
+                <ProtectedRoute allowedRoles={['parent']}>
+                  <ParentLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<ParentDashboard />} />
+            </Route>
+
+            {/* Library Routes */}
+            <Route 
+              path="/library" 
+              element={
+                <ProtectedRoute allowedRoles={['librarian', 'admin', 'principal']}>
+                  <LibraryLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<LibraryDashboard />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

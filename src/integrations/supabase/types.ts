@@ -44,6 +44,225 @@ export type Database = {
         }
         Relationships: []
       }
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          expiry_date: string | null
+          id: string
+          is_active: boolean | null
+          priority: string
+          published_date: string | null
+          target_audience: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: string
+          published_date?: string | null
+          target_audience?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: string
+          published_date?: string | null
+          target_audience?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointments: {
+        Row: {
+          appointment_date: string
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          meeting_type: string | null
+          notes: string | null
+          parent_id: string | null
+          purpose: string | null
+          status: string
+          student_id: string | null
+          teacher_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          meeting_type?: string | null
+          notes?: string | null
+          parent_id?: string | null
+          purpose?: string | null
+          status?: string
+          student_id?: string | null
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          meeting_type?: string | null
+          notes?: string | null
+          parent_id?: string | null
+          purpose?: string | null
+          status?: string
+          student_id?: string | null
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_records: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          status: string
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          status: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      behavior_notes: {
+        Row: {
+          category: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          is_private: boolean | null
+          note_type: string
+          recorded_by: string | null
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          date?: string
+          description: string
+          id?: string
+          is_private?: boolean | null
+          note_type: string
+          recorded_by?: string | null
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          is_private?: boolean | null
+          note_type?: string
+          recorded_by?: string | null
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "behavior_notes_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "behavior_notes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           academic_year_id: string | null
@@ -257,6 +476,263 @@ export type Database = {
           },
         ]
       }
+      library_fines: {
+        Row: {
+          amount: number
+          borrower_id: string | null
+          created_at: string
+          description: string | null
+          fine_type: string
+          id: string
+          is_paid: boolean | null
+          paid_date: string | null
+          transaction_id: string | null
+          updated_at: string
+          waived_by: string | null
+          waived_date: string | null
+        }
+        Insert: {
+          amount: number
+          borrower_id?: string | null
+          created_at?: string
+          description?: string | null
+          fine_type: string
+          id?: string
+          is_paid?: boolean | null
+          paid_date?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+          waived_by?: string | null
+          waived_date?: string | null
+        }
+        Update: {
+          amount?: number
+          borrower_id?: string | null
+          created_at?: string
+          description?: string | null
+          fine_type?: string
+          id?: string
+          is_paid?: boolean | null
+          paid_date?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+          waived_by?: string | null
+          waived_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_fines_borrower_id_fkey"
+            columns: ["borrower_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_fines_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "library_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_fines_waived_by_fkey"
+            columns: ["waived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_items: {
+        Row: {
+          author: string | null
+          available_copies: number
+          barcode: string | null
+          category: string
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          edition: string | null
+          id: string
+          is_active: boolean | null
+          isbn: string | null
+          item_type: string
+          language: string | null
+          location: string | null
+          publication_year: number | null
+          publisher: string | null
+          subject: string | null
+          title: string
+          total_copies: number
+          updated_at: string
+        }
+        Insert: {
+          author?: string | null
+          available_copies?: number
+          barcode?: string | null
+          category: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          edition?: string | null
+          id?: string
+          is_active?: boolean | null
+          isbn?: string | null
+          item_type: string
+          language?: string | null
+          location?: string | null
+          publication_year?: number | null
+          publisher?: string | null
+          subject?: string | null
+          title: string
+          total_copies?: number
+          updated_at?: string
+        }
+        Update: {
+          author?: string | null
+          available_copies?: number
+          barcode?: string | null
+          category?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          edition?: string | null
+          id?: string
+          is_active?: boolean | null
+          isbn?: string | null
+          item_type?: string
+          language?: string | null
+          location?: string | null
+          publication_year?: number | null
+          publisher?: string | null
+          subject?: string | null
+          title?: string
+          total_copies?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      library_reservations: {
+        Row: {
+          created_at: string
+          expiry_date: string
+          id: string
+          library_item_id: string | null
+          notes: string | null
+          reservation_date: string | null
+          reserver_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expiry_date: string
+          id?: string
+          library_item_id?: string | null
+          notes?: string | null
+          reservation_date?: string | null
+          reserver_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expiry_date?: string
+          id?: string
+          library_item_id?: string | null
+          notes?: string | null
+          reservation_date?: string | null
+          reserver_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_reservations_library_item_id_fkey"
+            columns: ["library_item_id"]
+            isOneToOne: false
+            referencedRelation: "library_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_reservations_reserver_id_fkey"
+            columns: ["reserver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_transactions: {
+        Row: {
+          borrower_id: string | null
+          created_at: string
+          due_date: string
+          fine_amount: number | null
+          id: string
+          is_overdue: boolean | null
+          issue_date: string | null
+          library_item_id: string | null
+          notes: string | null
+          processed_by: string | null
+          return_date: string | null
+          transaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          borrower_id?: string | null
+          created_at?: string
+          due_date: string
+          fine_amount?: number | null
+          id?: string
+          is_overdue?: boolean | null
+          issue_date?: string | null
+          library_item_id?: string | null
+          notes?: string | null
+          processed_by?: string | null
+          return_date?: string | null
+          transaction_type: string
+          updated_at?: string
+        }
+        Update: {
+          borrower_id?: string | null
+          created_at?: string
+          due_date?: string
+          fine_amount?: number | null
+          id?: string
+          is_overdue?: boolean | null
+          issue_date?: string | null
+          library_item_id?: string | null
+          notes?: string | null
+          processed_by?: string | null
+          return_date?: string | null
+          transaction_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_transactions_borrower_id_fkey"
+            columns: ["borrower_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_transactions_library_item_id_fkey"
+            columns: ["library_item_id"]
+            isOneToOne: false
+            referencedRelation: "library_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_transactions_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_student_relationships: {
         Row: {
           created_at: string | null
@@ -410,6 +886,66 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      report_cards: {
+        Row: {
+          academic_year_id: string | null
+          created_at: string
+          id: string
+          is_published: boolean | null
+          issued_date: string | null
+          overall_grade: string | null
+          overall_percentage: number | null
+          principal_comments: string | null
+          student_id: string | null
+          teacher_comments: string | null
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          issued_date?: string | null
+          overall_grade?: string | null
+          overall_percentage?: number | null
+          principal_comments?: string | null
+          student_id?: string | null
+          teacher_comments?: string | null
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          issued_date?: string | null
+          overall_grade?: string | null
+          overall_percentage?: number | null
+          principal_comments?: string | null
+          student_id?: string | null
+          teacher_comments?: string | null
+          term?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_cards_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_cards_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scholarships: {
         Row: {

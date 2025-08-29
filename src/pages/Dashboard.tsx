@@ -55,13 +55,17 @@ const Dashboard = () => {
     if (profile?.role === 'admin') {
       navigate('/admin', { replace: true });
     } else if (profile?.role === 'principal') {
-      navigate('/principal', { replace: true });
+      navigate('/admin', { replace: true }); // Principal uses admin layout
     } else if (profile?.role === 'head_teacher') {
       navigate('/head-teacher', { replace: true });
     } else if (profile?.role === 'teacher') {
       navigate('/teacher', { replace: true });
     } else if (profile?.role === 'bursar') {
       navigate('/bursar', { replace: true });
+    } else if (profile?.role === 'parent') {
+      navigate('/parent', { replace: true });
+    } else if (profile?.role === 'librarian') {
+      navigate('/library', { replace: true });
     } else if (profile?.role === 'student') {
       navigate('/student', { replace: true });
     }

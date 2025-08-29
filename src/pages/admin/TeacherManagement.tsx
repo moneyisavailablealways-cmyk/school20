@@ -121,7 +121,7 @@ const TeacherManagement = () => {
             Manage teaching staff and their information
           </p>
         </div>
-        <Button className="gap-2" onClick={() => window.location.href = '/admin/users'}>
+        <Button className="gap-2" onClick={() => window.location.href = '/admin/add-teacher'}>
           <GraduationCap className="h-4 w-4" />
           Add Teacher
         </Button>

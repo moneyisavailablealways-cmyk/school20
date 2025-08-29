@@ -45,7 +45,7 @@ serve(async (req) => {
       )
     }
 
-    const { email, password, firstName, lastName, phone, role } = await req.json()
+    const { email, password, firstName, lastName, phone, role, teacherDetails, parentDetails } = await req.json()
 
     // Create the user with admin privileges
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
@@ -66,12 +66,67 @@ serve(async (req) => {
       )
     }
 
-    // Update the profile with phone number if provided
-    if (phone && newUser.user) {
-      await supabase
-        .from('profiles')
-        .update({ phone })
-        .eq('user_id', newUser.user.id)
+    // Update the profile with phone number if provided and get profile ID
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .update({ phone })
+      .eq('user_id', newUser.user.id)
+      .select('id')
+      .single()
+
+    if (profileError) {
+      return new Response(
+        JSON.stringify({ error: profileError.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Create teacher details if role is teacher or head_teacher
+    if ((role === 'teacher' || role === 'head_teacher') && teacherDetails) {
+      const { error: teacherError } = await supabase
+        .from('teachers')
+        .insert({
+          profile_id: profileData.id,
+          employee_id: teacherDetails.employeeId,
+          specialization: teacherDetails.specialization,
+          qualification: teacherDetails.qualification,
+          experience_years: teacherDetails.experienceYears,
+          joining_date: teacherDetails.joiningDate,
+          department: teacherDetails.department,
+          salary: teacherDetails.salary,
+          is_class_teacher: teacherDetails.isClassTeacher || false,
+        })
+
+      if (teacherError) {
+        return new Response(
+          JSON.stringify({ error: teacherError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
+    // Create parent details if role is parent
+    if (role === 'parent' && parentDetails) {
+      const { error: parentError } = await supabase
+        .from('parents')
+        .insert({
+          profile_id: profileData.id,
+          occupation: parentDetails.occupation,
+          workplace: parentDetails.workplace,
+          national_id: parentDetails.nationalId,
+          address: parentDetails.address,
+          emergency_contact_name: parentDetails.emergencyContactName,
+          emergency_contact_phone: parentDetails.emergencyContactPhone,
+          emergency_contact_relationship: parentDetails.emergencyContactRelationship,
+          preferred_contact_method: parentDetails.preferredContactMethod,
+        })
+
+      if (parentError) {
+        return new Response(
+          JSON.stringify({ error: parentError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
     }
 
     return new Response(

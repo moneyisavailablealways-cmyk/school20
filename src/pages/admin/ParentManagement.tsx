@@ -133,7 +133,7 @@ const ParentManagement = () => {
             Manage parent accounts and student relationships
           </p>
         </div>
-        <Button className="gap-2" onClick={() => window.location.href = '/admin/users'}>
+        <Button className="gap-2" onClick={() => window.location.href = '/admin/add-parent'}>
           <UserPlus className="h-4 w-4" />
           Add Parent
         </Button>

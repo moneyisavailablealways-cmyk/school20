@@ -832,6 +832,59 @@ export type Database = {
           },
         ]
       }
+      parents: {
+        Row: {
+          address: string | null
+          created_at: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relationship: string | null
+          id: string
+          national_id: string | null
+          occupation: string | null
+          preferred_contact_method: string | null
+          profile_id: string
+          updated_at: string
+          workplace: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
+          id?: string
+          national_id?: string | null
+          occupation?: string | null
+          preferred_contact_method?: string | null
+          profile_id: string
+          updated_at?: string
+          workplace?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
+          id?: string
+          national_id?: string | null
+          occupation?: string | null
+          preferred_contact_method?: string | null
+          profile_id?: string
+          updated_at?: string
+          workplace?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parents_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -1451,6 +1504,59 @@ export type Database = {
           {
             foreignKeyName: "fk_teacher_enrollments_teacher_id"
             columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teachers: {
+        Row: {
+          created_at: string
+          department: string | null
+          employee_id: string | null
+          experience_years: number | null
+          id: string
+          is_class_teacher: boolean | null
+          joining_date: string | null
+          profile_id: string
+          qualification: string | null
+          salary: number | null
+          specialization: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          employee_id?: string | null
+          experience_years?: number | null
+          id?: string
+          is_class_teacher?: boolean | null
+          joining_date?: string | null
+          profile_id: string
+          qualification?: string | null
+          salary?: number | null
+          specialization?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          employee_id?: string | null
+          experience_years?: number | null
+          id?: string
+          is_class_teacher?: boolean | null
+          joining_date?: string | null
+          profile_id?: string
+          qualification?: string | null
+          salary?: number | null
+          specialization?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teachers_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

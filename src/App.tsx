@@ -36,6 +36,11 @@ import TeacherStudents from "./pages/teacher/TeacherStudents";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
 import Schedule from "./pages/teacher/Schedule";
 import StudentDashboard from "./pages/student/StudentDashboard";
+import StudentSubjects from "./pages/student/StudentSubjects";
+import StudentSchedule from "./pages/student/StudentSchedule";
+import StudentGrades from "./pages/student/StudentGrades";
+import StudentLibrary from "./pages/student/StudentLibrary";
+import StudentProfile from "./pages/student/StudentProfile";
 import PrincipalDashboard from "./pages/principal/PrincipalDashboard";
 import PerformanceAnalytics from "./pages/principal/PerformanceAnalytics";
 import ApprovalsCenter from "./pages/principal/ApprovalsCenter";
@@ -141,6 +146,11 @@ const App = () => (
               }
             >
               <Route index element={<StudentDashboard />} />
+              <Route path="subjects" element={<StudentSubjects />} />
+              <Route path="schedule" element={<StudentSchedule />} />
+              <Route path="grades" element={<StudentGrades />} />
+              <Route path="library" element={<StudentLibrary />} />
+              <Route path="profile" element={<StudentProfile />} />
             </Route>
             
             {/* Bursar Routes */}

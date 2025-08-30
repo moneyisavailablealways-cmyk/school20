@@ -18,7 +18,7 @@ const StudentLayout = () => {
 
   const navigation = [
     { name: 'Dashboard', href: '/student', icon: BookOpen },
-    { name: 'My Courses', href: '/student/courses', icon: GraduationCap },
+    { name: 'My Subjects', href: '/student/subjects', icon: GraduationCap },
     { name: 'Schedule', href: '/student/schedule', icon: Calendar },
     { name: 'Grades', href: '/student/grades', icon: BarChart3 },
     { name: 'Library', href: '/student/library', icon: Library },

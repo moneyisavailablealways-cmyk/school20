@@ -53,6 +53,11 @@ import AcademicReports from "./pages/head-teacher/AcademicReports";
 import HeadTeacherProfile from "./pages/head-teacher/HeadTeacherProfile";
 import BursarDashboard from "./pages/bursar/BursarDashboard";
 import FeeStructures from "./pages/bursar/FeeStructures";
+import Invoices from "./pages/bursar/Invoices";
+import Payments from "./pages/bursar/Payments";
+import Scholarships from "./pages/bursar/Scholarships";
+import BursarReports from "./pages/bursar/Reports";
+import BursarProfile from "./pages/bursar/BursarProfile";
 import ParentDashboard from "./pages/parent/ParentDashboard";
 import LibrarianDashboard from "./pages/librarian/LibrarianDashboard";
 import LibraryCatalog from "./pages/librarian/LibraryCatalog";
@@ -164,6 +169,11 @@ const App = () => (
             >
               <Route index element={<BursarDashboard />} />
               <Route path="fee-structures" element={<FeeStructures />} />
+              <Route path="invoices" element={<Invoices />} />
+              <Route path="payments" element={<Payments />} />
+              <Route path="scholarships" element={<Scholarships />} />
+              <Route path="reports" element={<BursarReports />} />
+              <Route path="profile" element={<BursarProfile />} />
             </Route>
 
             {/* Parent Routes */}

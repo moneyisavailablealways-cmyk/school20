@@ -225,6 +225,24 @@ const BursarDashboard = () => {
                 <Button asChild size="sm" className="w-full">
                   <Link to={action.href}>Open</Link>
                 </Button>
+                <DialogTrigger asChild>
+                  <Button onClick={() => {
+                    setEditingFee(null);
+                    setFormData({
+                      name: '',
+                      description: '',
+                      amount: '',
+                      fee_type: '',
+                      payment_schedule: '',
+                      due_date: '',
+                      academic_year_id: 'all',
+                      class_id: 'all',
+                    });
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Fee Structure
+                  </Button>
+                </DialogTrigger>
               </CardContent>
             </Card>
           ))}

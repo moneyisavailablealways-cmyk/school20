@@ -175,6 +175,9 @@ const AdminDashboard = () => {
         <Button className="gap-2">
           <Plus className="h-4 w-4" />
           Quick Setup
+          <Button asChild size="sm" className="w-full">
+            <Link to={action.href}>Open</Link>
+          </Button>
         </Button>
       </div>
 

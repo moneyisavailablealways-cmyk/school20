@@ -58,7 +58,14 @@ import Payments from "./pages/bursar/Payments";
 import Scholarships from "./pages/bursar/Scholarships";
 import BursarReports from "./pages/bursar/Reports";
 import BursarProfile from "./pages/bursar/BursarProfile";
-import ParentDashboard from "./pages/parent/ParentDashboard";
+import ParentDashboard from './pages/parent/ParentDashboard';
+import MyChildren from './pages/parent/MyChildren';
+import Attendance from './pages/parent/Attendance';
+import ReportsGrades from './pages/parent/ReportsGrades';
+import FeesPayments from './pages/parent/FeesPayments';
+import Appointments from './pages/parent/Appointments';
+import Announcements from './pages/parent/Announcements';
+import ParentProfile from './pages/parent/ParentProfile';
 import LibrarianDashboard from "./pages/librarian/LibrarianDashboard";
 import LibraryCatalog from "./pages/librarian/LibraryCatalog";
 import NotFound from "./pages/NotFound";
@@ -180,12 +187,19 @@ const App = () => (
             <Route 
               path="/parent" 
               element={
-                <ProtectedRoute allowedRoles={['parent', 'admin', 'principal']}>
+                <ProtectedRoute allowedRoles={['parent']}>
                   <ParentLayout />
                 </ProtectedRoute>
               }
             >
               <Route index element={<ParentDashboard />} />
+              <Route path="children" element={<MyChildren />} />
+              <Route path="attendance" element={<Attendance />} />
+              <Route path="reports" element={<ReportsGrades />} />
+              <Route path="payments" element={<FeesPayments />} />
+              <Route path="appointments" element={<Appointments />} />
+              <Route path="announcements" element={<Announcements />} />
+              <Route path="profile" element={<ParentProfile />} />
             </Route>
 
             {/* Librarian Routes */}

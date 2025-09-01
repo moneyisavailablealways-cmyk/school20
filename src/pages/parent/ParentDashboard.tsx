@@ -241,19 +241,35 @@ const ParentDashboard = () => {
             <CardDescription>Common tasks you can perform</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => window.location.href = '/parent/appointments'}
+            >
               <Calendar className="mr-2 h-4 w-4" />
               Book Parent-Teacher Meeting
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => window.location.href = '/parent/reports'}
+            >
               <FileText className="mr-2 h-4 w-4" />
               Download Report Cards
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => window.location.href = '/parent/announcements'}
+            >
               <Bell className="mr-2 h-4 w-4" />
               View All Announcements
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => window.location.href = '/parent/payments'}
+            >
               <CreditCard className="mr-2 h-4 w-4" />
               Payment History
             </Button>

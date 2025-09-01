@@ -34,6 +34,7 @@ const navigation = [
   { name: 'Fees & Payments', href: '/parent/payments', icon: CreditCard },
   { name: 'Appointments', href: '/parent/appointments', icon: Calendar },
   { name: 'Announcements', href: '/parent/announcements', icon: Bell },
+  { name: 'Profile', href: '/parent/profile', icon: User },
 ];
 
 const ParentLayout = () => {

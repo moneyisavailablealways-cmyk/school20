@@ -114,7 +114,10 @@ const LibraryCatalog = () => {
             Manage your library's collection of books and resources.
           </p>
         </div>
-        <Button>
+        <Button onClick={() => {
+          // This would open an add item dialog - functionality can be expanded
+          console.log('Add new item clicked');
+        }}>
           <Plus className="mr-2 h-4 w-4" />
           Add New Item
         </Button>
@@ -207,19 +210,19 @@ const LibraryCatalog = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => console.log('Edit item:', item.id)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Item
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => window.location.href = `/librarian/transactions?barcode=${item.barcode}`}>
                           <BookOpen className="mr-2 h-4 w-4" />
                           Issue Book
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => console.log('View history:', item.id)}>
                           <BookOpen className="mr-2 h-4 w-4" />
                           View History
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem className="text-destructive" onClick={() => console.log('Delete item:', item.id)}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete Item
                         </DropdownMenuItem>
@@ -240,7 +243,7 @@ const LibraryCatalog = () => {
               <p className="text-muted-foreground text-center">
                 No library items match your search criteria. Try adjusting your filters or search terms.
               </p>
-              <Button className="mt-4">
+              <Button className="mt-4" onClick={() => console.log('Add new item from empty state')}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Item
               </Button>

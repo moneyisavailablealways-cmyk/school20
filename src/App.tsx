@@ -68,6 +68,11 @@ import Announcements from './pages/parent/Announcements';
 import ParentProfile from './pages/parent/ParentProfile';
 import LibrarianDashboard from "./pages/librarian/LibrarianDashboard";
 import LibraryCatalog from "./pages/librarian/LibraryCatalog";
+import LibraryTransactions from "./pages/librarian/LibraryTransactions";
+import LibraryReservations from "./pages/librarian/LibraryReservations";
+import LibraryFines from "./pages/librarian/LibraryFines";
+import LibraryReports from "./pages/librarian/LibraryReports";
+import LibrarianProfile from "./pages/librarian/LibrarianProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -213,6 +218,11 @@ const App = () => (
             >
               <Route index element={<LibrarianDashboard />} />
               <Route path="catalog" element={<LibraryCatalog />} />
+              <Route path="transactions" element={<LibraryTransactions />} />
+              <Route path="reservations" element={<LibraryReservations />} />
+              <Route path="fines" element={<LibraryFines />} />
+              <Route path="reports" element={<LibraryReports />} />
+              <Route path="profile" element={<LibrarianProfile />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

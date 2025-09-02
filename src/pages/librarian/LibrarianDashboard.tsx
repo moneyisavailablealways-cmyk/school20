@@ -180,7 +180,7 @@ const LibrarianDashboard = () => {
                 </div>
               </div>
             ))}
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => window.location.href = '/librarian/transactions'}>
               View All Transactions
             </Button>
           </CardContent>
@@ -215,7 +215,7 @@ const LibrarianDashboard = () => {
                 </div>
               </div>
             ))}
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => window.location.href = '/librarian/transactions?filter=overdue'}>
               <AlertTriangle className="mr-2 h-4 w-4" />
               View All Overdue
             </Button>
@@ -253,19 +253,19 @@ const LibrarianDashboard = () => {
             <CardDescription>Common library management tasks</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/librarian/catalog'}>
               <BookOpen className="mr-2 h-4 w-4" />
               Add New Book
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/librarian/transactions'}>
               <Users className="mr-2 h-4 w-4" />
               Issue Book
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/librarian/transactions'}>
               <CheckCircle className="mr-2 h-4 w-4" />
               Return Book
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/librarian/fines'}>
               <AlertTriangle className="mr-2 h-4 w-4" />
               Manage Fines
             </Button>

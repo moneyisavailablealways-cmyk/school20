@@ -27,16 +27,13 @@ import {
 import { NavLink } from "react-router-dom";
 
 const navigation = [
-  { name: "Dashboard", href: "/library", icon: BookOpen },
-  { name: "Catalog", href: "/library/catalog", icon: Search },
-  { name: "Issue/Return", href: "/library/transactions", icon: Upload },
-  { name: "Reservations", href: "/library/reservations", icon: Calendar },
-  { name: "Members", href: "/library/members", icon: Users },
-  { name: "Overdue Items", href: "/library/overdue", icon: AlertCircle },
-  { name: "Fines", href: "/library/fines", icon: Download },
-  { name: "Reports", href: "/library/reports", icon: BarChart3 },
-  { name: "Manage Items", href: "/library/manage", icon: BookMarked },
-  { name: "Settings", href: "/library/settings", icon: Settings },
+  { name: "Dashboard", href: "/librarian", icon: BookOpen },
+  { name: "Catalog", href: "/librarian/catalog", icon: Search },
+  { name: "Transactions", href: "/librarian/transactions", icon: Upload },
+  { name: "Reservations", href: "/librarian/reservations", icon: Calendar },
+  { name: "Fines", href: "/librarian/fines", icon: Download },
+  { name: "Reports", href: "/librarian/reports", icon: BarChart3 },
+  { name: "Profile", href: "/librarian/profile", icon: Users },
 ];
 
 export function LibrarySidebar() {

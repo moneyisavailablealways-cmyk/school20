@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -33,6 +33,7 @@ const addTeacherSchema = z.object({
   department: z.string().min(1, 'Department is required'),
   salary: z.number().optional(),
   isClassTeacher: z.boolean().optional(),
+  assignedClassId: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -42,6 +43,8 @@ type AddTeacherForm = z.infer<typeof addTeacherSchema>;
 
 const AddTeacher = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [isClassTeacher, setIsClassTeacher] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -63,8 +66,28 @@ const AddTeacher = () => {
       department: '',
       salary: undefined,
       isClassTeacher: false,
+      assignedClassId: '',
     },
   });
+
+  useEffect(() => {
+    fetchAvailableClasses();
+  }, []);
+
+  const fetchAvailableClasses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .is('class_teacher_id', null)
+        .order('level', { ascending: true });
+
+      if (error) throw error;
+      setClasses(data || []);
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    }
+  };
 
   const createTeacher = async (data: AddTeacherForm) => {
     setIsSubmitting(true);
@@ -106,6 +129,23 @@ const AddTeacher = () => {
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to create teacher');
+      }
+
+      // If teacher is assigned as class teacher, update the class
+      if (data.isClassTeacher && data.assignedClassId && result.teacher_profile_id) {
+        const { error: classUpdateError } = await supabase
+          .from('classes')
+          .update({ class_teacher_id: result.teacher_profile_id })
+          .eq('id', data.assignedClassId);
+
+        if (classUpdateError) {
+          console.error('Error assigning class to teacher:', classUpdateError);
+          toast({
+            title: 'Warning',
+            description: 'Teacher created but class assignment failed',
+            variant: 'destructive',
+          });
+        }
       }
 
       toast({
@@ -388,7 +428,10 @@ const AddTeacher = () => {
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            setIsClassTeacher(!!checked);
+                          }}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -400,6 +443,36 @@ const AddTeacher = () => {
                     </FormItem>
                   )}
                 />
+
+                {isClassTeacher && (
+                  <FormField
+                    control={form.control}
+                    name="assignedClassId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assign to Class</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a class to assign" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {classes.map((classItem) => (
+                              <SelectItem key={classItem.id} value={classItem.id}>
+                                {classItem.name} (Level {classItem.level})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-sm text-muted-foreground">
+                          Select which class this teacher will be responsible for
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               <div className="flex justify-end gap-2">

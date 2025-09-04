@@ -35,6 +35,10 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
   const [loading, setLoading] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string>('');
+  const [classes, setClasses] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
+  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedSection, setSelectedSection] = useState<string>('');
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
     student?.date_of_birth ? new Date(student.date_of_birth) : undefined
   );
@@ -57,6 +61,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
 
   useEffect(() => {
     fetchProfiles();
+    fetchClasses();
     if (student?.profile_id) {
       setSelectedProfile(student.profile_id);
     }
@@ -77,6 +82,45 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
       toast({
         title: 'Error',
         description: 'Failed to fetch student profiles',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchClasses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .order('level', { ascending: true });
+
+      if (error) throw error;
+      setClasses(data || []);
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch classes',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchSections = async (classId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('sections')
+        .select('*')
+        .eq('class_id', classId)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setSections(data || []);
+    } catch (error) {
+      console.error('Error fetching sections:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch sections',
         variant: 'destructive',
       });
     }
@@ -148,11 +192,31 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
         });
       } else {
         // Create new student
-        const { error } = await supabase
+        const { data: newStudent, error } = await supabase
           .from('students')
-          .insert([studentData]);
+          .insert([studentData])
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Create student enrollment if class is selected
+        if (selectedClass && newStudent) {
+          const { error: enrollmentError } = await supabase
+            .from('student_enrollments')
+            .insert([{
+              student_id: newStudent.id,
+              class_id: selectedClass,
+              section_id: selectedSection || null,
+              enrollment_date: format(admissionDate, 'yyyy-MM-dd'),
+              status: 'active'
+            }]);
+
+          if (enrollmentError) {
+            console.error('Error creating enrollment:', enrollmentError);
+            // Don't fail the whole process for enrollment error
+          }
+        }
 
         toast({
           title: 'Success',
@@ -357,6 +421,57 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
                       <SelectItem value="transferred">Transferred</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="class">Class</Label>
+                  <Select
+                    value={selectedClass}
+                    onValueChange={(value) => {
+                      setSelectedClass(value);
+                      setSections([]);
+                      setSelectedSection('');
+                      if (value) {
+                        fetchSections(value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classes.map((classItem) => (
+                        <SelectItem key={classItem.id} value={classItem.id}>
+                          {classItem.name} (Level {classItem.level})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="section">Section</Label>
+                  <Select
+                    value={selectedSection}
+                    onValueChange={setSelectedSection}
+                    disabled={!selectedClass}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={selectedClass ? "Select section" : "Select class first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sections.map((section) => (
+                        <SelectItem key={section.id} value={section.id}>
+                          Section {section.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Choose a section within the selected class
+                  </p>
                 </div>
               </div>
             </CardContent>

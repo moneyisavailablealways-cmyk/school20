@@ -28,6 +28,7 @@ import {
   Calendar,
   MapPin,
   Phone,
+  Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import StudentForm from './StudentForm';
@@ -184,6 +185,44 @@ const StudentManagement = () => {
     fetchEnrollments();
     setIsDialogOpen(false);
     setSelectedStudent(null);
+  };
+
+  const handleDeleteStudent = async (student: Student) => {
+    if (!confirm(`Are you sure you want to delete student ${student.profile?.first_name} ${student.profile?.last_name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Delete student record (profile will be handled by cascade)
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', student.id);
+
+      if (error) throw error;
+
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_activity_type: 'student_deleted',
+        p_description: `Student ${student.profile?.first_name} ${student.profile?.last_name} deleted`,
+        p_metadata: { student_id: student.id, student_number: student.student_id }
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Student deleted successfully',
+      });
+
+      fetchStudents();
+      fetchEnrollments();
+    } catch (error: any) {
+      console.error('Error deleting student:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete student',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (loading) {
@@ -423,6 +462,13 @@ const StudentManagement = () => {
                             }}
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteStudent(student)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       </TableCell>

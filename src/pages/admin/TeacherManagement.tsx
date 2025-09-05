@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import EditTeacherDialog from '@/components/EditTeacherDialog';
 import {
   GraduationCap,
   Search,
@@ -38,6 +39,8 @@ const TeacherManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -105,6 +108,13 @@ const TeacherManagement = () => {
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_activity_type: 'teacher_deleted',
+        p_description: `Teacher ${teacher.first_name} ${teacher.last_name} deleted`,
+        p_metadata: { teacher_id: teacher.id, user_id: teacher.user_id }
+      });
+
       toast({
         title: 'Success',
         description: 'Teacher deleted successfully',
@@ -119,6 +129,17 @@ const TeacherManagement = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleEditTeacher = (teacher: Teacher) => {
+    setEditingTeacher(teacher);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    loadTeachers();
+    setIsEditDialogOpen(false);
+    setEditingTeacher(null);
   };
 
   const filteredTeachers = teachers.filter(teacher => {
@@ -294,7 +315,7 @@ const TeacherManagement = () => {
                   <TableCell>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline">
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-4 w-4" onClick={() => handleEditTeacher(teacher)} />
                       </Button>
                       <Button
                         size="sm"
@@ -318,6 +339,13 @@ const TeacherManagement = () => {
           )}
         </CardContent>
       </Card>
+      
+      <EditTeacherDialog
+        teacher={editingTeacher}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 };

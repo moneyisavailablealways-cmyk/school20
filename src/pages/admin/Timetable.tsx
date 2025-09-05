@@ -182,8 +182,20 @@ const Timetable = () => {
   };
 
   const handleDeleteEntry = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this schedule entry?')) {
+      return;
+    }
+
     try {
       setTimetableEntries(prev => prev.filter(entry => entry.id !== id));
+      
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_activity_type: 'schedule_deleted',
+        p_description: 'Schedule entry deleted from timetable',
+        p_metadata: { schedule_id: id }
+      });
+
       toast({
         title: 'Success',
         description: 'Timetable entry deleted successfully',

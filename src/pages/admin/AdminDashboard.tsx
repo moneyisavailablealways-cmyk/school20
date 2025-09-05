@@ -133,18 +133,8 @@ const AdminDashboard = () => {
   };
 
   const handleQuickSetup = () => {
-    const setupTasks = [
-      { name: 'School Information', url: '/admin/settings' },
-      { name: 'Academic Structure', url: '/admin/academic' },
-      { name: 'Add Teachers', url: '/admin/add-teacher' },
-      { name: 'Create Classes', url: '/admin/academic' },
-      { name: 'Subject Management', url: '/admin/subjects' },
-    ];
-    
-    toast({
-      title: 'Quick Setup Guide',
-      description: 'Complete these steps to set up your school system',
-    });
+    // Navigate to the settings page for initial setup
+    window.location.href = '/admin/settings';
   };
 
   const quickActions = [
@@ -346,6 +336,11 @@ const AdminDashboard = () => {
                   case 'student_enrolled': return GraduationCap;
                   case 'student_status_changed': return Users;
                   case 'role_changed': return AlertCircle;
+                  case 'teacher_deleted': return Users;
+                  case 'student_deleted': return GraduationCap;
+                  case 'parent_deleted': return Users;
+                  case 'subject_deleted': return BookOpen;
+                  case 'schedule_deleted': return Calendar;
                   default: return Clock;
                 }
               };
@@ -356,6 +351,11 @@ const AdminDashboard = () => {
                   case 'student_enrolled': return 'text-blue-500';
                   case 'student_status_changed': return 'text-purple-500';
                   case 'role_changed': return 'text-orange-500';
+                  case 'teacher_deleted': return 'text-red-500';
+                  case 'student_deleted': return 'text-red-500';
+                  case 'parent_deleted': return 'text-red-500';
+                  case 'subject_deleted': return 'text-red-500';
+                  case 'schedule_deleted': return 'text-red-500';
                   default: return 'text-muted-foreground';
                 }
               };

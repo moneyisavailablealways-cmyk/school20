@@ -18,6 +18,7 @@ import {
   Calendar,
   Users,
   UserPlus,
+  Trash2,
 } from 'lucide-react';
 
 interface Parent {
@@ -77,26 +78,38 @@ const ParentManagement = () => {
     }
   };
 
-  const toggleParentStatus = async (userId: string, currentStatus: boolean) => {
+  const handleDeleteParent = async (parent: Parent) => {
+    if (!confirm(`Are you sure you want to delete ${parent.first_name} ${parent.last_name}? This action cannot be undone.`)) {
+      return;
+    }
+
     try {
+      // Delete the parent profile
       const { error } = await supabase
         .from('profiles')
-        .update({ is_active: !currentStatus })
-        .eq('user_id', userId);
+        .delete()
+        .eq('user_id', parent.user_id);
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_activity_type: 'parent_deleted',
+        p_description: `Parent ${parent.first_name} ${parent.last_name} deleted`,
+        p_metadata: { parent_id: parent.id }
+      });
+
       toast({
         title: 'Success',
-        description: `Parent ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+        description: 'Parent deleted successfully',
       });
 
       loadParents();
     } catch (error: any) {
-      console.error('Error updating parent status:', error);
+      console.error('Error deleting parent:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update parent status',
+        description: 'Failed to delete parent',
         variant: 'destructive',
       });
     }
@@ -284,10 +297,10 @@ const ParentManagement = () => {
                       </Button>
                       <Button
                         size="sm"
-                        variant={parent.is_active ? "destructive" : "default"}
-                        onClick={() => toggleParentStatus(parent.user_id, parent.is_active)}
+                        variant="destructive"
+                        onClick={() => handleDeleteParent(parent)}
                       >
-                        {parent.is_active ? 'Deactivate' : 'Activate'}
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>

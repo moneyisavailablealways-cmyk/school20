@@ -162,6 +162,13 @@ const SubjectManagement = () => {
 
       if (error) throw error;
 
+      // Log activity
+      await supabase.rpc('log_activity', {
+        p_activity_type: 'subject_deleted',
+        p_description: `Subject "${subject.name}" (${subject.code}) deleted`,
+        p_metadata: { subject_id: subject.id, subject_code: subject.code }
+      });
+
       toast({
         title: 'Success',
         description: 'Subject deleted successfully',

@@ -17,6 +17,7 @@ import {
   Mail,
   Calendar,
   Users,
+  Trash2,
 } from 'lucide-react';
 
 interface Teacher {
@@ -85,6 +86,36 @@ const TeacherManagement = () => {
       toast({
         title: 'Error',
         description: 'Failed to update teacher status',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteTeacher = async (teacher: Teacher) => {
+    if (!confirm(`Are you sure you want to delete ${teacher.first_name} ${teacher.last_name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Delete the teacher profile
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', teacher.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Teacher deleted successfully',
+      });
+
+      loadTeachers();
+    } catch (error: any) {
+      console.error('Error deleting teacher:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete teacher',
         variant: 'destructive',
       });
     }
@@ -267,10 +298,10 @@ const TeacherManagement = () => {
                       </Button>
                       <Button
                         size="sm"
-                        variant={teacher.is_active ? "destructive" : "default"}
-                        onClick={() => toggleTeacherStatus(teacher.user_id, teacher.is_active)}
+                        variant="destructive"
+                        onClick={() => handleDeleteTeacher(teacher)}
                       >
-                        {teacher.is_active ? 'Deactivate' : 'Activate'}
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>

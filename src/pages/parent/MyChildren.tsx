@@ -65,8 +65,10 @@ const MyChildren = () => {
               phone
             ),
             student_enrollments (
-              class,
-              status
+              status,
+              classes (
+                name
+              )
             )
           )
         `)
@@ -75,7 +77,15 @@ const MyChildren = () => {
       if (error) throw error;
 
       const childrenData = data?.map(rel => rel.students).filter(Boolean) || [];
-      setChildren(childrenData as Student[]);
+      // Transform the data to match the expected Student type
+      const transformedChildren = childrenData.map(child => ({
+        ...child,
+        student_enrollments: child.student_enrollments?.map(enrollment => ({
+          class: enrollment.classes?.name || 'N/A',
+          status: enrollment.status
+        })) || []
+      }));
+      setChildren(transformedChildren as Student[]);
     } catch (error) {
       console.error('Error fetching children:', error);
       toast.error('Failed to load children information');

@@ -69,7 +69,6 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('school');
-  const [uploading, setUploading] = useState(false);
 
   const [schoolSettings, setSchoolSettings] = useState<SchoolSettings>({
     school_name: '',
@@ -115,43 +114,18 @@ const Settings = () => {
     try {
       setLoading(true);
       
-      // Fetch real settings from database
-      const { data, error } = await supabase
-        .from('school_settings')
-        .select('*')
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (data) {
-        setSchoolSettings({
-          school_name: data.school_name || '',
-          address: data.address || '',
-          phone: data.phone || '',
-          email: data.email || '',
-          website: data.website || '',
-          logo_url: data.logo_url || '',
-          established_year: data.established_year || '',
-          motto: data.motto || '',
-          description: data.description || '',
-        });
-      } else {
-        // Use default values if no settings exist
-        const defaultSchoolSettings: SchoolSettings = {
-          school_name: 'School20 Academy',
-          address: '123 Education Street, Learning City, LC 12345',
-          phone: '+1 (555) 123-4567',
-          email: 'contact@school20.edu',
-          website: 'https://www.school20.edu',
-          logo_url: '',
-          established_year: '1995',
-          motto: 'Excellence in Education',
-          description: 'A premier educational institution dedicated to nurturing young minds and fostering academic excellence.',
-        };
-        setSchoolSettings(defaultSchoolSettings);
-      }
+      // Mock settings data (in a real app, this would come from a settings table)
+      const mockSchoolSettings: SchoolSettings = {
+        school_name: 'School20 Academy',
+        address: '123 Education Street, Learning City, LC 12345',
+        phone: '+1 (555) 123-4567',
+        email: 'contact@school20.edu',
+        website: 'https://www.school20.edu',
+        logo_url: '',
+        established_year: '1995',
+        motto: 'Excellence in Education',
+        description: 'A premier educational institution dedicated to nurturing young minds and fostering academic excellence.',
+      };
 
       const mockSystemSettings: SystemSettings = {
         academic_year_start: '2024-09-01',
@@ -175,6 +149,7 @@ const Settings = () => {
         announcement_notifications: true,
       };
 
+      setSchoolSettings(mockSchoolSettings);
       setSystemSettings(mockSystemSettings);
       setNotificationSettings(mockNotificationSettings);
     } catch (error: any) {
@@ -193,28 +168,9 @@ const Settings = () => {
     try {
       setSaving(true);
       
-      // Check if settings already exist
-      const { data: existingSettings } = await supabase
-        .from('school_settings')
-        .select('id')
-        .single();
-
-      if (existingSettings) {
-        // Update existing settings
-        const { error } = await supabase
-          .from('school_settings')
-          .update(schoolSettings)
-          .eq('id', existingSettings.id);
-
-        if (error) throw error;
-      } else {
-        // Insert new settings
-        const { error } = await supabase
-          .from('school_settings')
-          .insert([schoolSettings]);
-
-        if (error) throw error;
-      }
+      // In a real app, this would save to a settings table in Supabase
+      // For now, we'll just simulate the save
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast({
         title: 'Success',
@@ -229,71 +185,6 @@ const Settings = () => {
       });
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setUploading(true);
-      
-      const file = event.target.files?.[0];
-      if (!file) return;
-
-      // Check file type
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: 'Error',
-          description: 'Please select an image file',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: 'Error',
-          description: 'File size must be less than 5MB',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `school-logo.${fileExt}`;
-      const filePath = `logos/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('school-assets')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('school-assets')
-        .getPublicUrl(filePath);
-
-      setSchoolSettings(prev => ({
-        ...prev,
-        logo_url: data.publicUrl
-      }));
-
-      toast({
-        title: 'Success',
-        description: 'Logo uploaded successfully',
-      });
-    } catch (error: any) {
-      console.error('Error uploading logo:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to upload logo',
-        variant: 'destructive',
-      });
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -480,24 +371,10 @@ const Settings = () => {
                       <School className="h-8 w-8 text-gray-400" />
                     )}
                   </div>
-                  <div>
-                    <input
-                      type="file"
-                      id="logo-upload"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      disabled={uploading}
-                    />
-                    <Button 
-                      variant="outline" 
-                      onClick={() => document.getElementById('logo-upload')?.click()}
-                      disabled={uploading}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {uploading ? 'Uploading...' : 'Upload Logo'}
-                    </Button>
-                  </div>
+                  <Button variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Logo
+                  </Button>
                 </div>
               </div>
 

@@ -1107,51 +1107,6 @@ export type Database = {
           },
         ]
       }
-      school_settings: {
-        Row: {
-          address: string | null
-          created_at: string | null
-          description: string | null
-          email: string | null
-          established_year: string | null
-          id: string
-          logo_url: string | null
-          motto: string | null
-          phone: string | null
-          school_name: string
-          updated_at: string | null
-          website: string | null
-        }
-        Insert: {
-          address?: string | null
-          created_at?: string | null
-          description?: string | null
-          email?: string | null
-          established_year?: string | null
-          id?: string
-          logo_url?: string | null
-          motto?: string | null
-          phone?: string | null
-          school_name?: string
-          updated_at?: string | null
-          website?: string | null
-        }
-        Update: {
-          address?: string | null
-          created_at?: string | null
-          description?: string | null
-          email?: string | null
-          established_year?: string | null
-          id?: string
-          logo_url?: string | null
-          motto?: string | null
-          phone?: string | null
-          school_name?: string
-          updated_at?: string | null
-          website?: string | null
-        }
-        Relationships: []
-      }
       sections: {
         Row: {
           class_id: string | null
@@ -1200,6 +1155,7 @@ export type Database = {
       student_enrollments: {
         Row: {
           academic_year_id: string | null
+          class: string | null
           class_id: string | null
           created_at: string | null
           enrollment_date: string
@@ -1211,6 +1167,7 @@ export type Database = {
         }
         Insert: {
           academic_year_id?: string | null
+          class?: string | null
           class_id?: string | null
           created_at?: string | null
           enrollment_date?: string
@@ -1222,6 +1179,7 @@ export type Database = {
         }
         Update: {
           academic_year_id?: string | null
+          class?: string | null
           class_id?: string | null
           created_at?: string | null
           enrollment_date?: string

@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import EditTeacherDialog from '@/components/EditTeacherDialog';
 import {
   GraduationCap,
   Search,
@@ -18,7 +17,6 @@ import {
   Mail,
   Calendar,
   Users,
-  Trash2,
 } from 'lucide-react';
 
 interface Teacher {
@@ -39,8 +37,6 @@ const TeacherManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -92,54 +88,6 @@ const TeacherManagement = () => {
         variant: 'destructive',
       });
     }
-  };
-
-  const handleDeleteTeacher = async (teacher: Teacher) => {
-    if (!confirm(`Are you sure you want to delete ${teacher.first_name} ${teacher.last_name}? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      // Delete the teacher profile
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', teacher.user_id);
-
-      if (error) throw error;
-
-      // Log activity
-      await supabase.rpc('log_activity', {
-        p_activity_type: 'teacher_deleted',
-        p_description: `Teacher ${teacher.first_name} ${teacher.last_name} deleted`,
-        p_metadata: { teacher_id: teacher.id, user_id: teacher.user_id }
-      });
-
-      toast({
-        title: 'Success',
-        description: 'Teacher deleted successfully',
-      });
-
-      loadTeachers();
-    } catch (error: any) {
-      console.error('Error deleting teacher:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete teacher',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleEditTeacher = (teacher: Teacher) => {
-    setEditingTeacher(teacher);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleEditSuccess = () => {
-    loadTeachers();
-    setIsEditDialogOpen(false);
-    setEditingTeacher(null);
   };
 
   const filteredTeachers = teachers.filter(teacher => {
@@ -315,14 +263,14 @@ const TeacherManagement = () => {
                   <TableCell>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline">
-                        <Edit className="h-4 w-4" onClick={() => handleEditTeacher(teacher)} />
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         size="sm"
-                        variant="destructive"
-                        onClick={() => handleDeleteTeacher(teacher)}
+                        variant={teacher.is_active ? "destructive" : "default"}
+                        onClick={() => toggleTeacherStatus(teacher.user_id, teacher.is_active)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {teacher.is_active ? 'Deactivate' : 'Activate'}
                       </Button>
                     </div>
                   </TableCell>
@@ -339,13 +287,6 @@ const TeacherManagement = () => {
           )}
         </CardContent>
       </Card>
-      
-      <EditTeacherDialog
-        teacher={editingTeacher}
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        onSuccess={handleEditSuccess}
-      />
     </div>
   );
 };

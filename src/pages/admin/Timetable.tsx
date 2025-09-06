@@ -51,9 +51,9 @@ const Timetable = () => {
   const { toast } = useToast();
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const [classes, setClasses] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [teachers, setTeachers] = useState<any[]>([]);
+  const classes = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
+  const subjects = ['Mathematics', 'English', 'Science', 'History', 'Geography', 'Art', 'Physical Education', 'Music'];
+  const teachers = ['Mr. Smith', 'Ms. Johnson', 'Dr. Brown', 'Mrs. Davis', 'Mr. Wilson', 'Ms. Taylor'];
 
   useEffect(() => {
     fetchData();
@@ -63,37 +63,7 @@ const Timetable = () => {
     try {
       setLoading(true);
       
-      // Fetch classes
-      const { data: classData, error: classError } = await supabase
-        .from('classes')
-        .select('*')
-        .order('level', { ascending: true });
-      
-      if (classError) throw classError;
-      setClasses(classData || []);
-
-      // Fetch subjects
-      const { data: subjectData, error: subjectError } = await supabase
-        .from('subjects')
-        .select('*')
-        .eq('is_active', true)
-        .order('name', { ascending: true });
-      
-      if (subjectError) throw subjectError;
-      setSubjects(subjectData || []);
-
-      // Fetch teachers
-      const { data: teacherData, error: teacherError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .in('role', ['teacher', 'head_teacher'])
-        .eq('is_active', true)
-        .order('first_name', { ascending: true });
-      
-      if (teacherError) throw teacherError;
-      setTeachers(teacherData || []);
-      
-      // Mock time slots for now
+      // Mock time slots
       const mockTimeSlots: TimeSlot[] = [
         { id: '1', start_time: '08:00', end_time: '08:45', duration: 45 },
         { id: '2', start_time: '08:45', end_time: '09:30', duration: 45 },
@@ -105,8 +75,62 @@ const Timetable = () => {
         { id: '8', start_time: '14:30', end_time: '15:15', duration: 45 },
       ];
 
+      // Mock timetable entries
+      const mockEntries: TimetableEntry[] = [
+        {
+          id: '1',
+          day: 'Monday',
+          time_slot: '08:00 - 08:45',
+          subject: 'Mathematics',
+          teacher: 'Mr. Smith',
+          class: 'Grade 7',
+          room: 'Room 101',
+          duration: 45,
+        },
+        {
+          id: '2',
+          day: 'Monday',
+          time_slot: '08:45 - 09:30',
+          subject: 'English',
+          teacher: 'Ms. Johnson',
+          class: 'Grade 7',
+          room: 'Room 102',
+          duration: 45,
+        },
+        {
+          id: '3',
+          day: 'Monday',
+          time_slot: '09:45 - 10:30',
+          subject: 'Science',
+          teacher: 'Dr. Brown',
+          class: 'Grade 7',
+          room: 'Lab 1',
+          duration: 45,
+        },
+        {
+          id: '4',
+          day: 'Tuesday',
+          time_slot: '08:00 - 08:45',
+          subject: 'History',
+          teacher: 'Mrs. Davis',
+          class: 'Grade 7',
+          room: 'Room 103',
+          duration: 45,
+        },
+        {
+          id: '5',
+          day: 'Wednesday',
+          time_slot: '08:00 - 08:45',
+          subject: 'Mathematics',
+          teacher: 'Mr. Wilson',
+          class: 'Grade 6',
+          room: 'Room 201',
+          duration: 45,
+        },
+      ];
+
       setTimeSlots(mockTimeSlots);
-      setTimetableEntries([]);
+      setTimetableEntries(mockEntries);
     } catch (error: any) {
       console.error('Error fetching data:', error);
       toast({
@@ -182,20 +206,8 @@ const Timetable = () => {
   };
 
   const handleDeleteEntry = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this schedule entry?')) {
-      return;
-    }
-
     try {
       setTimetableEntries(prev => prev.filter(entry => entry.id !== id));
-      
-      // Log activity
-      await supabase.rpc('log_activity', {
-        p_activity_type: 'schedule_deleted',
-        p_description: 'Schedule entry deleted from timetable',
-        p_metadata: { schedule_id: id }
-      });
-
       toast({
         title: 'Success',
         description: 'Timetable entry deleted successfully',
@@ -302,7 +314,7 @@ const Timetable = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {classes.map((cls) => (
-                      <SelectItem key={cls.id} value={cls.name}>{cls.name}</SelectItem>
+                      <SelectItem key={cls} value={cls}>{cls}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -316,7 +328,7 @@ const Timetable = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {subjects.map((subject) => (
-                      <SelectItem key={subject.id} value={subject.name}>{subject.name}</SelectItem>
+                      <SelectItem key={subject} value={subject}>{subject}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -330,9 +342,7 @@ const Timetable = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {teachers.map((teacher) => (
-                      <SelectItem key={teacher.id} value={`${teacher.first_name} ${teacher.last_name}`}>
-                        {teacher.first_name} {teacher.last_name}
-                      </SelectItem>
+                      <SelectItem key={teacher} value={teacher}>{teacher}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -404,7 +414,7 @@ const Timetable = () => {
               <SelectContent>
                 <SelectItem value="all">All Classes</SelectItem>
                 {classes.map((cls) => (
-                  <SelectItem key={cls.id} value={cls.name}>{cls.name}</SelectItem>
+                  <SelectItem key={cls} value={cls}>{cls}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

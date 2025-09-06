@@ -36,32 +36,10 @@ const AdminDashboard = () => {
     pendingAdmissions: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     loadDashboardStats();
-    loadRecentActivities();
-    
-    // Set up real-time subscription for activities
-    const channel = supabase
-      .channel('activity-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'activity_log'
-        },
-        () => {
-          loadRecentActivities();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const loadDashboardStats = async () => {
@@ -114,29 +92,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const loadRecentActivities = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('activity_log')
-        .select(`
-          *,
-          profiles:user_id(first_name, last_name)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      setRecentActivities(data || []);
-    } catch (error) {
-      console.error('Error loading recent activities:', error);
-    }
-  };
-
-  const handleQuickSetup = () => {
-    // Navigate to the settings page for initial setup
-    window.location.href = '/admin/settings';
-  };
-
   const quickActions = [
     {
       title: 'Add New User',
@@ -151,20 +106,6 @@ const AdminDashboard = () => {
       icon: GraduationCap,
       action: () => window.location.href = '/admin/students',
       color: 'text-green-600',
-    },
-    {
-      title: 'Enroll Teacher',
-      description: 'Add teacher and assign subjects',
-      icon: Users,
-      action: () => window.location.href = '/admin/add-teacher',
-      color: 'text-blue-600',
-    },
-    {
-      title: 'Enroll Parent',
-      description: 'Register new parent/guardian',
-      icon: Users,
-      action: () => window.location.href = '/admin/add-parent',
-      color: 'text-indigo-600',
     },
     {
       title: 'Create Class',
@@ -182,6 +123,36 @@ const AdminDashboard = () => {
     },
   ];
 
+  const recentActivities = [
+    {
+      type: 'user_created',
+      message: 'New teacher account created for John Smith',
+      time: '2 hours ago',
+      icon: CheckCircle,
+      color: 'text-green-500',
+    },
+    {
+      type: 'student_enrolled',
+      message: '5 new students enrolled in Grade 3',
+      time: '4 hours ago',
+      icon: GraduationCap,
+      color: 'text-blue-500',
+    },
+    {
+      type: 'class_created',
+      message: 'New section added: Grade 2-C',
+      time: '1 day ago',
+      icon: Building,
+      color: 'text-purple-500',
+    },
+    {
+      type: 'pending',
+      message: '3 admission applications pending review',
+      time: '2 days ago',
+      icon: Clock,
+      color: 'text-orange-500',
+    },
+  ];
 
   if (loading) {
     return (
@@ -201,7 +172,7 @@ const AdminDashboard = () => {
             Welcome to School20 Administration Center
           </p>
         </div>
-        <Button className="gap-2" onClick={handleQuickSetup}>
+        <Button className="gap-2">
           <Plus className="h-4 w-4" />
           Quick Setup
         </Button>
@@ -297,7 +268,7 @@ const AdminDashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickActions.map((action, index) => (
               <Card
                 key={index}
@@ -329,57 +300,15 @@ const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentActivities.map((activity, index) => {
-              const getActivityIcon = (type: string) => {
-                switch (type) {
-                  case 'user_created': return CheckCircle;
-                  case 'student_enrolled': return GraduationCap;
-                  case 'student_status_changed': return Users;
-                  case 'role_changed': return AlertCircle;
-                  case 'teacher_deleted': return Users;
-                  case 'student_deleted': return GraduationCap;
-                  case 'parent_deleted': return Users;
-                  case 'subject_deleted': return BookOpen;
-                  case 'schedule_deleted': return Calendar;
-                  default: return Clock;
-                }
-              };
-              
-              const getActivityColor = (type: string) => {
-                switch (type) {
-                  case 'user_created': return 'text-green-500';
-                  case 'student_enrolled': return 'text-blue-500';
-                  case 'student_status_changed': return 'text-purple-500';
-                  case 'role_changed': return 'text-orange-500';
-                  case 'teacher_deleted': return 'text-red-500';
-                  case 'student_deleted': return 'text-red-500';
-                  case 'parent_deleted': return 'text-red-500';
-                  case 'subject_deleted': return 'text-red-500';
-                  case 'schedule_deleted': return 'text-red-500';
-                  default: return 'text-muted-foreground';
-                }
-              };
-
-              const ActivityIcon = getActivityIcon(activity.activity_type);
-              const timeAgo = new Date(activity.created_at).toLocaleString();
-
-              return (
-                <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
-                  <ActivityIcon className={`h-5 w-5 ${getActivityColor(activity.activity_type)}`} />
-                  <div className="flex-1">
-                    <p className="text-sm">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground">{timeAgo}</p>
-                  </div>
+            {recentActivities.map((activity, index) => (
+              <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                <activity.icon className={`h-5 w-5 ${activity.color}`} />
+                <div className="flex-1">
+                  <p className="text-sm">{activity.message}</p>
+                  <p className="text-xs text-muted-foreground">{activity.time}</p>
                 </div>
-              );
-            })}
-            
-            {recentActivities.length === 0 && (
-              <div className="text-center py-4 text-muted-foreground">
-                <Clock className="h-8 w-8 mx-auto mb-2" />
-                <p className="text-sm">No recent activities</p>
               </div>
-            )}
+            ))}
           </div>
         </CardContent>
       </Card>

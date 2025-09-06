@@ -40,70 +40,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   const fetchProfile = async (userId: string) => {
-    setLoading(true);
     try {
-      // Try to get existing profile
-      const { data: existing, error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-      // If any error other than "no rows found"
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
         return;
       }
 
-      // If profile exists, set it and return
-      if (existing) {
-        setProfile(existing as Profile);
-        return;
-      }
-
-      // No profile found – create a minimal one from auth metadata
-      const { data: authUserData, error: userErr } = await supabase.auth.getUser();
-      if (userErr) {
-        console.error('Error getting auth user for profile creation:', userErr);
-        setProfile(null);
-        return;
-      }
-
-      const authUser = authUserData.user;
-      if (!authUser) {
-        setProfile(null);
-        return;
-      }
-
-      const meta = (authUser.user_metadata || {}) as any;
-      const newProfile = {
-        user_id: authUser.id,
-        first_name: meta.first_name || meta.given_name || 'User',
-        last_name: meta.last_name || meta.family_name || '',
-        email: authUser.email || '',
-        role: (meta.role as UserRole) || 'student',
-        is_active: true,
-      };
-
-      const { data: inserted, error: insertErr } = await supabase
-        .from('profiles')
-        .insert(newProfile)
-        .select('*')
-        .single();
-
-      if (insertErr) {
-        console.error('Error creating profile:', insertErr);
-        setProfile(null);
-        return;
-      }
-
-      setProfile(inserted as Profile);
+      setProfile(data);
     } catch (error) {
-      console.error('Error fetching/creating profile:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching profile:', error);
     }
   };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

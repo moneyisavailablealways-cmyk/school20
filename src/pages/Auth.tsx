@@ -58,7 +58,7 @@ const Auth = () => {
       confirmPassword: '',
       firstName: '',
       lastName: '',
-      role: undefined,
+      role: 'student',
     },
   });
 

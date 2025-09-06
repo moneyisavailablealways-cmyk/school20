@@ -44,33 +44,6 @@ export type Database = {
         }
         Relationships: []
       }
-      activity_log: {
-        Row: {
-          activity_type: string
-          created_at: string | null
-          description: string
-          id: string
-          metadata: Json | null
-          user_id: string | null
-        }
-        Insert: {
-          activity_type: string
-          created_at?: string | null
-          description: string
-          id?: string
-          metadata?: Json | null
-          user_id?: string | null
-        }
-        Update: {
-          activity_type?: string
-          created_at?: string | null
-          description?: string
-          id?: string
-          metadata?: Json | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       announcements: {
         Row: {
           content: string
@@ -1007,7 +980,7 @@ export type Database = {
           phone?: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
-          user_id?: string
+          user_id: string
         }
         Update: {
           avatar_url?: string | null
@@ -1505,65 +1478,6 @@ export type Database = {
         }
         Relationships: []
       }
-      teacher_class_assignments: {
-        Row: {
-          academic_year_id: string | null
-          class_id: string
-          created_at: string | null
-          id: string
-          subject_id: string
-          teacher_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          academic_year_id?: string | null
-          class_id: string
-          created_at?: string | null
-          id?: string
-          subject_id: string
-          teacher_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          academic_year_id?: string | null
-          class_id?: string
-          created_at?: string | null
-          id?: string
-          subject_id?: string
-          teacher_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "teacher_class_assignments_academic_year_id_fkey"
-            columns: ["academic_year_id"]
-            isOneToOne: false
-            referencedRelation: "academic_years"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teacher_class_assignments_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "classes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teacher_class_assignments_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teacher_class_assignments_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       teacher_enrollments: {
         Row: {
           academic_year_id: string | null
@@ -1634,45 +1548,6 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_teacher_enrollments_teacher_id"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      teacher_subject_specializations: {
-        Row: {
-          created_at: string | null
-          id: string
-          subject_id: string
-          teacher_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          subject_id: string
-          teacher_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          subject_id?: string
-          teacher_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "teacher_subject_specializations_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teacher_subject_specializations_teacher_id_fkey"
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1816,15 +1691,6 @@ export type Database = {
       is_admin_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean
-      }
-      log_activity: {
-        Args: {
-          p_activity_type: string
-          p_description: string
-          p_metadata?: Json
-          p_user_id?: string
-        }
-        Returns: string
       }
     }
     Enums: {

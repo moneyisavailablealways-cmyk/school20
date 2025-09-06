@@ -60,23 +60,46 @@ serve(async (req) => {
     })
 
     if (createError) {
+      console.error('Auth user creation error:', createError)
       return new Response(
-        JSON.stringify({ error: createError.message }),
+        JSON.stringify({ error: `Auth user creation failed: ${createError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Update the profile with phone number if provided and get profile ID
+    if (!newUser?.user?.id) {
+      console.error('No user ID returned from auth creation')
+      return new Response(
+        JSON.stringify({ error: 'User creation failed - no user ID returned' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Create/update the profile record using the auth user ID as the primary key
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .update({ phone })
-      .eq('user_id', newUser.user.id)
+      .upsert({
+        id: newUser.user.id,  // Use auth user ID as profile ID
+        user_id: newUser.user.id,
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        phone: phone,
+        role: role
+      })
       .select('id')
       .single()
 
     if (profileError) {
+      console.error('Profile creation error:', profileError)
+      // Try to clean up the auth user if profile creation fails
+      try {
+        await supabase.auth.admin.deleteUser(newUser.user.id)
+      } catch (cleanupError) {
+        console.error('Failed to cleanup auth user:', cleanupError)
+      }
       return new Response(
-        JSON.stringify({ error: profileError.message }),
+        JSON.stringify({ error: `Profile creation failed: ${profileError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -98,8 +121,16 @@ serve(async (req) => {
         })
 
       if (teacherError) {
+        console.error('Teacher details creation error:', teacherError)
+        // Try to clean up profile and auth user if teacher creation fails
+        try {
+          await supabase.from('profiles').delete().eq('id', profileData.id)
+          await supabase.auth.admin.deleteUser(newUser.user.id)
+        } catch (cleanupError) {
+          console.error('Failed to cleanup after teacher error:', cleanupError)
+        }
         return new Response(
-          JSON.stringify({ error: teacherError.message }),
+          JSON.stringify({ error: `Teacher details creation failed: ${teacherError.message}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -122,8 +153,44 @@ serve(async (req) => {
         })
 
       if (parentError) {
+        console.error('Parent details creation error:', parentError)
+        // Try to clean up profile and auth user if parent creation fails
+        try {
+          await supabase.from('profiles').delete().eq('id', profileData.id)
+          await supabase.auth.admin.deleteUser(newUser.user.id)
+        } catch (cleanupError) {
+          console.error('Failed to cleanup after parent error:', cleanupError)
+        }
         return new Response(
-          JSON.stringify({ error: parentError.message }),
+          JSON.stringify({ error: `Parent details creation failed: ${parentError.message}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
+    // Create student details if role is student
+    if (role === 'student') {
+      const { error: studentError } = await supabase
+        .from('students')
+        .insert({
+          profile_id: profileData.id,
+          student_id: `STU${Date.now()}`, // Generate unique student ID
+          admission_date: new Date().toISOString().split('T')[0],
+          date_of_birth: new Date().toISOString().split('T')[0], // This should come from frontend
+          enrollment_status: 'active'
+        })
+
+      if (studentError) {
+        console.error('Student details creation error:', studentError)
+        // Try to clean up profile and auth user if student creation fails
+        try {
+          await supabase.from('profiles').delete().eq('id', profileData.id)
+          await supabase.auth.admin.deleteUser(newUser.user.id)
+        } catch (cleanupError) {
+          console.error('Failed to cleanup after student error:', cleanupError)
+        }
+        return new Response(
+          JSON.stringify({ error: `Student details creation failed: ${studentError.message}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }

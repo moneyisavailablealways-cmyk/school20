@@ -69,15 +69,7 @@ export type Database = {
           metadata?: Json | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "activity_log_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       announcements: {
         Row: {
@@ -1015,7 +1007,7 @@ export type Database = {
           phone?: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
-          user_id: string
+          user_id?: string
         }
         Update: {
           avatar_url?: string | null

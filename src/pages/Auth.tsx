@@ -58,7 +58,7 @@ const Auth = () => {
       confirmPassword: '',
       firstName: '',
       lastName: '',
-      role: 'admin','principal','head_teacher','teacher','bursa','librarian','student','parent',
+      role: undefined,
     },
   });
 

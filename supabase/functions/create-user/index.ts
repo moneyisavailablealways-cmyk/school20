@@ -20,7 +20,13 @@ serve(async (req) => {
     )
 
     // Verify the requesting user is an admin
-    const authHeader = req.headers.get('Authorization')!
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     const token = authHeader.replace('Bearer ', '')
     
     const { data: user, error: authError } = await supabase.auth.getUser(token)
@@ -45,7 +51,43 @@ serve(async (req) => {
       )
     }
 
-    const { email, password, firstName, lastName, phone, role, teacherDetails, parentDetails } = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    const { email, password, firstName, lastName, phone, role, teacherDetails, parentDetails, studentDetails } = body
+
+    // Basic validation
+    const missing: string[] = []
+    if (!email) missing.push('email')
+    if (!password) missing.push('password')
+    if (!firstName) missing.push('firstName')
+    if (!lastName) missing.push('lastName')
+    if (!role) missing.push('role')
+    if (missing.length) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields', details: missing }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const allowedRoles = ['teacher','head_teacher','parent','student']
+    if (!allowedRoles.includes(role)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid role '${role}'. Allowed: ${allowedRoles.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if ((role === 'teacher' || role === 'head_teacher') && !teacherDetails) {
+      return new Response(
+        JSON.stringify({ error: 'teacherDetails is required for teacher/head_teacher' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Create the user with admin privileges
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
@@ -61,9 +103,12 @@ serve(async (req) => {
 
     if (createError) {
       console.error('Auth user creation error:', createError)
+      const msg = createError.message || 'Unknown error creating auth user'
+      const lower = msg.toLowerCase()
+      const status = (lower.includes('already') || lower.includes('duplicate') || lower.includes('exists')) ? 409 : 400
       return new Response(
-        JSON.stringify({ error: `Auth user creation failed: ${createError.message}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Auth user creation failed', message: msg }),
+        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -129,9 +174,10 @@ serve(async (req) => {
         } catch (cleanupError) {
           console.error('Failed to cleanup after teacher error:', cleanupError)
         }
+        const status = teacherError.code === '23505' ? 409 : 400
         return new Response(
-          JSON.stringify({ error: `Teacher details creation failed: ${teacherError.message}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Teacher details creation failed', message: teacherError.message, code: teacherError.code }),
+          { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
     }
@@ -161,9 +207,10 @@ serve(async (req) => {
         } catch (cleanupError) {
           console.error('Failed to cleanup after parent error:', cleanupError)
         }
+        const status = parentError.code === '23505' ? 409 : 400
         return new Response(
-          JSON.stringify({ error: `Parent details creation failed: ${parentError.message}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Parent details creation failed', message: parentError.message, code: parentError.code }),
+          { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
     }
@@ -176,7 +223,7 @@ serve(async (req) => {
           profile_id: profileData.id,
           student_id: `STU${Date.now()}`, // Generate unique student ID
           admission_date: new Date().toISOString().split('T')[0],
-          date_of_birth: new Date().toISOString().split('T')[0], // This should come from frontend
+          date_of_birth: (studentDetails?.dateOfBirth ?? new Date().toISOString().split('T')[0]), // Prefer frontend-provided DOB
           enrollment_status: 'active'
         })
 
@@ -189,21 +236,23 @@ serve(async (req) => {
         } catch (cleanupError) {
           console.error('Failed to cleanup after student error:', cleanupError)
         }
+        const status = studentError.code === '23505' ? 409 : 400
         return new Response(
-          JSON.stringify({ error: `Student details creation failed: ${studentError.message}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Student details creation failed', message: studentError.message, code: studentError.code }),
+          { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, user: newUser.user }),
+      JSON.stringify({ success: true, user: newUser.user, profile_id: profileData.id, role }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Unhandled error in create-user function:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Internal server error', message: error?.message ?? String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

@@ -129,33 +129,19 @@ const UserManagement = () => {
 
   const createUser = async (data: CreateUserForm) => {
     try {
-      // Get the current user's session
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.access_token) {
-        throw new Error('No valid session found');
-      }
-
-      // Call our edge function to create the user
-      const response = await fetch(`https://lbserxuqjcxmuvucokyc.supabase.co/functions/v1/create-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.session.access_token}`,
-        },
-        body: JSON.stringify({
+      const { data: result, error } = await supabase.functions.invoke('create-user', {
+        body: {
           email: data.email,
           password: data.password,
           firstName: data.firstName,
           lastName: data.lastName,
           phone: data.phone,
           role: data.role,
-        }),
+        },
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create user');
+      if (error) {
+        throw new Error((error as any)?.message || 'Failed to create user');
       }
 
       toast({

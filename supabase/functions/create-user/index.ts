@@ -66,21 +66,66 @@ serve(async (req) => {
       )
     }
 
-    // Update the profile with phone number if provided and get profile ID
-    const { data: profileData, error: profileError } = await supabase
+    // Ensure a profile exists and get profile ID (insert if missing)
+    const { data: existingProfile, error: fetchProfileError } = await supabase
       .from('profiles')
-      .update({ phone })
-      .eq('user_id', newUser.user.id)
       .select('id')
-      .single()
+      .eq('user_id', newUser.user.id)
+      .maybeSingle()
 
-    if (profileError) {
+    if (fetchProfileError) {
       return new Response(
-        JSON.stringify({ error: profileError.message }),
+        JSON.stringify({ error: fetchProfileError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    let profileId = existingProfile?.id
+
+    if (!profileId) {
+      const { data: insertedProfile, error: insertProfileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: newUser.user.id,
+          first_name: firstName || newUser.user.user_metadata?.first_name || 'User',
+          last_name: lastName || newUser.user.user_metadata?.last_name || '',
+          email,
+          phone: phone || null,
+          role,
+          is_active: true,
+        })
+        .select('id')
+        .single()
+
+      if (insertProfileError) {
+        return new Response(
+          JSON.stringify({ error: insertProfileError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      profileId = insertedProfile.id
+    } else {
+      // Update existing profile with latest details
+      const { error: updateProfileError } = await supabase
+        .from('profiles')
+        .update({
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone: phone || null,
+          role,
+        })
+        .eq('id', existingProfile.id)
+
+      if (updateProfileError) {
+        return new Response(
+          JSON.stringify({ error: updateProfileError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
+    const profileData = { id: profileId }
     // Create teacher details if role is teacher or head_teacher
     if ((role === 'teacher' || role === 'head_teacher') && teacherDetails) {
       const { error: teacherError } = await supabase

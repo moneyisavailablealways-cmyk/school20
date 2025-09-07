@@ -28,6 +28,7 @@ import {
   Calendar,
   MapPin,
   Phone,
+  Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import StudentForm from './StudentForm';
@@ -177,6 +178,36 @@ const StudentManagement = () => {
     const age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     return monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate()) ? age - 1 : age;
+  };
+
+  const deleteStudent = async (studentId: string, studentName: string) => {
+    if (!confirm(`Are you sure you want to delete student "${studentName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', studentId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Student deleted successfully',
+      });
+
+      fetchStudents();
+      fetchEnrollments();
+    } catch (error: any) {
+      console.error('Error deleting student:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete student',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleStudentSaved = () => {
@@ -423,6 +454,13 @@ const StudentManagement = () => {
                             }}
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteStudent(student.id, `${student.profile?.first_name} ${student.profile?.last_name}`)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       </TableCell>

@@ -17,6 +17,7 @@ import {
   Mail,
   Calendar,
   Users,
+  Trash2,
 } from 'lucide-react';
 
 interface Teacher {
@@ -65,26 +66,30 @@ const TeacherManagement = () => {
     }
   };
 
-  const toggleTeacherStatus = async (userId: string, currentStatus: boolean) => {
+  const deleteTeacher = async (userId: string, teacherName: string) => {
+    if (!confirm(`Are you sure you want to delete teacher "${teacherName}"? This action cannot be undone.`)) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_active: !currentStatus })
+        .delete()
         .eq('user_id', userId);
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: `Teacher ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+        description: 'Teacher deleted successfully',
       });
 
       loadTeachers();
     } catch (error: any) {
-      console.error('Error updating teacher status:', error);
+      console.error('Error deleting teacher:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update teacher status',
+        description: 'Failed to delete teacher',
         variant: 'destructive',
       });
     }
@@ -267,10 +272,10 @@ const TeacherManagement = () => {
                       </Button>
                       <Button
                         size="sm"
-                        variant={teacher.is_active ? "destructive" : "default"}
-                        onClick={() => toggleTeacherStatus(teacher.user_id, teacher.is_active)}
+                        variant="destructive"
+                        onClick={() => deleteTeacher(teacher.user_id, `${teacher.first_name} ${teacher.last_name}`)}
                       >
-                        {teacher.is_active ? 'Deactivate' : 'Activate'}
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>

@@ -176,26 +176,30 @@ const UserManagement = () => {
     }
   };
 
-  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+  const deleteUser = async (userId: string, userEmail: string) => {
+    if (!confirm(`Are you sure you want to delete user "${userEmail}"? This action cannot be undone.`)) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_active: !currentStatus })
+        .delete()
         .eq('user_id', userId);
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: `User ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+        description: 'User deleted successfully',
       });
 
       loadUsers();
     } catch (error: any) {
-      console.error('Error updating user status:', error);
+      console.error('Error deleting user:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update user status',
+        description: 'Failed to delete user',
         variant: 'destructive',
       });
     }
@@ -485,10 +489,10 @@ const UserManagement = () => {
                         </Button>
                         <Button
                           size="sm"
-                          variant={user.is_active ? "destructive" : "default"}
-                          onClick={() => toggleUserStatus(user.user_id, user.is_active)}
+                          variant="destructive"
+                          onClick={() => deleteUser(user.user_id, user.email)}
                         >
-                          {user.is_active ? 'Deactivate' : 'Activate'}
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>

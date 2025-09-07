@@ -18,6 +18,7 @@ import {
   Calendar,
   Users,
   UserPlus,
+  Trash2,
 } from 'lucide-react';
 
 interface Parent {
@@ -77,26 +78,30 @@ const ParentManagement = () => {
     }
   };
 
-  const toggleParentStatus = async (userId: string, currentStatus: boolean) => {
+  const deleteParent = async (userId: string, parentName: string) => {
+    if (!confirm(`Are you sure you want to delete parent "${parentName}"? This action cannot be undone.`)) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_active: !currentStatus })
+        .delete()
         .eq('user_id', userId);
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: `Parent ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+        description: 'Parent deleted successfully',
       });
 
       loadParents();
     } catch (error: any) {
-      console.error('Error updating parent status:', error);
+      console.error('Error deleting parent:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update parent status',
+        description: 'Failed to delete parent',
         variant: 'destructive',
       });
     }
@@ -284,10 +289,10 @@ const ParentManagement = () => {
                       </Button>
                       <Button
                         size="sm"
-                        variant={parent.is_active ? "destructive" : "default"}
-                        onClick={() => toggleParentStatus(parent.user_id, parent.is_active)}
+                        variant="destructive"
+                        onClick={() => deleteParent(parent.user_id, `${parent.first_name} ${parent.last_name}`)}
                       >
-                        {parent.is_active ? 'Deactivate' : 'Activate'}
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>

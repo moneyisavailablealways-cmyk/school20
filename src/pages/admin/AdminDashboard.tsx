@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import QuickSetupDialog from '@/components/QuickSetupDialog';
 import {
   Users,
   GraduationCap,
@@ -15,6 +16,8 @@ import {
   CheckCircle,
   Clock,
   Plus,
+  Heart,
+  UserPlus,
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -36,6 +39,7 @@ const AdminDashboard = () => {
     pendingAdmissions: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [isQuickSetupOpen, setIsQuickSetupOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -101,9 +105,23 @@ const AdminDashboard = () => {
       color: 'text-blue-600',
     },
     {
+      title: 'Enroll Teacher',
+      description: 'Add new teacher to the system',
+      icon: GraduationCap,
+      action: () => window.location.href = '/admin/add-teacher',
+      color: 'text-blue-600',
+    },
+    {
+      title: 'Enroll Parent',
+      description: 'Add new parent account',
+      icon: Heart,
+      action: () => window.location.href = '/admin/add-parent',
+      color: 'text-pink-600',
+    },
+    {
       title: 'Enroll Student',
       description: 'Add new student to the system',
-      icon: GraduationCap,
+      icon: UserPlus,
       action: () => window.location.href = '/admin/students',
       color: 'text-green-600',
     },
@@ -172,7 +190,7 @@ const AdminDashboard = () => {
             Welcome to School20 Administration Center
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setIsQuickSetupOpen(true)}>
           <Plus className="h-4 w-4" />
           Quick Setup
         </Button>
@@ -268,7 +286,7 @@ const AdminDashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {quickActions.map((action, index) => (
               <Card
                 key={index}
@@ -312,6 +330,11 @@ const AdminDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      <QuickSetupDialog 
+        open={isQuickSetupOpen} 
+        onOpenChange={setIsQuickSetupOpen} 
+      />
     </div>
   );
 };

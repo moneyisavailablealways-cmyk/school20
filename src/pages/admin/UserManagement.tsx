@@ -141,7 +141,13 @@ const UserManagement = () => {
       });
 
       if (error) {
+        console.error('Edge function error:', error);
         throw new Error((error as any)?.message || 'Failed to create user');
+      }
+
+      if (result?.error) {
+        console.error('Function returned error:', result.error);
+        throw new Error(result.error);
       }
 
       toast({

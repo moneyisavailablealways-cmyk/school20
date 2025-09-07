@@ -60,6 +60,7 @@ serve(async (req) => {
     })
 
     if (createError) {
+      console.error('Error creating user:', createError)
       return new Response(
         JSON.stringify({ error: createError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -74,8 +75,9 @@ serve(async (req) => {
       .maybeSingle()
 
     if (fetchProfileError) {
+      console.error('Error fetching existing profile:', fetchProfileError)
       return new Response(
-        JSON.stringify({ error: fetchProfileError.message }),
+        JSON.stringify({ error: `Profile fetch error: ${fetchProfileError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -98,8 +100,9 @@ serve(async (req) => {
         .single()
 
       if (insertProfileError) {
+        console.error('Error inserting profile:', insertProfileError)
         return new Response(
-          JSON.stringify({ error: insertProfileError.message }),
+          JSON.stringify({ error: `Profile creation error: ${insertProfileError.message}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -118,8 +121,9 @@ serve(async (req) => {
         .eq('id', existingProfile.id)
 
       if (updateProfileError) {
+        console.error('Error updating profile:', updateProfileError)
         return new Response(
-          JSON.stringify({ error: updateProfileError.message }),
+          JSON.stringify({ error: `Profile update error: ${updateProfileError.message}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -180,8 +184,9 @@ serve(async (req) => {
     )
 
   } catch (error) {
+    console.error('Error in create-user function:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

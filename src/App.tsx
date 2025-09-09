@@ -25,6 +25,7 @@ import Timetable from "./pages/admin/Timetable";
 import Reports from "./pages/admin/Reports";
 import Communications from "./pages/admin/Communications";
 import Settings from "./pages/admin/Settings";
+import SubjectManagement from "./pages/admin/SubjectManagement";
 import StudentForm from "./pages/admin/StudentForm";
 import AddTeacher from "./pages/admin/AddTeacher";
 import AddParent from "./pages/admin/AddParent";
@@ -111,6 +112,7 @@ const App = () => (
               <Route path="parents" element={<ParentManagement />} />
               <Route path="add-parent" element={<AddParent />} />
               <Route path="students" element={<StudentManagement />} />
+              <Route path="subjects" element={<SubjectManagement />} />
               <Route path="academic" element={<AcademicStructure />} />
               <Route path="admissions" element={<Admissions />} />
               <Route path="timetable" element={<Timetable />} />

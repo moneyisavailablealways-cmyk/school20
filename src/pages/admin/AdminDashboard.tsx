@@ -40,10 +40,12 @@ const AdminDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [isQuickSetupOpen, setIsQuickSetupOpen] = useState(false);
+  const [recentActivities, setRecentActivities] = useState([]);
   const { toast } = useToast();
 
   useEffect(() => {
     loadDashboardStats();
+    loadRecentActivities();
   }, []);
 
   const loadDashboardStats = async () => {
@@ -96,6 +98,102 @@ const AdminDashboard = () => {
     }
   };
 
+  const loadRecentActivities = async () => {
+    try {
+      // Get recent student enrollments
+      const { data: enrollments } = await supabase
+        .from('student_enrollments')
+        .select(`
+          *,
+          student:students(
+            profile:profiles(first_name, last_name)
+          ),
+          class:classes(name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      // Get recent user creations
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      // Get recent subject additions
+      const { data: subjects } = await supabase
+        .from('subjects')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      const activities = [];
+
+      // Add enrollment activities
+      enrollments?.forEach(enrollment => {
+        if (enrollment.student?.profile) {
+          activities.push({
+            type: 'student_enrolled',
+            message: `${enrollment.student.profile.first_name} ${enrollment.student.profile.last_name} enrolled in ${enrollment.class?.name || 'a class'}`,
+            time: formatTimeAgo(enrollment.created_at),
+            icon: GraduationCap,
+            color: 'text-blue-500',
+          });
+        }
+      });
+
+      // Add user creation activities
+      profiles?.forEach(profile => {
+        if (profile.role !== 'student') {
+          activities.push({
+            type: 'user_created',
+            message: `New ${profile.role} account created for ${profile.first_name} ${profile.last_name}`,
+            time: formatTimeAgo(profile.created_at),
+            icon: CheckCircle,
+            color: 'text-green-500',
+          });
+        }
+      });
+
+      // Add subject activities
+      subjects?.forEach(subject => {
+        activities.push({
+          type: 'subject_created',
+          message: `New subject added: ${subject.name}`,
+          time: formatTimeAgo(subject.created_at),
+          icon: BookOpen,
+          color: 'text-purple-500',
+        });
+      });
+
+      setRecentActivities(activities.slice(0, 8));
+    } catch (error) {
+      console.error('Error loading recent activities:', error);
+      // Fallback to static data if there's an error
+      setRecentActivities([
+        {
+          type: 'info',
+          message: 'System is ready for new activities',
+          time: 'Now',
+          icon: CheckCircle,
+          color: 'text-green-500',
+        }
+      ]);
+    }
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+
   const quickActions = [
     {
       title: 'Add New User',
@@ -141,7 +239,7 @@ const AdminDashboard = () => {
     },
   ];
 
-  const recentActivities = [
+  const recentActivitiesStatic = [
     {
       type: 'user_created',
       message: 'New teacher account created for John Smith',
@@ -318,7 +416,7 @@ const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentActivities.map((activity, index) => (
+            {(recentActivities.length > 0 ? recentActivities : recentActivitiesStatic).map((activity, index) => (
               <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                 <activity.icon className={`h-5 w-5 ${activity.color}`} />
                 <div className="flex-1">

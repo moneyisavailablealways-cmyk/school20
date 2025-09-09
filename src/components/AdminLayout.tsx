@@ -64,6 +64,11 @@ const adminMenuItems = [
     icon: Building,
   },
   {
+    title: 'Subject Management',
+    url: '/admin/subjects',
+    icon: BookOpen,
+  },
+  {
     title: 'Admissions',
     url: '/admin/admissions',
     icon: UserPlus,

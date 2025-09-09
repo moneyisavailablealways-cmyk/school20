@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Save, X, User, GraduationCap, Contact, AlertTriangle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CalendarIcon, Save, X, User, GraduationCap, Contact, AlertTriangle, Users, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,11 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
   const [sections, setSections] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
+  const [parents, setParents] = useState<Profile[]>([]);
+  const [selectedParent, setSelectedParent] = useState<string>('');
+  const [relationshipType, setRelationshipType] = useState<string>('');
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
     student?.date_of_birth ? new Date(student.date_of_birth) : undefined
   );
@@ -62,8 +68,13 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
   useEffect(() => {
     fetchProfiles();
     fetchClasses();
+    fetchParents();
+    fetchSubjects();
     if (student?.profile_id) {
       setSelectedProfile(student.profile_id);
+    }
+    if (student?.id) {
+      fetchStudentRelationships();
     }
   }, [student]);
 
@@ -123,6 +134,68 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
         description: 'Failed to fetch sections',
         variant: 'destructive',
       });
+    }
+  };
+
+  const fetchParents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'parent')
+        .order('first_name');
+
+      if (error) throw error;
+      setParents(data || []);
+    } catch (error) {
+      console.error('Error fetching parents:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch parent profiles',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchSubjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('subjects')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setSubjects(data || []);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch subjects',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchStudentRelationships = async () => {
+    if (!student?.id) return;
+    
+    try {
+      // Fetch parent relationship
+      const { data: parentRel, error: parentError } = await supabase
+        .from('parent_student_relationships')
+        .select('parent_id, relationship_type')
+        .eq('student_id', student.id)
+        .maybeSingle();
+
+      if (parentError) throw parentError;
+      
+      if (parentRel) {
+        setSelectedParent(parentRel.parent_id);
+        setRelationshipType(parentRel.relationship_type);
+      }
+    } catch (error) {
+      console.error('Error fetching student relationships:', error);
     }
   };
 
@@ -186,6 +259,29 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
 
         if (error) throw error;
 
+        // Update or create parent-student relationship
+        if (selectedParent && relationshipType) {
+          // First, delete existing relationship
+          await supabase
+            .from('parent_student_relationships')
+            .delete()
+            .eq('student_id', student.id);
+
+          // Then create new relationship
+          const { error: relationshipError } = await supabase
+            .from('parent_student_relationships')
+            .insert([{
+              parent_id: selectedParent,
+              student_id: student.id,
+              relationship_type: relationshipType,
+              is_primary_contact: true
+            }]);
+
+          if (relationshipError) {
+            console.error('Error updating parent relationship:', relationshipError);
+          }
+        }
+
         toast({
           title: 'Success',
           description: 'Student updated successfully',
@@ -215,6 +311,23 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
           if (enrollmentError) {
             console.error('Error creating enrollment:', enrollmentError);
             // Don't fail the whole process for enrollment error
+          }
+        }
+
+        // Create parent-student relationship if parent is selected
+        if (selectedParent && relationshipType && newStudent) {
+          const { error: relationshipError } = await supabase
+            .from('parent_student_relationships')
+            .insert([{
+              parent_id: selectedParent,
+              student_id: newStudent.id,
+              relationship_type: relationshipType,
+              is_primary_contact: true
+            }]);
+
+          if (relationshipError) {
+            console.error('Error creating parent relationship:', relationshipError);
+            // Don't fail the whole process for relationship error
           }
         }
 
@@ -339,6 +452,65 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
                   rows={3}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Parent/Guardian Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="parent">Parent/Guardian</Label>
+                  <Select value={selectedParent} onValueChange={setSelectedParent}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a parent/guardian..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {parents.map((parent) => (
+                        <SelectItem key={parent.id} value={parent.id}>
+                          {parent.first_name} {parent.last_name} - {parent.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="relationship">Relationship</Label>
+                  <Select value={relationshipType} onValueChange={setRelationshipType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select relationship..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="father">Father</SelectItem>
+                      <SelectItem value="mother">Mother</SelectItem>
+                      <SelectItem value="guardian">Guardian</SelectItem>
+                      <SelectItem value="grandfather">Grandfather</SelectItem>
+                      <SelectItem value="grandmother">Grandmother</SelectItem>
+                      <SelectItem value="uncle">Uncle</SelectItem>
+                      <SelectItem value="aunt">Aunt</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {selectedParent && (
+                <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                  Selected Parent: {parents.find(p => p.id === selectedParent)?.first_name} {parents.find(p => p.id === selectedParent)?.last_name}
+                  {relationshipType && (
+                    <>
+                      <br />
+                      Relationship: {relationshipType.charAt(0).toUpperCase() + relationshipType.slice(1)}
+                    </>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -473,6 +645,54 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
                     Choose a section within the selected class
                   </p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subjects">Subjects</Label>
+                <Card className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {subjects.map((subject) => (
+                      <div key={subject.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={subject.id}
+                          checked={selectedSubjects.includes(subject.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedSubjects(prev => [...prev, subject.id]);
+                            } else {
+                              setSelectedSubjects(prev => prev.filter(id => id !== subject.id));
+                            }
+                          }}
+                        />
+                        <Label
+                          htmlFor={subject.id}
+                          className="text-sm font-normal cursor-pointer flex items-center gap-2"
+                        >
+                          <BookOpen className="h-4 w-4" />
+                          {subject.name}
+                          {subject.code && (
+                            <span className="text-muted-foreground">({subject.code})</span>
+                          )}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {subjects.length === 0 && (
+                    <p className="text-muted-foreground text-sm text-center py-4">
+                      No subjects available. Please contact administrator to add subjects.
+                    </p>
+                  )}
+                  {selectedSubjects.length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-sm text-muted-foreground">
+                        Selected: {selectedSubjects.length} subject{selectedSubjects.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  )}
+                </Card>
+                <p className="text-xs text-muted-foreground">
+                  Select the subjects this student will be enrolled in
+                </p>
               </div>
             </CardContent>
           </Card>

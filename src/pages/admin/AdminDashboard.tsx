@@ -100,73 +100,52 @@ const AdminDashboard = () => {
 
   const loadRecentActivities = async () => {
     try {
-      // Get recent student enrollments
-      const { data: enrollments } = await supabase
-        .from('student_enrollments')
-        .select(`
-          *,
-          student:students(
-            profile:profiles(first_name, last_name)
-          ),
-          class:classes(name)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      // Get recent user creations
-      const { data: profiles } = await supabase
-        .from('profiles')
+      // Get activities from the activity_log table
+      const { data: activities, error } = await supabase
+        .from('activity_log')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(8);
 
-      // Get recent subject additions
-      const { data: subjects } = await supabase
-        .from('subjects')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(3);
+      if (error) throw error;
 
-      const activities = [];
+      const mappedActivities = activities?.map(activity => {
+        let icon = CheckCircle;
+        let color = 'text-green-500';
 
-      // Add enrollment activities
-      enrollments?.forEach(enrollment => {
-        if (enrollment.student?.profile) {
-          activities.push({
-            type: 'student_enrolled',
-            message: `${enrollment.student.profile.first_name} ${enrollment.student.profile.last_name} enrolled in ${enrollment.class?.name || 'a class'}`,
-            time: formatTimeAgo(enrollment.created_at),
-            icon: GraduationCap,
-            color: 'text-blue-500',
-          });
+        switch (activity.activity_type) {
+          case 'user_created':
+            icon = UserPlus;
+            color = 'text-green-500';
+            break;
+          case 'student_enrolled':
+          case 'enrollment_created':
+            icon = GraduationCap;
+            color = 'text-blue-500';
+            break;
+          case 'subject_created':
+            icon = BookOpen;
+            color = 'text-purple-500';
+            break;
+          case 'role_changed':
+            icon = AlertCircle;
+            color = 'text-orange-500';
+            break;
+          default:
+            icon = CheckCircle;
+            color = 'text-green-500';
         }
-      });
 
-      // Add user creation activities
-      profiles?.forEach(profile => {
-        if (profile.role !== 'student') {
-          activities.push({
-            type: 'user_created',
-            message: `New ${profile.role} account created for ${profile.first_name} ${profile.last_name}`,
-            time: formatTimeAgo(profile.created_at),
-            icon: CheckCircle,
-            color: 'text-green-500',
-          });
-        }
-      });
+        return {
+          type: activity.activity_type,
+          message: activity.description,
+          time: formatTimeAgo(activity.created_at),
+          icon,
+          color,
+        };
+      }) || [];
 
-      // Add subject activities
-      subjects?.forEach(subject => {
-        activities.push({
-          type: 'subject_created',
-          message: `New subject added: ${subject.name}`,
-          time: formatTimeAgo(subject.created_at),
-          icon: BookOpen,
-          color: 'text-purple-500',
-        });
-      });
-
-      setRecentActivities(activities.slice(0, 8));
+      setRecentActivities(mappedActivities);
     } catch (error) {
       console.error('Error loading recent activities:', error);
       // Fallback to static data if there's an error

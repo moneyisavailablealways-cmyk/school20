@@ -44,6 +44,33 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_log: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string
+          id: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           content: string
@@ -980,7 +1007,7 @@ export type Database = {
           phone?: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
-          user_id: string
+          user_id?: string
         }
         Update: {
           avatar_url?: string | null
@@ -1691,6 +1718,15 @@ export type Database = {
       is_admin_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      log_activity: {
+        Args: {
+          p_activity_type: string
+          p_description: string
+          p_metadata?: Json
+          p_user_id?: string
+        }
+        Returns: string
       }
     }
     Enums: {

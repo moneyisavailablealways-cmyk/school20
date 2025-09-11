@@ -84,7 +84,7 @@ const AcademicStructure = () => {
   const [classForm, setClassForm] = useState({
     name: '',
     level: '',
-    max_students: '40',
+    max_students: '200',
     academic_year_id: '',
   });
   

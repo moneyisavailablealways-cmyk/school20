@@ -22,6 +22,7 @@ import {
   Save, 
   X,
   GraduationCap,
+  Heart,
   Users
 } from 'lucide-react';
 
@@ -72,6 +73,40 @@ const StudentProfile = () => {
       return data;
     },
     enabled: !!profile?.id
+  });
+
+  const { data: medicalInfo } = useQuery({
+    queryKey: ['student-medical', studentData?.id],
+    queryFn: async () => {
+      if (!studentData?.id) return null;
+      
+      const { data, error } = await supabase
+        .from('student_medical_info')
+        .select('*')
+        .eq('student_id', studentData.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!studentData?.id
+  });
+
+  const { data: emergencyContacts } = useQuery({
+    queryKey: ['student-emergency-contacts', studentData?.id],
+    queryFn: async () => {
+      if (!studentData?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('student_emergency_contacts')
+        .select('*')
+        .eq('student_id', studentData.id)
+        .order('is_primary_contact', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!studentData?.id
   });
 
   const { data: parentRelationships } = useQuery({
@@ -462,56 +497,93 @@ const StudentProfile = () => {
         </Card>
       )}
 
-      {/* Emergency Contact */}
-      {studentData?.emergency_contact_name && (
+      {/* Emergency Contacts */}
+      {emergencyContacts && emergencyContacts.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5" />
-              Emergency Contact
+              Emergency Contacts
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Emergency Contact Name</Label>
-                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span>{studentData.emergency_contact_name}</span>
+          <CardContent className="space-y-4">
+            {emergencyContacts.map((contact, index) => (
+              <div key={contact.id} className="p-4 border rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold">{contact.contact_name}</h4>
+                  <div className="flex items-center gap-2">
+                    {contact.contact_relationship && (
+                      <Badge variant="outline">{contact.contact_relationship}</Badge>
+                    )}
+                    {contact.is_primary_contact && (
+                      <Badge variant="default">Primary Contact</Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Phone className="h-4 w-4" />
+                  <span>{contact.contact_phone}</span>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label>Emergency Contact Phone</Label>
-                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{studentData.emergency_contact_phone}</span>
-                </div>
-              </div>
-            </div>
+            ))}
           </CardContent>
         </Card>
       )}
 
       {/* Medical Information */}
-      {studentData?.medical_conditions && (
+      {medicalInfo && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+              <Heart className="h-5 w-5" />
               Medical Information
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label>Medical Conditions</Label>
-              <div className="p-3 border rounded-md bg-muted/50">
-                <span>{studentData.medical_conditions}</span>
+          <CardContent className="space-y-4">
+            {medicalInfo.medical_conditions && (
+              <div className="space-y-2">
+                <Label>Medical Conditions</Label>
+                <div className="p-2 border rounded-md bg-muted/50">
+                  <span>{medicalInfo.medical_conditions}</span>
+                </div>
               </div>
-            </div>
+            )}
+            {medicalInfo.allergies && (
+              <div className="space-y-2">
+                <Label>Allergies</Label>
+                <div className="p-2 border rounded-md bg-muted/50">
+                  <span>{medicalInfo.allergies}</span>
+                </div>
+              </div>
+            )}
+            {medicalInfo.medications && (
+              <div className="space-y-2">
+                <Label>Current Medications</Label>
+                <div className="p-2 border rounded-md bg-muted/50">
+                  <span>{medicalInfo.medications}</span>
+                </div>
+              </div>
+            )}
+            {medicalInfo.dietary_requirements && (
+              <div className="space-y-2">
+                <Label>Dietary Requirements</Label>
+                <div className="p-2 border rounded-md bg-muted/50">
+                  <span>{medicalInfo.dietary_requirements}</span>
+                </div>
+              </div>
+            )}
+            {medicalInfo.special_needs && (
+              <div className="space-y-2">
+                <Label>Special Needs</Label>
+                <div className="p-2 border rounded-md bg-muted/50">
+                  <span>{medicalInfo.special_needs}</span>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
+
     </div>
   );
 };

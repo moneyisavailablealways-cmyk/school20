@@ -41,9 +41,6 @@ interface Student {
   admission_date: string;
   gender: string | null;
   address: string | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
-  medical_conditions: string | null;
   enrollment_status: string;
   profile_id: string | null;
   profile?: {
@@ -306,7 +303,7 @@ const StudentManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {students.filter(s => !s.profile || !s.emergency_contact_phone).length}
+              {students.filter(s => !s.profile).length}
             </div>
             <p className="text-xs text-muted-foreground">Missing info</p>
           </CardContent>
@@ -422,11 +419,6 @@ const StudentManagement = () => {
                             <div className="flex items-center gap-1 text-sm">
                               <Phone className="h-3 w-3" />
                               {student.profile.phone}
-                            </div>
-                          )}
-                          {student.emergency_contact_phone && (
-                            <div className="text-xs text-muted-foreground">
-                              Emergency: {student.emergency_contact_phone}
                             </div>
                           )}
                         </div>

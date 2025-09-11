@@ -13,9 +13,6 @@ interface Student {
   date_of_birth: string;
   gender: string;
   address: string;
-  medical_conditions: string;
-  emergency_contact_name: string;
-  emergency_contact_phone: string;
   enrollment_status: string;
   profiles: {
     first_name: string;
@@ -26,6 +23,19 @@ interface Student {
   student_enrollments: {
     class: string;
     status: string;
+  }[];
+  medical_info?: {
+    medical_conditions?: string;
+    allergies?: string;
+    medications?: string;
+    dietary_requirements?: string;
+    special_needs?: string;
+  };
+  emergency_contacts?: {
+    contact_name: string;
+    contact_phone: string;
+    contact_relationship?: string;
+    is_primary_contact: boolean;
   }[];
 }
 
@@ -42,7 +52,8 @@ const MyChildren = () => {
     if (!profile?.id) return;
     
     try {
-      const { data, error } = await supabase
+      // First get the student relationships
+      const { data: relationshipsData, error: relationshipsError } = await supabase
         .from('parent_student_relationships')
         .select(`
           student_id,
@@ -54,9 +65,6 @@ const MyChildren = () => {
             date_of_birth,
             gender,
             address,
-            medical_conditions,
-            emergency_contact_name,
-            emergency_contact_phone,
             enrollment_status,
             profiles!inner (
               first_name,
@@ -74,18 +82,40 @@ const MyChildren = () => {
         `)
         .eq('parent_id', profile.id);
 
-      if (error) throw error;
+      if (relationshipsError) throw relationshipsError;
 
-      const childrenData = data?.map(rel => rel.students).filter(Boolean) || [];
-      // Transform the data to match the expected Student type
-      const transformedChildren = childrenData.map(child => ({
-        ...child,
-        student_enrollments: child.student_enrollments?.map(enrollment => ({
-          class: enrollment.classes?.name || 'N/A',
-          status: enrollment.status
-        })) || []
-      }));
-      setChildren(transformedChildren as Student[]);
+      const childrenData = relationshipsData?.map(rel => rel.students).filter(Boolean) || [];
+      
+      // Get medical info and emergency contacts for each child
+      const enrichedChildren = await Promise.all(
+        childrenData.map(async (child) => {
+          // Fetch medical info
+          const { data: medicalData } = await supabase
+            .from('student_medical_info')
+            .select('*')
+            .eq('student_id', child.id)
+            .maybeSingle();
+
+          // Fetch emergency contacts  
+          const { data: emergencyData } = await supabase
+            .from('student_emergency_contacts')
+            .select('*')
+            .eq('student_id', child.id)
+            .order('is_primary_contact', { ascending: false });
+
+          return {
+            ...child,
+            student_enrollments: child.student_enrollments?.map(enrollment => ({
+              class: enrollment.classes?.name || 'N/A',
+              status: enrollment.status
+            })) || [],
+            medical_info: medicalData || undefined,
+            emergency_contacts: emergencyData || []
+          };
+        })
+      );
+
+      setChildren(enrichedChildren as Student[]);
     } catch (error) {
       console.error('Error fetching children:', error);
       toast.error('Failed to load children information');
@@ -200,27 +230,44 @@ const MyChildren = () => {
                   )}
                 </div>
 
-                {child.medical_conditions && (
+                {child.medical_info && (
                   <div className="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
                     <div className="flex items-center gap-2 mb-1">
                       <Heart className="h-4 w-4 text-orange-600" />
-                      <span className="font-medium text-orange-900 dark:text-orange-100">Medical Conditions</span>
+                      <span className="font-medium text-orange-900 dark:text-orange-100">Medical Information</span>
                     </div>
-                    <p className="text-sm text-orange-800 dark:text-orange-200">
-                      {child.medical_conditions}
-                    </p>
+                    <div className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
+                      {child.medical_info.medical_conditions && (
+                        <p><strong>Conditions:</strong> {child.medical_info.medical_conditions}</p>
+                      )}
+                      {child.medical_info.allergies && (
+                        <p><strong>Allergies:</strong> {child.medical_info.allergies}</p>
+                      )}
+                      {child.medical_info.medications && (
+                        <p><strong>Medications:</strong> {child.medical_info.medications}</p>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {child.emergency_contact_name && (
+                {child.emergency_contacts && child.emergency_contacts.length > 0 && (
                   <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-2">
                       <Phone className="h-4 w-4 text-blue-600" />
-                      <span className="font-medium text-blue-900 dark:text-blue-100">Emergency Contact</span>
+                      <span className="font-medium text-blue-900 dark:text-blue-100">Emergency Contacts</span>
                     </div>
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      {child.emergency_contact_name} - {child.emergency_contact_phone}
-                    </p>
+                    <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                      {child.emergency_contacts.map((contact, index) => (
+                        <p key={index}>
+                          <strong>{contact.contact_name}</strong>
+                          {contact.contact_relationship && ` (${contact.contact_relationship})`}
+                          : {contact.contact_phone}
+                          {contact.is_primary_contact && (
+                            <span className="ml-2 text-xs bg-blue-200 dark:bg-blue-800 px-1 rounded">Primary</span>
+                          )}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 )}
 

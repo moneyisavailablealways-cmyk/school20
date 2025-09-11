@@ -1224,6 +1224,42 @@ export type Database = {
           },
         ]
       }
+      student_emergency_contacts: {
+        Row: {
+          can_pickup: boolean | null
+          contact_name: string
+          contact_phone: string
+          contact_relationship: string | null
+          created_at: string
+          id: string
+          is_primary_contact: boolean | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          can_pickup?: boolean | null
+          contact_name: string
+          contact_phone: string
+          contact_relationship?: string | null
+          created_at?: string
+          id?: string
+          is_primary_contact?: boolean | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          can_pickup?: boolean | null
+          contact_name?: string
+          contact_phone?: string
+          contact_relationship?: string | null
+          created_at?: string
+          id?: string
+          is_primary_contact?: boolean | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       student_enrollments: {
         Row: {
           academic_year_id: string | null
@@ -1346,6 +1382,42 @@ export type Database = {
           },
         ]
       }
+      student_medical_info: {
+        Row: {
+          allergies: string | null
+          created_at: string
+          dietary_requirements: string | null
+          id: string
+          medical_conditions: string | null
+          medications: string | null
+          special_needs: string | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          allergies?: string | null
+          created_at?: string
+          dietary_requirements?: string | null
+          id?: string
+          medical_conditions?: string | null
+          medications?: string | null
+          special_needs?: string | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          allergies?: string | null
+          created_at?: string
+          dietary_requirements?: string | null
+          id?: string
+          medical_conditions?: string | null
+          medications?: string | null
+          special_needs?: string | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       student_scholarships: {
         Row: {
           academic_year_id: string | null
@@ -1414,12 +1486,9 @@ export type Database = {
           admission_number: string | null
           created_at: string | null
           date_of_birth: string
-          emergency_contact_name: string | null
-          emergency_contact_phone: string | null
           enrollment_status: string | null
           gender: string | null
           id: string
-          medical_conditions: string | null
           profile_id: string | null
           student_id: string
           updated_at: string | null
@@ -1430,12 +1499,9 @@ export type Database = {
           admission_number?: string | null
           created_at?: string | null
           date_of_birth: string
-          emergency_contact_name?: string | null
-          emergency_contact_phone?: string | null
           enrollment_status?: string | null
           gender?: string | null
           id?: string
-          medical_conditions?: string | null
           profile_id?: string | null
           student_id: string
           updated_at?: string | null
@@ -1446,12 +1512,9 @@ export type Database = {
           admission_number?: string | null
           created_at?: string | null
           date_of_birth?: string
-          emergency_contact_name?: string | null
-          emergency_contact_phone?: string | null
           enrollment_status?: string | null
           gender?: string | null
           id?: string
-          medical_conditions?: string | null
           profile_id?: string | null
           student_id?: string
           updated_at?: string | null

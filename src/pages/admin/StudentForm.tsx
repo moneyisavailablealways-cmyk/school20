@@ -57,11 +57,26 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
     admission_number: student?.admission_number || '',
     gender: student?.gender || '',
     address: student?.address || '',
-    emergency_contact_name: student?.emergency_contact_name || '',
-    emergency_contact_phone: student?.emergency_contact_phone || '',
-    medical_conditions: student?.medical_conditions || '',
     enrollment_status: student?.enrollment_status || 'active',
   });
+
+  // Medical information form data
+  const [medicalData, setMedicalData] = useState({
+    medical_conditions: '',
+    allergies: '',
+    medications: '',
+    dietary_requirements: '',
+    special_needs: '',
+  });
+
+  // Emergency contact form data  
+  const [emergencyContacts, setEmergencyContacts] = useState([{
+    contact_name: '',
+    contact_phone: '',
+    contact_relationship: '',
+    is_primary_contact: true,
+    can_pickup: true,
+  }]);
 
   const { toast } = useToast();
 
@@ -75,6 +90,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
     }
     if (student?.id) {
       fetchStudentRelationships();
+      fetchStudentMedicalInfo();
+      fetchStudentEmergencyContacts();
     }
   }, [student]);
 
@@ -199,6 +216,58 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
     }
   };
 
+  const fetchStudentMedicalInfo = async () => {
+    if (!student?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('student_medical_info')
+        .select('*')
+        .eq('student_id', student.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data) {
+        setMedicalData({
+          medical_conditions: data.medical_conditions || '',
+          allergies: data.allergies || '',
+          medications: data.medications || '',
+          dietary_requirements: data.dietary_requirements || '',
+          special_needs: data.special_needs || '',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching medical info:', error);
+    }
+  };
+
+  const fetchStudentEmergencyContacts = async () => {
+    if (!student?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('student_emergency_contacts')
+        .select('*')
+        .eq('student_id', student.id)
+        .order('is_primary_contact', { ascending: false });
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setEmergencyContacts(data.map(contact => ({
+          contact_name: contact.contact_name,
+          contact_phone: contact.contact_phone,
+          contact_relationship: contact.contact_relationship || '',
+          is_primary_contact: contact.is_primary_contact,
+          can_pickup: contact.can_pickup,
+        })));
+      }
+    } catch (error) {
+      console.error('Error fetching emergency contacts:', error);
+    }
+  };
+
   const generateStudentId = () => {
     const year = new Date().getFullYear();
     const randomNum = Math.floor(Math.random() * 9000) + 1000;
@@ -259,15 +328,56 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
 
         if (error) throw error;
 
+        // Update medical information
+        const hasMedicalInfo = Object.values(medicalData).some(value => value.trim() !== '');
+        if (hasMedicalInfo) {
+          const { error: medicalError } = await supabase
+            .from('student_medical_info')
+            .upsert({
+              student_id: student.id,
+              ...medicalData
+            }, { 
+              onConflict: 'student_id' 
+            });
+
+          if (medicalError) {
+            console.error('Error updating medical info:', medicalError);
+          }
+        }
+
+        // Update emergency contacts
+        // First delete existing contacts
+        await supabase
+          .from('student_emergency_contacts')
+          .delete()
+          .eq('student_id', student.id);
+
+        // Insert new contacts
+        const validContacts = emergencyContacts.filter(contact => 
+          contact.contact_name.trim() && contact.contact_phone.trim()
+        );
+        if (validContacts.length > 0) {
+          const contactsToInsert = validContacts.map(contact => ({
+            student_id: student.id,
+            ...contact
+          }));
+
+          const { error: contactsError } = await supabase
+            .from('student_emergency_contacts')
+            .insert(contactsToInsert);
+
+          if (contactsError) {
+            console.error('Error updating emergency contacts:', contactsError);
+          }
+        }
+
         // Update or create parent-student relationship
         if (selectedParent && relationshipType) {
-          // First, delete existing relationship
           await supabase
             .from('parent_student_relationships')
             .delete()
             .eq('student_id', student.id);
 
-          // Then create new relationship
           const { error: relationshipError } = await supabase
             .from('parent_student_relationships')
             .insert([{
@@ -296,6 +406,40 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
 
         if (error) throw error;
 
+        // Save medical information if provided
+        const hasMedicalInfo = Object.values(medicalData).some(value => value.trim() !== '');
+        if (hasMedicalInfo && newStudent) {
+          const { error: medicalError } = await supabase
+            .from('student_medical_info')
+            .insert([{
+              student_id: newStudent.id,
+              ...medicalData
+            }]);
+
+          if (medicalError) {
+            console.error('Error saving medical info:', medicalError);
+          }
+        }
+
+        // Save emergency contacts if provided
+        const validContacts = emergencyContacts.filter(contact => 
+          contact.contact_name.trim() && contact.contact_phone.trim()
+        );
+        if (validContacts.length > 0 && newStudent) {
+          const contactsToInsert = validContacts.map(contact => ({
+            student_id: newStudent.id,
+            ...contact
+          }));
+
+          const { error: contactsError } = await supabase
+            .from('student_emergency_contacts')
+            .insert(contactsToInsert);
+
+          if (contactsError) {
+            console.error('Error saving emergency contacts:', contactsError);
+          }
+        }
+
         // Create student enrollment if class is selected
         if (selectedClass && newStudent) {
           const { error: enrollmentError } = await supabase
@@ -310,7 +454,6 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
 
           if (enrollmentError) {
             console.error('Error creating enrollment:', enrollmentError);
-            // Don't fail the whole process for enrollment error
           }
         }
 
@@ -327,7 +470,6 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
 
           if (relationshipError) {
             console.error('Error creating parent relationship:', relationshipError);
-            // Don't fail the whole process for relationship error
           }
         }
 
@@ -706,27 +848,104 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
                 Emergency Contact
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="emergency_contact_name">Emergency Contact Name</Label>
-                  <Input
-                    id="emergency_contact_name"
-                    placeholder="Enter contact name"
-                    value={formData.emergency_contact_name}
-                    onChange={(e) => handleInputChange('emergency_contact_name', e.target.value)}
-                  />
-                </div>
+            <CardContent>
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Emergency Contacts</h3>
+                {emergencyContacts.map((contact, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Contact {index + 1}</span>
+                      {emergencyContacts.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newContacts = emergencyContacts.filter((_, i) => i !== index);
+                            setEmergencyContacts(newContacts);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Contact Name *</Label>
+                        <Input
+                          placeholder="Enter contact name"
+                          value={contact.contact_name}
+                          onChange={(e) => {
+                            const newContacts = [...emergencyContacts];
+                            newContacts[index].contact_name = e.target.value;
+                            setEmergencyContacts(newContacts);
+                          }}
+                        />
+                      </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="emergency_contact_phone">Emergency Contact Phone</Label>
-                  <Input
-                    id="emergency_contact_phone"
-                    placeholder="Enter phone number"
-                    value={formData.emergency_contact_phone}
-                    onChange={(e) => handleInputChange('emergency_contact_phone', e.target.value)}
-                  />
-                </div>
+                      <div className="space-y-2">
+                        <Label>Contact Phone *</Label>
+                        <Input
+                          placeholder="Enter phone number"
+                          value={contact.contact_phone}
+                          onChange={(e) => {
+                            const newContacts = [...emergencyContacts];
+                            newContacts[index].contact_phone = e.target.value;
+                            setEmergencyContacts(newContacts);
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Relationship</Label>
+                        <Input
+                          placeholder="e.g., Parent, Guardian, Uncle"
+                          value={contact.contact_relationship}
+                          onChange={(e) => {
+                            const newContacts = [...emergencyContacts];
+                            newContacts[index].contact_relationship = e.target.value;
+                            setEmergencyContacts(newContacts);
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`primary-${index}`}
+                            checked={contact.is_primary_contact}
+                            onCheckedChange={(checked) => {
+                              const newContacts = emergencyContacts.map((c, i) => ({
+                                ...c,
+                                is_primary_contact: i === index ? !!checked : false
+                              }));
+                              setEmergencyContacts(newContacts);
+                            }}
+                          />
+                          <Label htmlFor={`primary-${index}`}>Primary contact</Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEmergencyContacts([...emergencyContacts, {
+                      contact_name: '',
+                      contact_phone: '',
+                      contact_relationship: '',
+                      is_primary_contact: false,
+                      can_pickup: true,
+                    }]);
+                  }}
+                  className="w-full"
+                >
+                  Add Another Contact
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -739,18 +958,56 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="medical_conditions">Medical Conditions / Allergies</Label>
-                <Textarea
-                  id="medical_conditions"
-                  placeholder="Enter any medical conditions, allergies, or special requirements..."
-                  value={formData.medical_conditions}
-                  onChange={(e) => handleInputChange('medical_conditions', e.target.value)}
-                  rows={4}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Include any medical conditions, allergies, medications, or special care requirements
-                </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Medical Conditions</Label>
+                  <Textarea
+                    placeholder="Enter any medical conditions..."
+                    value={medicalData.medical_conditions}
+                    onChange={(e) => setMedicalData({...medicalData, medical_conditions: e.target.value})}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Allergies</Label>
+                  <Textarea
+                    placeholder="Enter any allergies..."
+                    value={medicalData.allergies}
+                    onChange={(e) => setMedicalData({...medicalData, allergies: e.target.value})}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Current Medications</Label>
+                  <Textarea
+                    placeholder="Enter any current medications..."
+                    value={medicalData.medications}
+                    onChange={(e) => setMedicalData({...medicalData, medications: e.target.value})}
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Dietary Requirements</Label>
+                  <Textarea
+                    placeholder="Enter any dietary requirements..."
+                    value={medicalData.dietary_requirements}
+                    onChange={(e) => setMedicalData({...medicalData, dietary_requirements: e.target.value})}
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Special Needs</Label>
+                  <Textarea
+                    placeholder="Enter any special needs or accommodations..."
+                    value={medicalData.special_needs}
+                    onChange={(e) => setMedicalData({...medicalData, special_needs: e.target.value})}
+                    rows={2}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

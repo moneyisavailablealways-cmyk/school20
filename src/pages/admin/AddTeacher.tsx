@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { GraduationCap, ArrowLeft } from 'lucide-react';
+import { GraduationCap, ArrowLeft, BookOpen, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const addTeacherSchema = z.object({
@@ -26,7 +26,6 @@ const addTeacherSchema = z.object({
   
   // Teacher-specific fields
   employeeId: z.string().min(1, 'Employee ID is required'),
-  specialization: z.string().min(1, 'Specialization is required'),
   qualification: z.string().min(1, 'Qualification is required'),
   experienceYears: z.number().min(0, 'Experience years must be 0 or more'),
   joiningDate: z.string().min(1, 'Joining date is required'),
@@ -41,9 +40,35 @@ const addTeacherSchema = z.object({
 
 type AddTeacherForm = z.infer<typeof addTeacherSchema>;
 
+interface Subject {
+  id: string;
+  name: string;
+  code: string;
+  level: number;
+}
+
+interface Class {
+  id: string;
+  name: string;
+  level: number;
+  class_teacher_id?: string;
+  max_students?: number;
+  academic_year_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface SubjectClassAssignment {
+  subjectId: string;
+  classIds: string[];
+}
+
 const AddTeacher = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [classes, setClasses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [subjectClassAssignments, setSubjectClassAssignments] = useState<SubjectClassAssignment[]>([]);
   const [isClassTeacher, setIsClassTeacher] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -59,7 +84,6 @@ const AddTeacher = () => {
       confirmPassword: '',
       role: 'teacher',
       employeeId: '',
-      specialization: '',
       qualification: '',
       experienceYears: 0,
       joiningDate: new Date().toISOString().split('T')[0],
@@ -71,27 +95,78 @@ const AddTeacher = () => {
   });
 
   useEffect(() => {
-    fetchAvailableClasses();
+    fetchSubjectsAndClasses();
   }, []);
 
-  const fetchAvailableClasses = async () => {
+  const fetchSubjectsAndClasses = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch subjects
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from('subjects')
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      if (subjectsError) throw subjectsError;
+      setSubjects(subjectsData || []);
+
+      // Fetch all classes
+      const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select('*')
-        .is('class_teacher_id', null)
         .order('level', { ascending: true });
 
-      if (error) throw error;
-      setClasses(data || []);
+      if (classesError) throw classesError;
+      setClasses(classesData || []);
     } catch (error) {
-      console.error('Error fetching classes:', error);
+      console.error('Error fetching data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch subjects and classes',
+        variant: 'destructive',
+      });
     }
+  };
+
+  const handleSubjectToggle = (subjectId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedSubjects(prev => [...prev, subjectId]);
+      setSubjectClassAssignments(prev => [...prev, { subjectId, classIds: [] }]);
+    } else {
+      setSelectedSubjects(prev => prev.filter(id => id !== subjectId));
+      setSubjectClassAssignments(prev => prev.filter(assignment => assignment.subjectId !== subjectId));
+    }
+  };
+
+  const handleClassToggle = (subjectId: string, classId: string, checked: boolean) => {
+    setSubjectClassAssignments(prev => 
+      prev.map(assignment => {
+        if (assignment.subjectId === subjectId) {
+          return {
+            ...assignment,
+            classIds: checked 
+              ? [...assignment.classIds, classId]
+              : assignment.classIds.filter(id => id !== classId)
+          };
+        }
+        return assignment;
+      })
+    );
   };
 
   const createTeacher = async (data: AddTeacherForm) => {
     setIsSubmitting(true);
     try {
+      // Validate at least one subject is selected
+      if (selectedSubjects.length === 0) {
+        toast({
+          title: 'Error',
+          description: 'Please select at least one subject specialization',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       // Get the current user's session
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token) {
@@ -114,7 +189,7 @@ const AddTeacher = () => {
           role: data.role,
           teacherDetails: {
             employeeId: data.employeeId,
-            specialization: data.specialization,
+            specialization: selectedSubjects.map(id => subjects.find(s => s.id === id)?.name).join(', '),
             qualification: data.qualification,
             experienceYears: data.experienceYears,
             joiningDate: data.joiningDate,
@@ -129,6 +204,46 @@ const AddTeacher = () => {
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to create teacher');
+      }
+
+      const teacherId = result.teacher_id;
+
+      // Insert teacher specializations
+      const specializationInserts = [];
+      
+      for (const assignment of subjectClassAssignments) {
+        if (assignment.classIds.length === 0) {
+          // Subject selected but no classes - insert with null class_id
+          specializationInserts.push({
+            teacher_id: teacherId,
+            subject_id: assignment.subjectId,
+            class_id: null
+          });
+        } else {
+          // Insert for each selected class
+          for (const classId of assignment.classIds) {
+            specializationInserts.push({
+              teacher_id: teacherId,
+              subject_id: assignment.subjectId,
+              class_id: classId
+            });
+          }
+        }
+      }
+
+      if (specializationInserts.length > 0) {
+        const { error: specializationError } = await supabase
+          .from('teacher_specializations')
+          .insert(specializationInserts);
+
+        if (specializationError) {
+          console.error('Error inserting teacher specializations:', specializationError);
+          toast({
+            title: 'Warning',
+            description: 'Teacher created but specializations assignment failed',
+            variant: 'destructive',
+          });
+        }
       }
 
       // If teacher is assigned as class teacher, update the class
@@ -150,9 +265,14 @@ const AddTeacher = () => {
 
       toast({
         title: 'Success',
-        description: 'Teacher created successfully with login credentials',
+        description: 'Teacher created successfully with specializations',
       });
 
+      // Reset form and navigate
+      form.reset();
+      setSelectedSubjects([]);
+      setSubjectClassAssignments([]);
+      setIsClassTeacher(false);
       navigate('/admin/teachers');
     } catch (error: any) {
       console.error('Error creating teacher:', error);
@@ -166,6 +286,14 @@ const AddTeacher = () => {
     }
   };
 
+  const getAvailableClassesForAssignment = () => {
+    return classes.filter(classItem => !classItem.class_teacher_id);
+  };
+
+  const getSubjectName = (subjectId: string) => {
+    return subjects.find(s => s.id === subjectId)?.name || 'Unknown Subject';
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -176,7 +304,7 @@ const AddTeacher = () => {
         <div>
           <h1 className="text-3xl font-bold">Add New Teacher</h1>
           <p className="text-muted-foreground">
-            Create a new teacher account with detailed information
+            Create a new teacher account with detailed information and subject specializations
           </p>
         </div>
       </div>
@@ -339,34 +467,19 @@ const AddTeacher = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="specialization"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Specialization</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Mathematics" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="qualification"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Qualification</FormLabel>
-                        <FormControl>
-                          <Input placeholder="M.Sc. Mathematics" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="qualification"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Qualification</FormLabel>
+                      <FormControl>
+                        <Input placeholder="M.Sc. Mathematics" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
@@ -458,7 +571,7 @@ const AddTeacher = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {classes.map((classItem) => (
+                            {getAvailableClassesForAssignment().map((classItem) => (
                               <SelectItem key={classItem.id} value={classItem.id}>
                                 {classItem.name} (Level {classItem.level})
                               </SelectItem>
@@ -472,6 +585,82 @@ const AddTeacher = () => {
                       </FormItem>
                     )}
                   />
+                )}
+              </div>
+
+              {/* Subject Specializations */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  <h3 className="text-lg font-semibold">Subject Specializations</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Select the subjects this teacher specializes in and assign them to specific classes
+                </p>
+                
+                <div className="space-y-4">
+                  {subjects.map((subject) => (
+                    <div key={subject.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          id={`subject-${subject.id}`}
+                          checked={selectedSubjects.includes(subject.id)}
+                          onCheckedChange={(checked) => handleSubjectToggle(subject.id, !!checked)}
+                        />
+                        <label 
+                          htmlFor={`subject-${subject.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {subject.name} ({subject.code}) - Level {subject.level}
+                        </label>
+                      </div>
+
+                      {selectedSubjects.includes(subject.id) && (
+                        <div className="ml-6 space-y-2">
+                          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <Users className="h-4 w-4" />
+                            Assign to Classes:
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                            {classes
+                              .filter(c => c.level === subject.level)
+                              .map((classItem) => (
+                                <div key={classItem.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`class-${subject.id}-${classItem.id}`}
+                                    checked={
+                                      subjectClassAssignments
+                                        .find(a => a.subjectId === subject.id)
+                                        ?.classIds.includes(classItem.id) || false
+                                    }
+                                    onCheckedChange={(checked) => 
+                                      handleClassToggle(subject.id, classItem.id, !!checked)
+                                    }
+                                  />
+                                  <label 
+                                    htmlFor={`class-${subject.id}-${classItem.id}`}
+                                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                  >
+                                    {classItem.name}
+                                  </label>
+                                </div>
+                              ))}
+                          </div>
+                          {classes.filter(c => c.level === subject.level).length === 0 && (
+                            <p className="text-sm text-muted-foreground ml-6">
+                              No classes available for Level {subject.level}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {selectedSubjects.length === 0 && (
+                  <p className="text-sm text-destructive">
+                    Please select at least one subject specialization
+                  </p>
                 )}
               </div>
 

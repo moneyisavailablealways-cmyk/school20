@@ -36,29 +36,29 @@ const MyClasses = () => {
     if (!profile?.id) return;
 
     try {
-      // Simple approach: make individual queries and manually combine results
-      setClasses([]);
+      const results: any[] = [];
+
+      // Use any to avoid complex TypeScript inference
+      const supabaseClient: any = supabase;
 
       // Query 1: Classes where user is class teacher
-      const { data: classData } = await supabase
+      const classResponse = await supabaseClient
         .from('classes')
         .select('id, name, max_students')
         .eq('class_teacher_id', profile.id);
 
-      // Query 2: Streams where user is stream teacher  
-      const streamQuery = supabase
+      const classData = classResponse.data || [];
+
+      // Query 2: Streams where user is stream teacher
+      const streamResponse = await supabaseClient
         .from('streams')
         .select('id, name, max_students, class_id')
         .eq('stream_teacher_id', profile.id);
       
-      const streamResult = await streamQuery;
-      const streamData = streamResult.data;
-
-      // Build results manually to avoid complex type inference
-      const results: any[] = [];
+      const streamData = streamResponse.data || [];
 
       // Add class teacher classes
-      (classData || []).forEach((cls: any) => {
+      for (const cls of classData) {
         results.push({
           id: cls.id,
           name: cls.name,
@@ -66,32 +66,32 @@ const MyClasses = () => {
           sections: [],
           teacherRole: 'Class Teacher'
         });
-      });
+      }
 
       // Add stream teacher classes
-      if (streamData && streamData.length > 0) {
-        for (const stream of streamData) {
-          const existing = results.find(r => r.id === stream.class_id);
-          if (!existing) {
-            // Get class details
-            const { data: classDetails } = await supabase
-              .from('classes')
-              .select('id, name, max_students')
-              .eq('id', stream.class_id)
-              .single();
-            
-            if (classDetails) {
-              results.push({
-                id: classDetails.id,
-                name: classDetails.name,
-                max_students: classDetails.max_students,
-                sections: [stream],
-                teacherRole: 'Stream Teacher'
-              });
-            }
-          } else {
-            existing.sections.push(stream);
+      for (const stream of streamData) {
+        const existing = results.find(r => r.id === stream.class_id);
+        if (!existing) {
+          // Get class details
+          const classDetailsResponse = await supabaseClient
+            .from('classes')
+            .select('id, name, max_students')
+            .eq('id', stream.class_id)
+            .single();
+          
+          const classDetails = classDetailsResponse.data;
+          
+          if (classDetails) {
+            results.push({
+              id: classDetails.id,
+              name: classDetails.name,
+              max_students: classDetails.max_students,
+              sections: [stream],
+              teacherRole: 'Stream Teacher'
+            });
           }
+        } else {
+          existing.sections.push(stream);
         }
       }
 

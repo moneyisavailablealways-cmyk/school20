@@ -8,21 +8,24 @@ import { Users, Eye, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 
+interface StreamData {
+  id: string;
+  name: string;
+  max_students: number;
+  class_id: string;
+}
+
 interface ClassData {
   id: string;
   name: string;
   max_students: number;
-  sections?: {
-    id: string;
-    name: string;
-    max_students: number;
-  }[];
+  sections?: StreamData[];
 }
 
 const MyClasses = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
-  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [classes, setClasses] = useState<(ClassData & { teacherRole: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,80 +36,66 @@ const MyClasses = () => {
     if (!profile?.id) return;
 
     try {
-      // Fetch classes where the teacher is assigned as class teacher
-      const { data: classTeacherData, error: classError } = await supabase
+      // Simple approach: make individual queries and manually combine results
+      setClasses([]);
+
+      // Query 1: Classes where user is class teacher
+      const { data: classData } = await supabase
         .from('classes')
-        .select(`
-          id,
-          name,
-          max_students,
-          levels (name),
-          streams (
-            id,
-            name,
-            max_students
-          )
-        `)
+        .select('id, name, max_students')
         .eq('class_teacher_id', profile.id);
 
-      // Fetch streams where the teacher is assigned as stream teacher
-      const { data: streamTeacherData, error: streamError } = await supabase
+      // Query 2: Streams where user is stream teacher  
+      const streamQuery = supabase
         .from('streams')
         .select('id, name, max_students, class_id')
         .eq('stream_teacher_id', profile.id);
-
-      // Get class details for streams separately
-      const classIds = streamTeacherData?.map(s => s.class_id) || [];
-      let streamClasses: any[] = [];
       
-      if (classIds.length > 0) {
-        const { data: streamClassData } = await supabase
-          .from('classes')
-          .select('id, name, max_students')
-          .in('id', classIds);
-        streamClasses = streamClassData || [];
-      }
+      const streamResult = await streamQuery;
+      const streamData = streamResult.data;
 
-      if (classError || streamError) {
-        throw classError || streamError;
-      }
+      // Build results manually to avoid complex type inference
+      const results: any[] = [];
 
-      // Combine and deduplicate classes
-      const allClasses = new Map();
-
-      // Add classes where teacher is class teacher
-      classTeacherData?.forEach(cls => {
-        allClasses.set(cls.id, {
-          ...cls,
+      // Add class teacher classes
+      (classData || []).forEach((cls: any) => {
+        results.push({
+          id: cls.id,
+          name: cls.name,
+          max_students: cls.max_students,
+          sections: [],
           teacherRole: 'Class Teacher'
         });
       });
 
-      // Add classes where teacher is stream teacher
-      streamTeacherData?.forEach(stream => {
-        const classData = streamClasses.find(c => c.id === stream.class_id);
-        if (!classData) return;
-        
-        const classId = classData.id;
-        if (!allClasses.has(classId)) {
-          allClasses.set(classId, {
-            ...classData,
-            sections: [],
-            teacherRole: 'Stream Teacher'
-          });
+      // Add stream teacher classes
+      if (streamData && streamData.length > 0) {
+        for (const stream of streamData) {
+          const existing = results.find(r => r.id === stream.class_id);
+          if (!existing) {
+            // Get class details
+            const { data: classDetails } = await supabase
+              .from('classes')
+              .select('id, name, max_students')
+              .eq('id', stream.class_id)
+              .single();
+            
+            if (classDetails) {
+              results.push({
+                id: classDetails.id,
+                name: classDetails.name,
+                max_students: classDetails.max_students,
+                sections: [stream],
+                teacherRole: 'Stream Teacher'
+              });
+            }
+          } else {
+            existing.sections.push(stream);
+          }
         }
-        // Add the specific stream
-        const existingClass = allClasses.get(classId);
-        if (!existingClass.sections.some((s: any) => s.id === stream.id)) {
-          existingClass.sections.push({
-            id: stream.id,
-            name: stream.name,
-            max_students: stream.max_students
-          });
-        }
-      });
+      }
 
-      setClasses(Array.from(allClasses.values()));
+      setClasses(results);
     } catch (error: any) {
       console.error('Error fetching classes:', error);
       toast({
@@ -154,10 +143,10 @@ const MyClasses = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{classData.name}</CardTitle>
-                  <Badge variant="secondary">{(classData as any).levels?.name || 'No Level'}</Badge>
+                  <Badge variant="secondary">Class</Badge>
                 </div>
                 <CardDescription>
-                  {(classData as any).teacherRole}
+                  {classData.teacherRole}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

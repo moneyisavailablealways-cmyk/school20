@@ -174,7 +174,7 @@ const AddTeacher = () => {
       }
 
       // Call our edge function to create the user with teacher details
-      const response = await fetch('/functions/v1/create-user', {
+      const response = await fetch('https://lbserxuqjcxmuvucokyc.supabase.co/functions/v1/create-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -200,13 +200,23 @@ const AddTeacher = () => {
         }),
       });
 
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create teacher: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
       const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create teacher');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
       const teacherId = result.teacher_id;
+
+      if (!teacherId) {
+        throw new Error('Failed to retrieve teacher ID from response');
+      }
 
       // Insert teacher specializations
       const specializationInserts = [];
@@ -247,10 +257,10 @@ const AddTeacher = () => {
       }
 
       // If teacher is assigned as class teacher, update the class
-      if (data.isClassTeacher && data.assignedClassId && result.teacher_profile_id) {
+      if (data.isClassTeacher && data.assignedClassId && result.profile_id) {
         const { error: classUpdateError } = await supabase
           .from('classes')
-          .update({ class_teacher_id: result.teacher_profile_id })
+          .update({ class_teacher_id: result.profile_id })
           .eq('id', data.assignedClassId);
 
         if (classUpdateError) {

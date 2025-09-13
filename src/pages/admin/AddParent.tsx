@@ -73,7 +73,7 @@ const AddParent = () => {
       }
 
       // Call our edge function to create the user with parent details
-      const response = await fetch('/functions/v1/create-user', {
+      const response = await fetch('https://lbserxuqjcxmuvucokyc.supabase.co/functions/v1/create-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,10 +99,16 @@ const AddParent = () => {
         }),
       });
 
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create parent: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
       const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create parent');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
       toast({
@@ -110,6 +116,8 @@ const AddParent = () => {
         description: 'Parent created successfully with login credentials',
       });
 
+      // Reset form
+      form.reset();
       navigate('/admin/parents');
     } catch (error: any) {
       console.error('Error creating parent:', error);

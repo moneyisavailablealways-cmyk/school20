@@ -130,9 +130,11 @@ serve(async (req) => {
     }
 
     const profileData = { id: profileId }
+    let teacherId = null;
+    
     // Create teacher details if role is teacher or head_teacher
     if ((role === 'teacher' || role === 'head_teacher') && teacherDetails) {
-      const { error: teacherError } = await supabase
+      const { data: teacherData, error: teacherError } = await supabase
         .from('teachers')
         .insert({
           profile_id: profileData.id,
@@ -145,6 +147,8 @@ serve(async (req) => {
           salary: teacherDetails.salary,
           is_class_teacher: teacherDetails.isClassTeacher || false,
         })
+        .select('id')
+        .single()
 
       if (teacherError) {
         return new Response(
@@ -152,6 +156,7 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      teacherId = teacherData.id;
     }
 
     // Create parent details if role is parent
@@ -179,7 +184,12 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, user: newUser.user }),
+      JSON.stringify({ 
+        success: true, 
+        user: newUser.user, 
+        profile_id: profileId,
+        teacher_id: teacherId 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 

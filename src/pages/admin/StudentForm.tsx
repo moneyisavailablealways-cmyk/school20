@@ -37,9 +37,9 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string>('');
   const [classes, setClasses] = useState<any[]>([]);
-  const [sections, setSections] = useState<any[]>([]);
+  const [streams, setStreams] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>('');
-  const [selectedSection, setSelectedSection] = useState<string>('');
+  const [selectedStream, setSelectedStream] = useState<string>('');
   const [parents, setParents] = useState<Profile[]>([]);
   const [selectedParent, setSelectedParent] = useState<string>('');
   const [relationshipType, setRelationshipType] = useState<string>('');
@@ -119,8 +119,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
     try {
       const { data, error } = await supabase
         .from('classes')
-        .select('*')
-        .order('level', { ascending: true });
+        .select('*, levels(name)')
+        .order('name', { ascending: true });
 
       if (error) throw error;
       setClasses(data || []);
@@ -134,21 +134,21 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
     }
   };
 
-  const fetchSections = async (classId: string) => {
+  const fetchStreams = async (classId: string) => {
     try {
       const { data, error } = await supabase
-        .from('sections')
+        .from('streams')
         .select('*')
         .eq('class_id', classId)
         .order('name', { ascending: true });
 
       if (error) throw error;
-      setSections(data || []);
+      setStreams(data || []);
     } catch (error) {
-      console.error('Error fetching sections:', error);
+      console.error('Error fetching streams:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch sections',
+        description: 'Failed to fetch streams',
         variant: 'destructive',
       });
     }
@@ -447,7 +447,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
             .insert([{
               student_id: newStudent.id,
               class_id: selectedClass,
-              section_id: selectedSection || null,
+              stream_id: selectedStream || null,
               enrollment_date: format(admissionDate, 'yyyy-MM-dd'),
               status: 'active'
             }]);
@@ -743,42 +743,42 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
                   <Label htmlFor="class">Class</Label>
                   <Select
                     value={selectedClass}
-                    onValueChange={(value) => {
-                      setSelectedClass(value);
-                      setSections([]);
-                      setSelectedSection('');
-                      if (value) {
-                        fetchSections(value);
-                      }
-                    }}
+                     onValueChange={(value) => {
+                       setSelectedClass(value);
+                       setStreams([]);
+                       setSelectedStream('');
+                       if (value) {
+                         fetchStreams(value);
+                       }
+                     }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select class" />
                     </SelectTrigger>
                     <SelectContent>
-                      {classes.map((classItem) => (
-                        <SelectItem key={classItem.id} value={classItem.id}>
-                          {classItem.name} (Level {classItem.level})
-                        </SelectItem>
-                      ))}
+                       {classes.map((classItem) => (
+                         <SelectItem key={classItem.id} value={classItem.id}>
+                           {classItem.name}
+                         </SelectItem>
+                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="section">Section</Label>
+                 <div className="space-y-2">
+                  <Label htmlFor="stream">Stream</Label>
                   <Select
-                    value={selectedSection}
-                    onValueChange={setSelectedSection}
+                    value={selectedStream}
+                    onValueChange={setSelectedStream}
                     disabled={!selectedClass}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={selectedClass ? "Select section" : "Select class first"} />
+                      <SelectValue placeholder={selectedClass ? "Select stream" : "Select class first"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {sections.map((section) => (
-                        <SelectItem key={section.id} value={section.id}>
-                          Section {section.name}
+                      {streams.map((stream) => (
+                        <SelectItem key={stream.id} value={stream.id}>
+                          Stream {stream.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

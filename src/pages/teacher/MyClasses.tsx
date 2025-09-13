@@ -11,19 +11,12 @@ import { Link } from 'react-router-dom';
 interface ClassData {
   id: string;
   name: string;
-  level: number;
   max_students: number;
-  sections: {
+  sections?: {
     id: string;
     name: string;
     max_students: number;
-    _count?: {
-      student_enrollments: number;
-    };
   }[];
-  _count?: {
-    student_enrollments: number;
-  };
 }
 
 const MyClasses = () => {
@@ -46,9 +39,9 @@ const MyClasses = () => {
         .select(`
           id,
           name,
-          level,
           max_students,
-          sections (
+          levels (name),
+          streams (
             id,
             name,
             max_students
@@ -56,25 +49,26 @@ const MyClasses = () => {
         `)
         .eq('class_teacher_id', profile.id);
 
-      // Fetch classes where the teacher is assigned as section teacher
-      const { data: sectionTeacherData, error: sectionError } = await supabase
-        .from('sections')
-        .select(`
-          id,
-          name,
-          max_students,
-          class_id,
-          classes (
-            id,
-            name,
-            level,
-            max_students
-          )
-        `)
-        .eq('section_teacher_id', profile.id);
+      // Fetch streams where the teacher is assigned as stream teacher
+      const { data: streamTeacherData, error: streamError } = await supabase
+        .from('streams')
+        .select('id, name, max_students, class_id')
+        .eq('stream_teacher_id', profile.id);
 
-      if (classError || sectionError) {
-        throw classError || sectionError;
+      // Get class details for streams separately
+      const classIds = streamTeacherData?.map(s => s.class_id) || [];
+      let streamClasses: any[] = [];
+      
+      if (classIds.length > 0) {
+        const { data: streamClassData } = await supabase
+          .from('classes')
+          .select('id, name, max_students')
+          .in('id', classIds);
+        streamClasses = streamClassData || [];
+      }
+
+      if (classError || streamError) {
+        throw classError || streamError;
       }
 
       // Combine and deduplicate classes
@@ -88,23 +82,26 @@ const MyClasses = () => {
         });
       });
 
-      // Add classes where teacher is section teacher
-      sectionTeacherData?.forEach(section => {
-        const classId = section.classes.id;
+      // Add classes where teacher is stream teacher
+      streamTeacherData?.forEach(stream => {
+        const classData = streamClasses.find(c => c.id === stream.class_id);
+        if (!classData) return;
+        
+        const classId = classData.id;
         if (!allClasses.has(classId)) {
           allClasses.set(classId, {
-            ...section.classes,
+            ...classData,
             sections: [],
-            teacherRole: 'Section Teacher'
+            teacherRole: 'Stream Teacher'
           });
         }
-        // Add the specific section
+        // Add the specific stream
         const existingClass = allClasses.get(classId);
-        if (!existingClass.sections.some((s: any) => s.id === section.id)) {
+        if (!existingClass.sections.some((s: any) => s.id === stream.id)) {
           existingClass.sections.push({
-            id: section.id,
-            name: section.name,
-            max_students: section.max_students
+            id: stream.id,
+            name: stream.name,
+            max_students: stream.max_students
           });
         }
       });
@@ -135,7 +132,7 @@ const MyClasses = () => {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">My Classes</h1>
         <p className="text-muted-foreground">
-          Classes and sections you're assigned to teach
+          Classes and streams you're assigned to teach
         </p>
       </div>
 
@@ -157,7 +154,7 @@ const MyClasses = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{classData.name}</CardTitle>
-                  <Badge variant="secondary">Level {classData.level}</Badge>
+                  <Badge variant="secondary">{(classData as any).levels?.name || 'No Level'}</Badge>
                 </div>
                 <CardDescription>
                   {(classData as any).teacherRole}
@@ -171,13 +168,13 @@ const MyClasses = () => {
 
                 {classData.sections && classData.sections.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium mb-2">Sections:</h4>
+                    <h4 className="text-sm font-medium mb-2">Streams:</h4>
                     <div className="space-y-1">
-                      {classData.sections.map((section) => (
-                        <div key={section.id} className="flex items-center justify-between text-sm bg-muted/50 rounded px-2 py-1">
-                          <span>{section.name}</span>
+                      {classData.sections.map((stream) => (
+                        <div key={stream.id} className="flex items-center justify-between text-sm bg-muted/50 rounded px-2 py-1">
+                          <span>{stream.name}</span>
                           <span className="text-muted-foreground">
-                            Max: {section.max_students}
+                            Max: {stream.max_students}
                           </span>
                         </div>
                       ))}

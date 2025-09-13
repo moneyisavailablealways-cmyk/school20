@@ -57,7 +57,7 @@ interface StudentEnrollment {
   student_id: string;
   academic_year_id: string | null;
   class_id: string | null;
-  section_id: string | null;
+  stream_id: string | null;
   enrollment_date: string;
   status: string;
   academic_year?: {
@@ -66,9 +66,9 @@ interface StudentEnrollment {
   };
   class?: {
     name: string;
-    level: number;
+    levels: { name: string };
   };
-  section?: {
+  stream?: {
     name: string;
   };
 }
@@ -125,8 +125,8 @@ const StudentManagement = () => {
         .select(`
           *,
           academic_year:academic_years(name, is_current),
-          class:classes(name, level),
-          section:sections(name)
+          class:classes(name, levels(name)),
+          stream:streams(name)
         `)
         .order('enrollment_date', { ascending: false });
 
@@ -349,7 +349,7 @@ const StudentManagement = () => {
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>ID / Admission</TableHead>
-                  <TableHead>Class & Section</TableHead>
+                  <TableHead>Class & Stream</TableHead>
                   <TableHead>Age</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Contact</TableHead>
@@ -397,9 +397,9 @@ const StudentManagement = () => {
                             <div className="font-medium">
                               {enrollment.class?.name}
                             </div>
-                            {enrollment.section && (
+                            {enrollment.stream && (
                               <div className="text-sm text-muted-foreground">
-                                Section: {enrollment.section.name}
+                                Stream: {enrollment.stream.name}
                               </div>
                             )}
                           </div>

@@ -62,7 +62,7 @@ interface Class {
   academic_year?: {
     name: string;
   };
-  level?: {
+  levels?: {
     name: string;
   };
   streams?: Stream[];
@@ -77,7 +77,7 @@ interface Stream {
   created_at: string;
   class?: {
     name: string;
-    level?: {
+    levels?: {
       name: string;
     };
   };
@@ -168,7 +168,7 @@ const AcademicStructure = () => {
           *,
           class:classes(
             name,
-            level:levels(name)
+            levels(name)
           )
         `)
         .order('name');
@@ -178,7 +178,10 @@ const AcademicStructure = () => {
       setAcademicYears(yearsData || []);
       setLevels(buildLevelHierarchy(levelsData || []));
       setClasses(classesData || []);
-      setStreams(streamsData || []);
+      setStreams((streamsData || []).map(stream => ({
+        ...stream,
+        stream_teacher_id: (stream as any).section_teacher_id || null
+      })));
     } catch (error: any) {
       console.error('Error fetching data:', error);
       toast({
@@ -338,7 +341,7 @@ const AcademicStructure = () => {
       } else {
         const { error } = await supabase
           .from('classes')
-          .insert([classData]);
+          .insert([classData as any]);
 
         if (error) throw error;
         toast({ title: 'Success', description: 'Class created successfully' });
@@ -1036,7 +1039,7 @@ const AcademicStructure = () => {
                     <TableRow key={cls.id}>
                       <TableCell className="font-medium">{cls.name}</TableCell>
                       <TableCell>
-                        {cls.level?.name || <Badge variant="outline">No Level</Badge>}
+                        {cls.levels?.name || <Badge variant="outline">No Level</Badge>}
                       </TableCell>
                       <TableCell>{cls.max_students}</TableCell>
                       <TableCell>
@@ -1109,7 +1112,7 @@ const AcademicStructure = () => {
                           <SelectContent>
                             {classes.map((cls) => (
                               <SelectItem key={cls.id} value={cls.id}>
-                                {cls.name} {cls.level?.name && `(${cls.level.name})`}
+                                {cls.name} {cls.levels?.name && `(${cls.levels.name})`}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1159,7 +1162,7 @@ const AcademicStructure = () => {
                       <TableCell className="font-medium">{stream.name}</TableCell>
                       <TableCell>{stream.class?.name || 'Unknown'}</TableCell>
                       <TableCell>
-                        {stream.class?.level?.name || <Badge variant="outline">No Level</Badge>}
+                        {stream.class?.levels?.name || <Badge variant="outline">No Level</Badge>}
                       </TableCell>
                       <TableCell>{stream.max_students}</TableCell>
                       <TableCell>

@@ -57,7 +57,7 @@ const StudentProfile = () => {
               name,
               level
             ),
-            sections:section_id (
+            streams:stream_id (
               name
             ),
             academic_years:academic_year_id (
@@ -408,11 +408,11 @@ const StudentProfile = () => {
                 </div>
               </div>
 
-              {currentEnrollment.sections && (
+              {currentEnrollment.streams && (
                 <div className="space-y-2">
-                  <Label>Section</Label>
+                  <Label>Stream</Label>
                   <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                    <span>{currentEnrollment.sections.name}</span>
+                    <span>{currentEnrollment.streams.name}</span>
                   </div>
                 </div>
               )}

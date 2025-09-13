@@ -29,7 +29,7 @@ const StudentSubjects = () => {
             name,
             level
           ),
-          sections:section_id (
+          streams:stream_id (
             name
           )
         `)
@@ -154,8 +154,8 @@ const StudentSubjects = () => {
             <div className="space-y-2">
               <p><strong>Class:</strong> {enrollments[0]?.classes?.name}</p>
               <p><strong>Level:</strong> Class {enrollments[0]?.classes?.level}</p>
-              {enrollments[0]?.sections && (
-                <p><strong>Section:</strong> {enrollments[0].sections.name}</p>
+              {enrollments[0]?.streams && (
+                <p><strong>Stream:</strong> {enrollments[0].streams.name}</p>
               )}
               <Badge variant="secondary">
                 {enrollments[0]?.status}

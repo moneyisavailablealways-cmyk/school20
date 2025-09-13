@@ -29,9 +29,9 @@ interface StudentData {
       name: string;
       level: number;
     } | null;
-    sections: {
-      name: string;
-    } | null;
+  streams: {
+    name: string;
+  } | null;
   }[];
 }
 
@@ -78,7 +78,7 @@ const TeacherStudents = () => {
             name,
             level
           ),
-          sections (
+          streams (
             name
           ),
           enrollment_date,
@@ -86,8 +86,8 @@ const TeacherStudents = () => {
         `)
         .in('class_id', await getTeacherClassIds());
 
-      // Get students from sections where teacher is section teacher
-      const { data: sectionStudents, error: sectionError } = await supabase
+      // Get students from streams where teacher is stream teacher
+      const { data: streamStudents, error: streamError } = await supabase
         .from('student_enrollments')
         .select(`
           students (
@@ -109,20 +109,20 @@ const TeacherStudents = () => {
             name,
             level
           ),
-          sections (
+          streams (
             name
           ),
           enrollment_date,
           status
         `)
-        .in('section_id', await getTeacherSectionIds());
+        .in('stream_id', await getTeacherStreamIds());
 
-      if (classError || sectionError) {
-        throw classError || sectionError;
+      if (classError || streamError) {
+        throw classError || streamError;
       }
 
       // Combine and deduplicate students
-      const allEnrollments = [...(classStudents || []), ...(sectionStudents || [])];
+      const allEnrollments = [...(classStudents || []), ...(streamStudents || [])];
       const studentMap = new Map();
 
       allEnrollments.forEach(enrollment => {
@@ -138,7 +138,7 @@ const TeacherStudents = () => {
             enrollment_date: enrollment.enrollment_date,
             status: enrollment.status,
             classes: enrollment.classes,
-            sections: enrollment.sections
+            streams: enrollment.streams
           });
         }
       });
@@ -164,11 +164,11 @@ const TeacherStudents = () => {
     return data?.map(c => c.id) || [];
   };
 
-  const getTeacherSectionIds = async () => {
+  const getTeacherStreamIds = async () => {
     const { data } = await supabase
-      .from('sections')
+      .from('streams')
       .select('id')
-      .eq('section_teacher_id', profile?.id);
+      .eq('stream_teacher_id', profile?.id);
     return data?.map(s => s.id) || [];
   };
 
@@ -217,7 +217,7 @@ const TeacherStudents = () => {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">My Students</h1>
         <p className="text-muted-foreground">
-          Students in your assigned classes and sections
+          Students in your assigned classes and streams
         </p>
       </div>
 
@@ -303,8 +303,8 @@ const TeacherStudents = () => {
                     <div className="space-y-1">
                       {student.student_enrollments.map((enrollment, index) => (
                         <div key={index} className="text-sm text-muted-foreground">
-                          {enrollment.classes?.name} {enrollment.classes?.level}
-                          {enrollment.sections && ` - ${enrollment.sections.name}`}
+                          {enrollment.classes?.name}
+                          {enrollment.streams && ` - ${enrollment.streams.name}`}
                         </div>
                       ))}
                     </div>

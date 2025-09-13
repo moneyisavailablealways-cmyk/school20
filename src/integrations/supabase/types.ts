@@ -297,6 +297,7 @@ export type Database = {
           created_at: string | null
           id: string
           level: number
+          level_id: string | null
           max_students: number | null
           name: string
           updated_at: string | null
@@ -307,6 +308,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           level: number
+          level_id?: string | null
           max_students?: number | null
           name: string
           updated_at?: string | null
@@ -317,6 +319,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           level?: number
+          level_id?: string | null
           max_students?: number | null
           name?: string
           updated_at?: string | null
@@ -334,6 +337,13 @@ export type Database = {
             columns: ["class_teacher_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classes_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
             referencedColumns: ["id"]
           },
         ]
@@ -499,6 +509,35 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      levels: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "levels_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
             referencedColumns: ["id"]
           },
         ]
@@ -1179,7 +1218,7 @@ export type Database = {
         }
         Relationships: []
       }
-      sections: {
+      streams: {
         Row: {
           class_id: string | null
           created_at: string | null
@@ -1209,17 +1248,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "sections_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "classes"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "sections_section_teacher_id_fkey"
             columns: ["section_teacher_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streams_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
         ]
@@ -1267,8 +1306,8 @@ export type Database = {
           created_at: string | null
           enrollment_date: string
           id: string
-          section_id: string | null
           status: string | null
+          stream_id: string | null
           student_id: string | null
           updated_at: string | null
         }
@@ -1278,8 +1317,8 @@ export type Database = {
           created_at?: string | null
           enrollment_date?: string
           id?: string
-          section_id?: string | null
           status?: string | null
+          stream_id?: string | null
           student_id?: string | null
           updated_at?: string | null
         }
@@ -1289,8 +1328,8 @@ export type Database = {
           created_at?: string | null
           enrollment_date?: string
           id?: string
-          section_id?: string | null
           status?: string | null
+          stream_id?: string | null
           student_id?: string | null
           updated_at?: string | null
         }
@@ -1310,10 +1349,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "student_enrollments_section_id_fkey"
-            columns: ["section_id"]
+            foreignKeyName: "student_enrollments_stream_id_fkey"
+            columns: ["stream_id"]
             isOneToOne: false
-            referencedRelation: "sections"
+            referencedRelation: "streams"
             referencedColumns: ["id"]
           },
           {

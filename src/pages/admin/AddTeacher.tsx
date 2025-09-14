@@ -44,7 +44,15 @@ interface Subject {
   id: string;
   name: string;
   code: string;
-  level: number;
+  level_id: string;
+  sub_level: string | null;
+  is_core: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  level?: {
+    name: string;
+  };
 }
 
 interface Class {
@@ -103,7 +111,10 @@ const AddTeacher = () => {
       // Fetch subjects
       const { data: subjectsData, error: subjectsError } = await supabase
         .from('subjects')
-        .select('*')
+        .select(`
+          *,
+          level:levels(name)
+        `)
         .eq('is_active', true)
         .order('name', { ascending: true });
 
@@ -621,7 +632,7 @@ const AddTeacher = () => {
                           htmlFor={`subject-${subject.id}`}
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                         >
-                          {subject.name} ({subject.code}) - Level {subject.level}
+                          {subject.name} ({subject.code}) - {subject.level?.name || 'No Level'}
                         </label>
                       </div>
 
@@ -633,7 +644,6 @@ const AddTeacher = () => {
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                             {classes
-                              .filter(c => c.level === subject.level)
                               .map((classItem) => (
                                 <div key={classItem.id} className="flex items-center space-x-2">
                                   <Checkbox
@@ -656,9 +666,9 @@ const AddTeacher = () => {
                                 </div>
                               ))}
                           </div>
-                          {classes.filter(c => c.level === subject.level).length === 0 && (
+                          {classes.length === 0 && (
                             <p className="text-sm text-muted-foreground ml-6">
-                              No classes available for Level {subject.level}
+                              No classes available
                             </p>
                           )}
                         </div>

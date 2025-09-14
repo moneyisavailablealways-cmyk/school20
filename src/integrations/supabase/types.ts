@@ -1572,40 +1572,48 @@ export type Database = {
         Row: {
           code: string | null
           created_at: string
-          credits: number | null
           description: string | null
           id: string
           is_active: boolean | null
           is_core: boolean | null
-          level: number | null
+          level_id: string | null
           name: string
+          sub_level: string | null
           updated_at: string
         }
         Insert: {
           code?: string | null
           created_at?: string
-          credits?: number | null
           description?: string | null
           id?: string
           is_active?: boolean | null
           is_core?: boolean | null
-          level?: number | null
+          level_id?: string | null
           name: string
+          sub_level?: string | null
           updated_at?: string
         }
         Update: {
           code?: string | null
           created_at?: string
-          credits?: number | null
           description?: string | null
           id?: string
           is_active?: boolean | null
           is_core?: boolean | null
-          level?: number | null
+          level_id?: string | null
           name?: string
+          sub_level?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_subjects_level_id"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teacher_enrollments: {
         Row: {

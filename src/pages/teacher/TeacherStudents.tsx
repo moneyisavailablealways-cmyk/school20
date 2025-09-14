@@ -165,11 +165,12 @@ const TeacherStudents = () => {
   };
 
   const getTeacherStreamIds = async () => {
-    const { data } = await supabase
+    const supabaseClient: any = supabase;
+    const { data } = await supabaseClient
       .from('streams')
       .select('id')
       .eq('stream_teacher_id', profile?.id);
-    return data?.map(s => s.id) || [];
+    return data?.map((s: any) => s.id) || [];
   };
 
   const filterStudents = () => {

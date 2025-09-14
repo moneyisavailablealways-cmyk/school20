@@ -70,8 +70,9 @@ const StudentSubjects = () => {
             name,
             code,
             description,
-            credits,
-            is_core
+            is_core,
+            level:levels(name),
+            sub_level
           )
         `)
         .eq('class_id', enrollmentData.class_id)
@@ -190,7 +191,8 @@ const StudentSubjects = () => {
                 <div className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
-                    {enrollment.subjects?.credits || 1} Credit{enrollment.subjects?.credits !== 1 ? 's' : ''}
+                    {enrollment.subjects?.level?.name || 'No Level'} 
+                    {enrollment.subjects?.sub_level && ` - ${enrollment.subjects.sub_level}`}
                   </span>
                 </div>
                 

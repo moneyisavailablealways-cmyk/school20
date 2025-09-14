@@ -13,21 +13,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, BookOpen } from 'lucide-react';
 
+interface Level {
+  id: string;
+  name: string;
+}
+
 interface Subject {
   id: string;
   name: string;
   code: string | null;
   description: string | null;
-  level: number | null;
-  credits: number;
+  level_id: string | null;
+  sub_level: string | null;
   is_core: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  level?: Level;
 }
 
 const SubjectManagement = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
@@ -35,8 +42,8 @@ const SubjectManagement = () => {
     name: '',
     code: '',
     description: '',
-    level: '',
-    credits: '1',
+    level_id: '',
+    sub_level: '',
     is_core: false,
     is_active: true,
   });
@@ -44,13 +51,17 @@ const SubjectManagement = () => {
 
   useEffect(() => {
     fetchSubjects();
+    fetchLevels();
   }, []);
 
   const fetchSubjects = async () => {
     try {
       const { data, error } = await supabase
         .from('subjects')
-        .select('*')
+        .select(`
+          *,
+          level:levels(id, name)
+        `)
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -67,6 +78,25 @@ const SubjectManagement = () => {
     }
   };
 
+  const fetchLevels = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('levels')
+        .select('id, name')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setLevels(data || []);
+    } catch (error) {
+      console.error('Error fetching levels:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load levels',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -76,8 +106,8 @@ const SubjectManagement = () => {
         name: formData.name,
         code: formData.code || null,
         description: formData.description || null,
-        level: formData.level ? parseInt(formData.level) : null,
-        credits: parseInt(formData.credits),
+        level_id: formData.level_id || null,
+        sub_level: formData.sub_level || null,
         is_core: formData.is_core,
         is_active: formData.is_active,
       };
@@ -126,8 +156,8 @@ const SubjectManagement = () => {
       name: subject.name,
       code: subject.code || '',
       description: subject.description || '',
-      level: subject.level?.toString() || '',
-      credits: subject.credits.toString(),
+      level_id: subject.level_id || '',
+      sub_level: subject.sub_level || '',
       is_core: subject.is_core,
       is_active: subject.is_active,
     });
@@ -165,8 +195,8 @@ const SubjectManagement = () => {
       name: '',
       code: '',
       description: '',
-      level: '',
-      credits: '1',
+      level_id: '',
+      sub_level: '',
       is_core: false,
       is_active: true,
     });
@@ -215,7 +245,7 @@ const SubjectManagement = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Code</TableHead>
                 <TableHead>Level</TableHead>
-                <TableHead>Credits</TableHead>
+                <TableHead>Sub-Level</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -231,10 +261,10 @@ const SubjectManagement = () => {
                     {subject.code || '-'}
                   </TableCell>
                   <TableCell>
-                    {subject.level || '-'}
+                    {subject.level?.name || '-'}
                   </TableCell>
                   <TableCell>
-                    {subject.credits}
+                    {subject.sub_level || '-'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={subject.is_core ? 'default' : 'secondary'}>
@@ -328,34 +358,52 @@ const SubjectManagement = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="level">Level/Grade</Label>
-                <Select value={formData.level} onValueChange={(value) => setFormData({ ...formData, level: value })}>
+                <Label htmlFor="level">Level *</Label>
+                <Select 
+                  value={formData.level_id} 
+                  onValueChange={(value) => {
+                    setFormData({ 
+                      ...formData, 
+                      level_id: value,
+                      sub_level: '' // Reset sub-level when level changes
+                    });
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select level" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((level) => (
-                      <SelectItem key={level} value={level.toString()}>
-                        Grade {level}
+                    {levels.map((level) => (
+                      <SelectItem key={level.id} value={level.id}>
+                        {level.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="credits">Credits *</Label>
-                <Input
-                  id="credits"
-                  type="number"
-                  min="1"
-                  value={formData.credits}
-                  onChange={(e) => setFormData({ ...formData, credits: e.target.value })}
-                  required
-                />
-              </div>
+              {/* Show sub-level dropdown only if Secondary is selected */}
+              {formData.level_id && 
+               levels.find(l => l.id === formData.level_id)?.name === 'Secondary' && (
+                <div className="space-y-2">
+                  <Label htmlFor="sub_level">Sub-Level *</Label>
+                  <Select 
+                    value={formData.sub_level} 
+                    onValueChange={(value) => setFormData({ ...formData, sub_level: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select sub-level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="O Level">O Level</SelectItem>
+                      <SelectItem value="A Level">A Level</SelectItem>
+                      <SelectItem value="All Levels">All Levels</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center space-x-4">

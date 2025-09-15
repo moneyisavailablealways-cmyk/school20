@@ -17,7 +17,6 @@ interface TimetableEntry {
   room_number: string;
   class?: {
     name: string;
-    level: number;
   };
   subject?: {
     name: string;
@@ -56,8 +55,7 @@ const TimetableManagement = () => {
         .select(`
           *,
           class:classes!timetables_class_id_fkey(
-            name,
-            level
+            name
           ),
           subject:subjects!timetables_subject_id_fkey(
             name,
@@ -160,7 +158,7 @@ const TimetableManagement = () => {
                     <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                       <div className="flex items-center">
                         <Users className="h-4 w-4 mr-1" />
-                        Class {entry.class?.level} {entry.class?.name}
+                        Class {entry.class?.name}
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-1" />

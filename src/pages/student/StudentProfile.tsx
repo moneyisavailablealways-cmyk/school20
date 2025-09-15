@@ -54,8 +54,7 @@ const StudentProfile = () => {
           student_enrollments (
             *,
             classes:class_id (
-              name,
-              level
+              name
             ),
             streams:stream_id (
               name
@@ -404,7 +403,7 @@ const StudentProfile = () => {
               <div className="space-y-2">
                 <Label>Class Level</Label>
                 <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                  <span>Level {currentEnrollment.classes?.level}</span>
+                  <span>Class: {currentEnrollment.classes?.name}</span>
                 </div>
               </div>
 

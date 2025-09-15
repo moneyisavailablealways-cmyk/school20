@@ -31,7 +31,7 @@ interface FeeStructure {
   academic_year_id: string;
   class_id: string;
   academic_years?: { name: string };
-  classes?: { name: string; level: number };
+  classes?: { name: string; level_name?: string };
 }
 
 const FeeStructures = () => {
@@ -67,7 +67,7 @@ const FeeStructures = () => {
         .select(`
           *,
           academic_years (name),
-          classes (name, level)
+          classes (name, levels!level_id(name))
         `)
         .order('created_at', { ascending: false });
 
@@ -510,7 +510,7 @@ const FeeStructures = () => {
                 {fee.classes && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Class:</span>
-                    <span>{fee.classes.name} (Level {fee.classes.level})</span>
+                    <span>{fee.classes.name}</span>
                   </div>
                 )}
                 {fee.due_date && (

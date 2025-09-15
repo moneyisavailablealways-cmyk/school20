@@ -58,7 +58,7 @@ interface Subject {
 interface Class {
   id: string;
   name: string;
-  level: number;
+  level_id?: string;
   class_teacher_id?: string;
   max_students?: number;
   academic_year_id?: string;
@@ -125,7 +125,7 @@ const AddTeacher = () => {
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select('*')
-        .order('level', { ascending: true });
+        .order('name');
 
       if (classesError) throw classesError;
       setClasses(classesData || []);
@@ -594,7 +594,7 @@ const AddTeacher = () => {
                           <SelectContent>
                             {getAvailableClassesForAssignment().map((classItem) => (
                               <SelectItem key={classItem.id} value={classItem.id}>
-                                {classItem.name} (Level {classItem.level})
+                                {classItem.name}
                               </SelectItem>
                             ))}
                           </SelectContent>

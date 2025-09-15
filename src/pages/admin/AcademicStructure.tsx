@@ -113,6 +113,7 @@ const AcademicStructure = () => {
   const [classForm, setClassForm] = useState({
     name: '',
     level_id: '',
+    sub_level_id: '',
     max_students: '40',
     academic_year_id: '',
   });
@@ -123,7 +124,60 @@ const AcademicStructure = () => {
     max_students: '30',
   });
 
+  // Add delete confirmation states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteType, setDeleteType] = useState<'year' | 'level' | 'class' | 'stream'>('year');
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
+
   const { toast } = useToast();
+
+  // Add delete handlers
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      let result;
+      
+      switch (deleteType) {
+        case 'year':
+          result = await supabase.rpc('delete_academic_year', { year_id: itemToDelete.id });
+          break;
+        case 'level':
+          result = await supabase.rpc('delete_level', { level_id: itemToDelete.id });
+          break;
+        case 'class':
+          result = await supabase.rpc('delete_class', { class_id: itemToDelete.id });
+          break;
+        case 'stream':
+          result = await supabase.rpc('delete_stream', { stream_id: itemToDelete.id });
+          break;
+      }
+      
+      if (result?.error) throw result.error;
+      
+      toast({ 
+        title: 'Success', 
+        description: `${deleteType.charAt(0).toUpperCase() + deleteType.slice(1)} "${itemToDelete.name}" deleted successfully` 
+      });
+      
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      toast({
+        title: 'Error',
+        description: error.message || `Failed to delete ${deleteType}`,
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  const openDeleteDialog = (type: 'year' | 'level' | 'class' | 'stream', item: any) => {
+    setDeleteType(type);
+    setItemToDelete(item);
+    setDeleteDialogOpen(true);
+  };
 
   useEffect(() => {
     fetchData();
@@ -154,8 +208,13 @@ const AcademicStructure = () => {
         .from('classes')
         .select(`
           *,
-          level:levels(name),
-          academic_year:academic_years(name)
+          levels!level_id(
+            id,
+            name,
+            parent_id,
+            parent:levels!parent_id(name)
+          ),
+          academic_years(name)
         `)
         .order('name');
 
@@ -166,9 +225,9 @@ const AcademicStructure = () => {
         .from('streams')
         .select(`
           *,
-          class:classes(
+          classes!class_id(
             name,
-            levels(name)
+            levels!level_id(name)
           )
         `)
         .order('name');
@@ -180,7 +239,13 @@ const AcademicStructure = () => {
       setClasses(classesData || []);
       setStreams((streamsData || []).map(stream => ({
         ...stream,
-        stream_teacher_id: (stream as any).section_teacher_id || null
+        stream_teacher_id: (stream as any).section_teacher_id || null,
+        class: (stream as any).classes ? {
+          name: (stream as any).classes.name,
+          levels: (stream as any).classes.levels ? {
+            name: (stream as any).classes.levels.name
+          } : null
+        } : null
       })));
     } catch (error: any) {
       console.error('Error fetching data:', error);
@@ -323,10 +388,18 @@ const AcademicStructure = () => {
     }
 
     try {
+      // Determine the final level_id based on whether sub_level is selected
+      let finalLevelId = null;
+      if (classForm.sub_level_id && classForm.sub_level_id !== 'none') {
+        finalLevelId = classForm.sub_level_id;
+      } else if (classForm.level_id && classForm.level_id !== 'none') {
+        finalLevelId = classForm.level_id;
+      }
+
       const classData = {
-        ...classForm,
+        name: classForm.name,
         max_students: parseInt(classForm.max_students),
-        level_id: classForm.level_id === 'none' ? null : classForm.level_id || null,
+        level_id: finalLevelId,
         academic_year_id: classForm.academic_year_id === 'none' ? null : classForm.academic_year_id || null,
       };
 
@@ -451,7 +524,7 @@ const AcademicStructure = () => {
   };
 
   const resetClassForm = () => {
-    setClassForm({ name: '', level_id: '', max_students: '40', academic_year_id: '' });
+    setClassForm({ name: '', level_id: '', sub_level_id: '', max_students: '40', academic_year_id: '' });
     setSelectedClass(null);
   };
 
@@ -481,9 +554,11 @@ const AcademicStructure = () => {
 
   const openEditClass = (cls: Class) => {
     setSelectedClass(cls);
+    const levelInfo = cls.levels as any;
     setClassForm({
       name: cls.name,
-      level_id: cls.level_id || 'none',
+      level_id: levelInfo?.parent_id || cls.level_id || 'none',
+      sub_level_id: levelInfo?.parent_id ? cls.level_id : 'none',
       max_students: cls.max_students.toString(),
       academic_year_id: cls.academic_year_id || 'none',
     });
@@ -786,6 +861,15 @@ const AcademicStructure = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                          {!year.is_current && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeleteDialog('year', year)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -915,6 +999,13 @@ const AcademicStructure = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog('level', level)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -961,14 +1052,16 @@ const AcademicStructure = () => {
                         <Label htmlFor="level">Level</Label>
                         <Select
                           value={classForm.level_id}
-                          onValueChange={(value) => setClassForm(prev => ({ ...prev, level_id: value }))}
+                          onValueChange={(value) => {
+                            setClassForm(prev => ({ ...prev, level_id: value, sub_level_id: 'none' }));
+                          }}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select level" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">No Level</SelectItem>
-                            {getAllLevels(levels).map((level) => (
+                            {levels.map((level) => (
                               <SelectItem key={level.id} value={level.id}>
                                 {level.name}
                               </SelectItem>
@@ -976,6 +1069,35 @@ const AcademicStructure = () => {
                           </SelectContent>
                         </Select>
                       </div>
+                      
+                      {/* Sub-Level dropdown - show only if Secondary is selected */}
+                      {(() => {
+                        const selectedLevel = levels.find(l => l.id === classForm.level_id);
+                        const isSecondary = selectedLevel?.name === 'Secondary';
+                        const subLevels = isSecondary ? selectedLevel?.children || [] : [];
+                        
+                        return isSecondary && subLevels.length > 0 ? (
+                          <div className="space-y-2">
+                            <Label htmlFor="sub-level">Sub-Level</Label>
+                            <Select
+                              value={classForm.sub_level_id}
+                              onValueChange={(value) => setClassForm(prev => ({ ...prev, sub_level_id: value }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select sub-level" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">No Sub-Level</SelectItem>
+                                {subLevels.map((subLevel) => (
+                                  <SelectItem key={subLevel.id} value={subLevel.id}>
+                                    {subLevel.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : null;
+                      })()}
                       <div className="space-y-2">
                         <Label htmlFor="max-students">Max Students</Label>
                         <Input
@@ -1039,7 +1161,16 @@ const AcademicStructure = () => {
                     <TableRow key={cls.id}>
                       <TableCell className="font-medium">{cls.name}</TableCell>
                       <TableCell>
-                        {cls.levels?.name || <Badge variant="outline">No Level</Badge>}
+                        {(() => {
+                          const levelInfo = cls.levels as any;
+                          if (!levelInfo) return <Badge variant="outline">No Level</Badge>;
+                          
+                          // If this level has a parent, show both parent and level names
+                          if (levelInfo.parent_id && levelInfo.parent) {
+                            return `${levelInfo.parent.name} - ${levelInfo.name}`;
+                          }
+                          return levelInfo.name;
+                        })()}
                       </TableCell>
                       <TableCell>{cls.max_students}</TableCell>
                       <TableCell>
@@ -1056,6 +1187,13 @@ const AcademicStructure = () => {
                             onClick={() => openEditClass(cls)}
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog('class', cls)}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -1174,6 +1312,13 @@ const AcademicStructure = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog('stream', stream)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1184,6 +1329,37 @@ const AcademicStructure = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this {deleteType} "{itemToDelete?.name}"? 
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

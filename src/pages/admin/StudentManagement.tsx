@@ -125,7 +125,7 @@ const StudentManagement = () => {
         .select(`
           *,
           academic_year:academic_years(name, is_current),
-          class:classes(name, levels(name)),
+          class:classes(name, levels!level_id(name)),
           stream:streams(name)
         `)
         .order('enrollment_date', { ascending: false });

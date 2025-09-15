@@ -26,8 +26,7 @@ const StudentSubjects = () => {
         .select(`
           *,
           classes:class_id (
-            name,
-            level
+            name
           ),
           streams:stream_id (
             name
@@ -154,7 +153,6 @@ const StudentSubjects = () => {
           <CardContent>
             <div className="space-y-2">
               <p><strong>Class:</strong> {enrollments[0]?.classes?.name}</p>
-              <p><strong>Level:</strong> Class {enrollments[0]?.classes?.level}</p>
               {enrollments[0]?.streams && (
                 <p><strong>Stream:</strong> {enrollments[0].streams.name}</p>
               )}

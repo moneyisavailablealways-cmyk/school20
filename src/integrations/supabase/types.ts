@@ -296,7 +296,6 @@ export type Database = {
           class_teacher_id: string | null
           created_at: string | null
           id: string
-          level: number
           level_id: string | null
           max_students: number | null
           name: string
@@ -307,7 +306,6 @@ export type Database = {
           class_teacher_id?: string | null
           created_at?: string | null
           id?: string
-          level: number
           level_id?: string | null
           max_students?: number | null
           name: string
@@ -318,7 +316,6 @@ export type Database = {
           class_teacher_id?: string | null
           created_at?: string | null
           id?: string
-          level?: number
           level_id?: string | null
           max_students?: number | null
           name?: string
@@ -341,6 +338,13 @@ export type Database = {
           },
           {
             foreignKeyName: "classes_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_classes_level_id"
             columns: ["level_id"]
             isOneToOne: false
             referencedRelation: "levels"
@@ -1870,6 +1874,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_academic_year: {
+        Args: { year_id: string }
+        Returns: boolean
+      }
+      delete_class: {
+        Args: { class_id: string }
+        Returns: boolean
+      }
+      delete_level: {
+        Args: { level_id: string }
+        Returns: boolean
+      }
+      delete_stream: {
+        Args: { stream_id: string }
+        Returns: boolean
+      }
       generate_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string

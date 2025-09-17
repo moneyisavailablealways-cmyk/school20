@@ -337,13 +337,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "classes_level_id_fkey"
-            columns: ["level_id"]
-            isOneToOne: false
-            referencedRelation: "levels"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "fk_classes_level_id"
             columns: ["level_id"]
             isOneToOne: false

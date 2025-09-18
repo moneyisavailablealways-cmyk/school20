@@ -230,11 +230,8 @@ const Scholarships = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="academic">Academic</SelectItem>
-                            <SelectItem value="need_based">Need Based</SelectItem>
-                            <SelectItem value="sports">Sports</SelectItem>
-                            <SelectItem value="arts">Arts</SelectItem>
-                            <SelectItem value="community_service">Community Service</SelectItem>
+                            <SelectItem value="percentage">Percentage Based</SelectItem>
+                            <SelectItem value="fixed_amount">Fixed Amount</SelectItem>
                           </SelectContent>
                         </Select>
                       </FormItem>

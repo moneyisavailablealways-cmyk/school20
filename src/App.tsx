@@ -55,7 +55,9 @@ import HeadTeacherProfile from "./pages/head-teacher/HeadTeacherProfile";
 import BursarDashboard from "./pages/bursar/BursarDashboard";
 import FeeStructures from "./pages/bursar/FeeStructures";
 import Invoices from "./pages/bursar/Invoices";
+import CreateInvoice from "./pages/bursar/CreateInvoice";
 import Payments from "./pages/bursar/Payments";
+import RecordPayment from "./pages/bursar/RecordPayment";
 import Scholarships from "./pages/bursar/Scholarships";
 import BursarReports from "./pages/bursar/Reports";
 import BursarProfile from "./pages/bursar/BursarProfile";
@@ -184,7 +186,9 @@ const App = () => (
               <Route index element={<BursarDashboard />} />
               <Route path="fee-structures" element={<FeeStructures />} />
               <Route path="invoices" element={<Invoices />} />
+              <Route path="invoices/create" element={<CreateInvoice />} />
               <Route path="payments" element={<Payments />} />
+              <Route path="payments/new" element={<RecordPayment />} />
               <Route path="scholarships" element={<Scholarships />} />
               <Route path="reports" element={<BursarReports />} />
               <Route path="profile" element={<BursarProfile />} />

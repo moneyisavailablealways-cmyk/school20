@@ -77,11 +77,14 @@ const FeeStructures = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      // Fetch classes
+      // Fetch classes with level information
       const { data: classData, error: classError } = await supabase
         .from('classes')
-        .select('*')
-        .order('level', { ascending: true });
+        .select(`
+          *,
+          levels!level_id(name)
+        `)
+        .order('created_at', { ascending: false });
 
       if (feeError || yearError || classError) {
         throw feeError || yearError || classError;
@@ -404,7 +407,7 @@ const FeeStructures = () => {
                     <SelectItem value="all">All Classes</SelectItem>
                     {classes.map((cls) => (
                       <SelectItem key={cls.id} value={cls.id}>
-                        {cls.name} (Level {cls.level})
+                        {cls.name} {cls.levels && `(${cls.levels.name})`}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -109,6 +109,9 @@ const RecordPayment = () => {
   };
 
   const getSelectedInvoice = () => {
+    if (!formData.invoice_id || formData.invoice_id === 'no-invoice') {
+      return null;
+    }
     return invoices.find(inv => inv.id === formData.invoice_id);
   };
 
@@ -133,7 +136,7 @@ const RecordPayment = () => {
         .from('payments')
         .insert({
           student_id: formData.student_id,
-          invoice_id: formData.invoice_id || null,
+          invoice_id: formData.invoice_id === 'no-invoice' ? null : formData.invoice_id,
           amount: paymentAmount,
           payment_method: formData.payment_method,
           payment_reference: formData.payment_reference,
@@ -232,7 +235,7 @@ const RecordPayment = () => {
                     <SelectValue placeholder={formData.student_id ? "Select invoice" : "Select student first"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No specific invoice</SelectItem>
+                    <SelectItem value="no-invoice">No specific invoice</SelectItem>
                     {invoices.map((invoice) => (
                       <SelectItem key={invoice.id} value={invoice.id}>
                         {invoice.invoice_number} - Balance: ${invoice.balance_amount}

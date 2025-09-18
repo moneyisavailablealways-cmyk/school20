@@ -166,19 +166,61 @@ const CreateInvoice = () => {
 
       if (invoiceError) throw invoiceError;
 
-      // Create invoice items
-      const itemsToInsert = invoiceItems.map(item => ({
-        invoice_id: invoiceData.id,
-        description: item.description,
-        amount: Number(item.amount),
-        student_fee_id: item.fee_structure_id || null,
-      }));
+      // Create invoice items with proper student_fee_id handling
+      const itemsToInsert = [];
+      
+      for (const item of invoiceItems) {
+        let studentFeeId = null;
+        
+        if (item.fee_structure_id) {
+          // Check if student_fee record exists
+          const { data: existingStudentFee } = await supabase
+            .from('student_fees')
+            .select('id')
+            .eq('student_id', formData.student_id)
+            .eq('fee_structure_id', item.fee_structure_id)
+            .maybeSingle();
+
+          if (existingStudentFee) {
+            studentFeeId = existingStudentFee.id;
+          } else {
+            // Create student_fee record
+            const { data: newStudentFee, error: studentFeeError } = await supabase
+              .from('student_fees')
+              .insert({
+                student_id: formData.student_id,
+                fee_structure_id: item.fee_structure_id,
+                amount: Number(item.amount),
+                final_amount: Number(item.amount),
+                due_date: formData.due_date,
+                status: 'pending'
+              })
+              .select('id')
+              .single();
+
+            if (studentFeeError) {
+              throw new Error(`Failed to create student fee record: ${studentFeeError.message}`);
+            }
+            
+            studentFeeId = newStudentFee.id;
+          }
+        }
+
+        itemsToInsert.push({
+          invoice_id: invoiceData.id,
+          description: item.description,
+          amount: Number(item.amount),
+          student_fee_id: studentFeeId,
+        });
+      }
 
       const { error: itemsError } = await supabase
         .from('invoice_items')
         .insert(itemsToInsert);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        throw new Error(`Failed to create invoice items: ${itemsError.message}`);
+      }
 
       toast({
         title: 'Success',

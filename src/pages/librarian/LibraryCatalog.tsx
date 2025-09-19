@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,9 @@ import {
   Filter,
   MoreHorizontal
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+import AddLibraryItemDialog from '@/components/AddLibraryItemDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,67 +30,47 @@ import {
 } from "@/components/ui/select";
 
 const LibraryCatalog = () => {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [catalogItems, setCatalogItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
-  // Mock data - replace with real data from Supabase
-  const catalogItems = [
-    {
-      id: '1',
-      title: 'To Kill a Mockingbird',
-      author: 'Harper Lee',
-      isbn: '978-0-06-112008-4',
-      barcode: 'LIB001234',
-      category: 'Fiction',
-      itemType: 'book',
-      totalCopies: 5,
-      availableCopies: 3,
-      location: 'A-12-03',
-      publishedYear: 1960
-    },
-    {
-      id: '2',
-      title: 'The Great Gatsby',
-      author: 'F. Scott Fitzgerald',
-      isbn: '978-0-7432-7356-5',
-      barcode: 'LIB001235',
-      category: 'Fiction',
-      itemType: 'book',
-      totalCopies: 4,
-      availableCopies: 1,
-      location: 'A-12-04',
-      publishedYear: 1925
-    },
-    {
-      id: '3',
-      title: 'Mathematics Grade 10',
-      author: 'John Smith',
-      isbn: '978-1-234-56789-0',
-      barcode: 'LIB001236',
-      category: 'Textbook',
-      itemType: 'book',
-      totalCopies: 25,
-      availableCopies: 18,
-      location: 'T-05-01',
-      publishedYear: 2023
-    },
-    {
-      id: '4',
-      title: 'National Geographic Kids',
-      author: 'Various',
-      isbn: '',
-      barcode: 'LIB001237',
-      category: 'Magazine',
-      itemType: 'magazine',
-      totalCopies: 1,
-      availableCopies: 1,
-      location: 'M-01-01',
-      publishedYear: 2024
+  // Load catalog items from Supabase
+  const loadCatalogItems = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('library_items')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setCatalogItems(data || []);
+    } catch (error) {
+      console.error('Error loading catalog items:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load catalog items',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const categories = ['all', 'Fiction', 'Textbook', 'Reference', 'Magazine', 'DVD'];
-  const itemTypes = ['all', 'book', 'ebook', 'magazine', 'dvd', 'material'];
+  useEffect(() => {
+    loadCatalogItems();
+  }, []);
+
+  // Get unique categories from the actual data
+  const categories = ['all', ...new Set(catalogItems.map(item => item.category))];
+
 
   const getAvailabilityBadge = (available: number, total: number) => {
     const percentage = (available / total) * 100;
@@ -98,9 +81,9 @@ const LibraryCatalog = () => {
 
   const filteredItems = catalogItems.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.isbn.includes(searchQuery) ||
-                         item.barcode.includes(searchQuery);
+                         (item.author && item.author.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                         (item.isbn && item.isbn.includes(searchQuery)) ||
+                         (item.barcode && item.barcode.includes(searchQuery));
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -114,10 +97,7 @@ const LibraryCatalog = () => {
             Manage your library's collection of books and resources.
           </p>
         </div>
-        <Button onClick={() => {
-          // This would open an add item dialog - functionality can be expanded
-          console.log('Add new item clicked');
-        }}>
+        <Button onClick={() => setShowAddDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add New Item
         </Button>
@@ -163,12 +143,15 @@ const LibraryCatalog = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Showing {filteredItems.length} of {catalogItems.length} items
+            {loading ? 'Loading...' : `Showing ${filteredItems.length} of ${catalogItems.length} items`}
           </p>
         </div>
 
-        <div className="grid gap-4">
-          {filteredItems.map((item) => (
+        {loading ? (
+          <div className="text-center py-8">Loading catalog items...</div>
+        ) : (
+          <div className="grid gap-4">
+            {filteredItems.map((item) => (
             <Card key={item.id}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -179,17 +162,17 @@ const LibraryCatalog = () => {
                     <div className="space-y-2">
                       <div>
                         <h3 className="text-lg font-semibold text-foreground">{item.title}</h3>
-                        <p className="text-muted-foreground">{item.author}</p>
+                        <p className="text-muted-foreground">{item.author || 'Unknown Author'}</p>
                       </div>
                       <div className="flex gap-4 text-sm text-muted-foreground">
                         <span>ISBN: {item.isbn || 'N/A'}</span>
-                        <span>Barcode: {item.barcode}</span>
-                        <span>Location: {item.location}</span>
-                        <span>Year: {item.publishedYear}</span>
+                        <span>Barcode: {item.barcode || 'N/A'}</span>
+                        <span>Location: {item.location || 'N/A'}</span>
+                        <span>Year: {item.publication_year || 'N/A'}</span>
                       </div>
                       <div className="flex gap-2">
                         <Badge variant="outline">{item.category}</Badge>
-                        <Badge variant="outline">{item.itemType}</Badge>
+                        <Badge variant="outline">{item.item_type}</Badge>
                       </div>
                     </div>
                   </div>
@@ -198,9 +181,9 @@ const LibraryCatalog = () => {
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground">Availability</p>
                       <p className="font-medium">
-                        {item.availableCopies} of {item.totalCopies} available
+                        {item.available_copies} of {item.total_copies} available
                       </p>
-                      {getAvailabilityBadge(item.availableCopies, item.totalCopies)}
+                      {getAvailabilityBadge(item.available_copies, item.total_copies)}
                     </div>
                     
                     <DropdownMenu>
@@ -232,10 +215,11 @@ const LibraryCatalog = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {filteredItems.length === 0 && (
+        {!loading && filteredItems.length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
               <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
@@ -243,7 +227,7 @@ const LibraryCatalog = () => {
               <p className="text-muted-foreground text-center">
                 No library items match your search criteria. Try adjusting your filters or search terms.
               </p>
-              <Button className="mt-4" onClick={() => console.log('Add new item from empty state')}>
+              <Button className="mt-4" onClick={() => setShowAddDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Item
               </Button>
@@ -251,6 +235,12 @@ const LibraryCatalog = () => {
           </Card>
         )}
       </div>
+
+      <AddLibraryItemDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onSuccess={loadCatalogItems}
+      />
     </div>
   );
 };

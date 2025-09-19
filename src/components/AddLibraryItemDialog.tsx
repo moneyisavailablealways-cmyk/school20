@@ -96,6 +96,24 @@ const AddLibraryItemDialog = ({ open, onOpenChange, onSuccess }: AddLibraryItemD
     setIsLoading(true);
 
     try {
+      // Validate barcode uniqueness if provided
+      if (formData.barcode) {
+        const { data: existingItem } = await supabase
+          .from('library_items')
+          .select('id')
+          .eq('barcode', formData.barcode)
+          .single();
+        
+        if (existingItem) {
+          toast({
+            title: 'Error',
+            description: 'An item with this barcode already exists',
+            variant: 'destructive'
+          });
+          return;
+        }
+      }
+
       const itemData = {
         title: formData.title,
         author: formData.author || null,
@@ -107,7 +125,7 @@ const AddLibraryItemDialog = ({ open, onOpenChange, onSuccess }: AddLibraryItemD
         publisher: formData.publisher || null,
         edition: formData.edition || null,
         publication_year: formData.publication_year ? parseInt(formData.publication_year) : null,
-        language: formData.language,
+        language: formData.language || 'English',
         subject: formData.subject || null,
         location: formData.location || null,
         total_copies: parseInt(formData.total_copies),
@@ -116,13 +134,19 @@ const AddLibraryItemDialog = ({ open, onOpenChange, onSuccess }: AddLibraryItemD
         is_active: true
       };
 
-      const { error } = await supabase
+      console.log('Attempting to insert library item:', itemData);
+
+      const { data, error } = await supabase
         .from('library_items')
-        .insert([itemData]);
+        .insert([itemData])
+        .select();
 
       if (error) {
+        console.error('Supabase insert error:', error);
         throw error;
       }
+
+      console.log('Successfully inserted library item:', data);
 
       toast({
         title: 'Success',
@@ -151,11 +175,26 @@ const AddLibraryItemDialog = ({ open, onOpenChange, onSuccess }: AddLibraryItemD
 
       onOpenChange(false);
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding library item:', error);
+      
+      let errorMessage = 'Failed to add library item. Please try again.';
+      
+      if (error?.message) {
+        if (error.message.includes('library_items_item_type_check')) {
+          errorMessage = 'Invalid item type. Please select from the available options.';
+        } else if (error.message.includes('library_items_barcode_key')) {
+          errorMessage = 'An item with this barcode already exists.';
+        } else if (error.message.includes('violates not-null constraint')) {
+          errorMessage = 'Please fill in all required fields.';
+        } else {
+          errorMessage = `Error: ${error.message}`;
+        }
+      }
+      
       toast({
         title: 'Error',
-        description: 'Failed to add library item. Please try again.',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {

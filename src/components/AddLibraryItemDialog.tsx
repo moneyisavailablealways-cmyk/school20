@@ -71,9 +71,7 @@ const AddLibraryItemDialog = ({ open, onOpenChange, onSuccess }: AddLibraryItemD
     'magazine',
     'journal',
     'dvd',
-    'audio_book',
-    'reference_material',
-    'textbook'
+    'material'
   ];
 
   const handleInputChange = (field: string, value: string) => {

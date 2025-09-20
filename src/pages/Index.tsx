@@ -217,9 +217,10 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
+            <P>For more systems, apps, websites, or need more information contact developer,Skyline Tech Solution +256705466283</p>
+
       </div>
     </div>
-    <P>For more systems, apps, websites, or need more information contact developer,Skyline Tech Solution +256705466283</p>
   );
 };
 

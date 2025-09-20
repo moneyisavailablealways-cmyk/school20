@@ -3,92 +3,66 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  GraduationCap, 
-  BookOpen, 
-  Users, 
-  BarChart3, 
-  Shield, 
-  Calendar,
-  DollarSign,
-  Library,
-  Smartphone,
-  Globe,
-  ArrowRight
-} from 'lucide-react';
+import { GraduationCap, BookOpen, Users, BarChart3, Shield, Calendar, DollarSign, Library, Smartphone, Globe, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
-
+  const {
+    user,
+    loading
+  } = useAuth();
   useEffect(() => {
     if (user && !loading) {
       navigate('/dashboard');
     }
   }, [user, loading, navigate]);
-
-  const features = [
-    {
-      icon: Shield,
-      title: 'Admin Portal',
-      description: 'Complete system administration and user management',
-      color: 'text-red-600',
-    },
-    {
-      icon: Users,
-      title: 'Principal Portal',
-      description: 'School-wide oversight and performance analytics',
-      color: 'text-blue-600',
-    },
-    {
-      icon: GraduationCap,
-      title: 'Teacher Portal',
-      description: 'Classroom management and student assessment',
-      color: 'text-green-600',
-    },
-    {
-      icon: BookOpen,
-      title: 'Student Portal',
-      description: 'Access courses, grades, and learning resources',
-      color: 'text-purple-600',
-    },
-    {
-      icon: BarChart3,
-      title: 'Parent Portal',
-      description: 'Monitor child progress and handle payments',
-      color: 'text-orange-600',
-    },
-    {
-      icon: DollarSign,
-      title: 'Bursar Portal',
-      description: 'Financial management and fee collection',
-      color: 'text-yellow-600',
-    },
-    {
-      icon: Library,
-      title: 'Library Portal',
-      description: 'Catalog management and resource tracking',
-      color: 'text-indigo-600',
-    },
-    {
-      icon: Calendar,
-      title: 'Head Teacher Portal',
-      description: 'Academic supervision and curriculum planning',
-      color: 'text-teal-600',
-    },
-  ];
-
+  const features = [{
+    icon: Shield,
+    title: 'Admin Portal',
+    description: 'Complete system administration and user management',
+    color: 'text-red-600'
+  }, {
+    icon: Users,
+    title: 'Principal Portal',
+    description: 'School-wide oversight and performance analytics',
+    color: 'text-blue-600'
+  }, {
+    icon: GraduationCap,
+    title: 'Teacher Portal',
+    description: 'Classroom management and student assessment',
+    color: 'text-green-600'
+  }, {
+    icon: BookOpen,
+    title: 'Student Portal',
+    description: 'Access courses, grades, and learning resources',
+    color: 'text-purple-600'
+  }, {
+    icon: BarChart3,
+    title: 'Parent Portal',
+    description: 'Monitor child progress and handle payments',
+    color: 'text-orange-600'
+  }, {
+    icon: DollarSign,
+    title: 'Bursar Portal',
+    description: 'Financial management and fee collection',
+    color: 'text-yellow-600'
+  }, {
+    icon: Library,
+    title: 'Library Portal',
+    description: 'Catalog management and resource tracking',
+    color: 'text-indigo-600'
+  }, {
+    icon: Calendar,
+    title: 'Head Teacher Portal',
+    description: 'Academic supervision and curriculum planning',
+    color: 'text-teal-600'
+  }];
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+  return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-16">
@@ -136,8 +110,7 @@ const Index = () => {
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature, index) => (
-              <Card key={index} className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            {features.map((feature, index) => <Card key={index} className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
                 <CardHeader className="pb-3">
                   <feature.icon className={`h-8 w-8 ${feature.color} mb-2`} />
                   <CardTitle className="text-lg">{feature.title}</CardTitle>
@@ -147,8 +120,7 @@ const Index = () => {
                     {feature.description}
                   </CardDescription>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
           </div>
         </div>
 
@@ -218,13 +190,11 @@ const Index = () => {
           </Card>
         </div>
         <div className="text-center">
-          <p>
+          <p className="mx-[53px] my-[24px] font-bold text-black text-xl">
             For more systems, apps, websites, or need more information contact developer,Skyline Tech Solution +256705466283
           </p>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;

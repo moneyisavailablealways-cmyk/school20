@@ -50,11 +50,9 @@ const AddBehaviorNoteDialog: React.FC<AddBehaviorNoteDialogProps> = ({
   ];
 
   const noteTypes = [
-    { value: 'incident', label: 'Incident' },
-    { value: 'achievement', label: 'Achievement' },
-    { value: 'observation', label: 'Observation' },
-    { value: 'warning', label: 'Warning' },
-    { value: 'commendation', label: 'Commendation' }
+    { value: 'positive', label: 'Positive' },
+    { value: 'neutral', label: 'Neutral' },
+    { value: 'negative', label: 'Negative' }
   ];
 
   useEffect(() => {

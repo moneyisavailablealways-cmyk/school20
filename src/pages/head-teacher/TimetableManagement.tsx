@@ -3,9 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MapPin, Users, Plus } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AddTimetableDialog from '@/components/AddTimetableDialog';
+import EditTimetableDialog from '@/components/EditTimetableDialog';
 
 interface TimetableEntry {
   id: string;
@@ -34,6 +35,8 @@ const TimetableManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(1); // Monday
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const { toast } = useToast();
 
   const daysOfWeek = [
@@ -98,6 +101,40 @@ const TimetableManagement = () => {
       hour: '2-digit', 
       minute: '2-digit' 
     });
+  };
+
+  const handleEdit = (entry: TimetableEntry) => {
+    setSelectedEntry(entry);
+    setShowEditDialog(true);
+  };
+
+  const handleDelete = async (entry: TimetableEntry) => {
+    if (!confirm('Are you sure you want to delete this timetable entry?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('timetables')
+        .delete()
+        .eq('id', entry.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Timetable entry deleted successfully'
+      });
+
+      fetchTimetableEntries();
+    } catch (error: any) {
+      console.error('Error deleting timetable entry:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete timetable entry',
+        variant: 'destructive'
+      });
+    }
   };
 
   if (loading) {
@@ -183,10 +220,12 @@ const TimetableManagement = () => {
                     {entry.teacher?.first_name} {entry.teacher?.last_name}
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(entry)}>
+                      <Edit className="h-4 w-4 mr-1" />
                       Edit
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleDelete(entry)}>
+                      <Trash2 className="h-4 w-4 mr-1" />
                       Delete
                     </Button>
                   </div>
@@ -201,6 +240,13 @@ const TimetableManagement = () => {
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onSuccess={fetchTimetableEntries}
+      />
+
+      <EditTimetableDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSuccess={fetchTimetableEntries}
+        entry={selectedEntry}
       />
     </div>
   );

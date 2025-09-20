@@ -126,7 +126,7 @@ const Auth = () => {
 
             <div className="mt-6 text-center text-sm text-muted-foreground">
               <p>Don't have an account?</p>
-              <p>Contact your school administrator to get access.</p>
+              <p>Contact your school administrator to get access or contact Skyline Tech Solutions +256705466283.</p>
             </div>
           </CardContent>
         </Card>

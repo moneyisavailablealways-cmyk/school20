@@ -218,7 +218,7 @@ const Index = () => {
           </Card>
         </div>
         <div className="text-center">
-          <P>
+          <p>
             For more systems, apps, websites, or need more information contact developer,Skyline Tech Solution +256705466283
           </p>
         </div>

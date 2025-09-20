@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, FileText, Calendar, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import AddBehaviorNoteDialog from '@/components/AddBehaviorNoteDialog';
 
 interface BehaviorNote {
   id: string;
@@ -31,6 +32,7 @@ interface BehaviorNote {
 const DisciplineRecords = () => {
   const [behaviorNotes, setBehaviorNotes] = useState<BehaviorNote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -118,7 +120,7 @@ const DisciplineRecords = () => {
           <h1 className="text-3xl font-bold">Discipline Records</h1>
           <p className="text-muted-foreground">View and manage student behavior records</p>
         </div>
-        <Button>
+        <Button onClick={() => setShowAddDialog(true)}>
           <FileText className="h-4 w-4 mr-2" />
           Add Record
         </Button>
@@ -172,6 +174,12 @@ const DisciplineRecords = () => {
           ))
         )}
       </div>
+
+      <AddBehaviorNoteDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onSuccess={fetchBehaviorNotes}
+      />
     </div>
   );
 };

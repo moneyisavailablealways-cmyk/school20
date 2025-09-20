@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, MapPin, Users, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import AddTimetableDialog from '@/components/AddTimetableDialog';
 
 interface TimetableEntry {
   id: string;
@@ -32,6 +33,7 @@ const TimetableManagement = () => {
   const [timetableEntries, setTimetableEntries] = useState<TimetableEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(1); // Monday
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const { toast } = useToast();
 
   const daysOfWeek = [
@@ -113,7 +115,7 @@ const TimetableManagement = () => {
           <h1 className="text-3xl font-bold">Timetable Management</h1>
           <p className="text-muted-foreground">Manage class schedules and time slots</p>
         </div>
-        <Button>
+        <Button onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Schedule
         </Button>
@@ -194,6 +196,12 @@ const TimetableManagement = () => {
           ))
         )}
       </div>
+
+      <AddTimetableDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onSuccess={fetchTimetableEntries}
+      />
     </div>
   );
 };

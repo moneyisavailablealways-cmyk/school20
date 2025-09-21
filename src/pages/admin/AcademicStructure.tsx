@@ -211,8 +211,7 @@ const AcademicStructure = () => {
           levels!level_id(
             id,
             name,
-            parent_id,
-            parent:levels!parent_id(name)
+            parent_id
           ),
           academic_years(name)
         `)

@@ -1876,7 +1876,7 @@ export type Database = {
         Returns: boolean
       }
       delete_level: {
-        Args: { level_id: string }
+        Args: { p_level_id: string }
         Returns: boolean
       }
       delete_stream: {

@@ -33,6 +33,7 @@ import TeacherManagement from "./pages/admin/TeacherManagement";
 import ParentManagement from "./pages/admin/ParentManagement";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import MyClasses from "./pages/teacher/MyClasses";
+import ClassStudents from "./pages/teacher/ClassStudents";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
 import Schedule from "./pages/teacher/Schedule";
@@ -134,6 +135,7 @@ const App = () => (
             >
               <Route index element={<TeacherDashboard />} />
               <Route path="classes" element={<MyClasses />} />
+              <Route path="classes/:classId/students" element={<ClassStudents />} />
               <Route path="students" element={<TeacherStudents />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="profile" element={<TeacherProfile />} />

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,8 @@ import {
 } from 'lucide-react';
 
 const ParentDashboard = () => {
+  const navigate = useNavigate();
+  
   // Mock data - replace with real data from Supabase
   const children = [
     {
@@ -192,7 +195,11 @@ const ParentDashboard = () => {
                 </Badge>
               </div>
             ))}
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => navigate('/parent/announcements')}
+            >
               View All Announcements
             </Button>
           </CardContent>
@@ -244,7 +251,7 @@ const ParentDashboard = () => {
             <Button 
               variant="outline" 
               className="w-full justify-start"
-              onClick={() => window.location.href = '/parent/appointments'}
+              onClick={() => navigate('/parent/appointments')}
             >
               <Calendar className="mr-2 h-4 w-4" />
               Book Parent-Teacher Meeting
@@ -252,7 +259,7 @@ const ParentDashboard = () => {
             <Button 
               variant="outline" 
               className="w-full justify-start"
-              onClick={() => window.location.href = '/parent/reports'}
+              onClick={() => navigate('/parent/reports')}
             >
               <FileText className="mr-2 h-4 w-4" />
               Download Report Cards
@@ -260,7 +267,7 @@ const ParentDashboard = () => {
             <Button 
               variant="outline" 
               className="w-full justify-start"
-              onClick={() => window.location.href = '/parent/announcements'}
+              onClick={() => navigate('/parent/announcements')}
             >
               <Bell className="mr-2 h-4 w-4" />
               View All Announcements
@@ -268,7 +275,7 @@ const ParentDashboard = () => {
             <Button 
               variant="outline" 
               className="w-full justify-start"
-              onClick={() => window.location.href = '/parent/payments'}
+              onClick={() => navigate('/parent/payments')}
             >
               <CreditCard className="mr-2 h-4 w-4" />
               Payment History

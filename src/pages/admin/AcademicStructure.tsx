@@ -969,46 +969,88 @@ const AcademicStructure = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
                     <TableHead>Parent Level</TableHead>
+                    <TableHead>Sub-Level</TableHead>
                     <TableHead>Classes Count</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {getAllLevels(levels).map((level) => (
-                    <TableRow key={level.id}>
-                      <TableCell className="font-medium">{level.name}</TableCell>
-                      <TableCell>
-                        {level.parent_id ? (
-                          getAllLevels(levels).find(l => l.id === level.parent_id)?.name || 'Unknown'
-                        ) : (
-                          <Badge variant="outline">Root Level</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {classes.filter(cls => cls.level_id === level.id).length}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditLevel(level)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteDialog('level', level)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {(() => {
+                    const allLevels = getAllLevels(levels);
+                    const hierarchicalRows: JSX.Element[] = [];
+                    
+                    // Get root levels first
+                    const rootLevels = allLevels.filter(level => !level.parent_id);
+                    
+                    rootLevels.forEach(rootLevel => {
+                      const children = allLevels.filter(level => level.parent_id === rootLevel.id);
+                      
+                      if (children.length > 0) {
+                        // Show children with parent-child relationship
+                        children.forEach(child => {
+                          hierarchicalRows.push(
+                            <TableRow key={child.id}>
+                              <TableCell className="font-medium">{rootLevel.name}</TableCell>
+                              <TableCell>{child.name}</TableCell>
+                              <TableCell>
+                                {classes.filter(cls => cls.level_id === child.id).length}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditLevel(child)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openDeleteDialog('level', child)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        });
+                      } else {
+                        // Show root level with no sub-level
+                        hierarchicalRows.push(
+                          <TableRow key={rootLevel.id}>
+                            <TableCell className="font-medium">{rootLevel.name}</TableCell>
+                            <TableCell>-</TableCell>
+                            <TableCell>
+                              {classes.filter(cls => cls.level_id === rootLevel.id).length}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditLevel(rootLevel)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openDeleteDialog('level', rootLevel)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+                    });
+                    
+                    return hierarchicalRows;
+                  })()}
                 </TableBody>
               </Table>
             </CardContent>
@@ -1060,7 +1102,7 @@ const AcademicStructure = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">No Level</SelectItem>
-                            {levels.map((level) => (
+                            {levels.filter(level => !level.parent_id).map((level) => (
                               <SelectItem key={level.id} value={level.id}>
                                 {level.name}
                               </SelectItem>

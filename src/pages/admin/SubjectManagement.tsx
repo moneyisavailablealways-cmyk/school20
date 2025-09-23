@@ -16,6 +16,7 @@ import { Plus, Pencil, Trash2, BookOpen } from 'lucide-react';
 interface Level {
   id: string;
   name: string;
+  parent_id: string | null;
 }
 
 interface Subject {
@@ -60,7 +61,7 @@ const SubjectManagement = () => {
         .from('subjects')
         .select(`
           *,
-          level:levels(id, name)
+          level:levels(id, name, parent_id)
         `)
         .order('name', { ascending: true });
 
@@ -82,7 +83,7 @@ const SubjectManagement = () => {
     try {
       const { data, error } = await supabase
         .from('levels')
-        .select('id, name')
+        .select('id, name, parent_id')
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -384,24 +385,34 @@ const SubjectManagement = () => {
                 </Select>
               </div>
 
-              {/* Show sub-level dropdown only if Secondary is selected */}
-              {formData.level_id && 
-               levels.find(l => l.id === formData.level_id)?.name === 'Secondary' && (
-                <div className="space-y-2">
-                  <Label htmlFor="sub_level">Sub-Level *</Label>
-                  <Select 
-                    value={formData.sub_level} 
-                    onValueChange={(value) => setFormData({ ...formData, sub_level: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select sub-level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All Levels">All Levels</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {/* Sub-Level dropdown - show only if the selected level has children */}
+              {(() => {
+                const selectedLevelData = levels.find(l => l.id === formData.level_id);
+                const hasChildren = selectedLevelData && levels.some(l => l.parent_id === selectedLevelData.id);
+                const subLevels = hasChildren ? levels.filter(l => l.parent_id === selectedLevelData.id) : [];
+                
+                return hasChildren && subLevels.length > 0 ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="sub_level">Sub-Level *</Label>
+                    <Select 
+                      value={formData.sub_level} 
+                      onValueChange={(value) => setFormData({ ...formData, sub_level: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select sub-level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="All Levels">All Levels</SelectItem>
+                        {subLevels.map((subLevel) => (
+                          <SelectItem key={subLevel.id} value={subLevel.name}>
+                            {subLevel.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             <div className="flex items-center space-x-4">

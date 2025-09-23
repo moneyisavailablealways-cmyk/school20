@@ -397,8 +397,6 @@ const SubjectManagement = () => {
                       <SelectValue placeholder="Select sub-level" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="O Level">O Level</SelectItem>
-                      <SelectItem value="A Level">A Level</SelectItem>
                       <SelectItem value="All Levels">All Levels</SelectItem>
                     </SelectContent>
                   </Select>

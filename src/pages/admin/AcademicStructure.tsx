@@ -108,6 +108,9 @@ const AcademicStructure = () => {
   const [levelForm, setLevelForm] = useState({
     name: '',
     parent_id: '',
+    custom_parent_name: '',
+    is_sub_level: false,
+    sub_level_parent: '',
   });
   
   const [classForm, setClassForm] = useState({
@@ -329,19 +332,61 @@ const AcademicStructure = () => {
   const handleSaveLevel = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!levelForm.name) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields',
-        variant: 'destructive',
-      });
-      return;
+    // Validation based on form type
+    if (levelForm.is_sub_level) {
+      // Sub-level validation
+      if (!levelForm.name || !levelForm.sub_level_parent) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please fill in all required fields',
+          variant: 'destructive',
+        });
+        return;
+      }
+    } else {
+      // Parent level validation
+      if (levelForm.parent_id === 'other' && !levelForm.custom_parent_name) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please enter a custom parent level name',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (!levelForm.name) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please fill in all required fields',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     try {
+      let parentId = null;
+      let levelName = levelForm.name;
+      
+      if (levelForm.is_sub_level) {
+        // Creating a sub-level
+        parentId = levelForm.sub_level_parent;
+      } else if (levelForm.parent_id === 'other') {
+        // Creating new parent level first, then sub-level
+        const { data: newParent, error: parentError } = await supabase
+          .from('levels')
+          .insert([{ name: levelForm.custom_parent_name, parent_id: null }])
+          .select()
+          .single();
+        
+        if (parentError) throw parentError;
+        parentId = newParent.id;
+      } else if (levelForm.parent_id !== 'none') {
+        parentId = levelForm.parent_id;
+      }
+
       const levelData = {
-        ...levelForm,
-        parent_id: levelForm.parent_id === 'none' ? null : levelForm.parent_id || null,
+        name: levelName,
+        parent_id: parentId,
       };
 
       if (selectedLevel) {
@@ -518,7 +563,13 @@ const AcademicStructure = () => {
   };
 
   const resetLevelForm = () => {
-    setLevelForm({ name: '', parent_id: '' });
+    setLevelForm({
+      name: '',
+      parent_id: '',
+      custom_parent_name: '',
+      is_sub_level: false,
+      sub_level_parent: '',
+    });
     setSelectedLevel(null);
   };
 
@@ -547,6 +598,9 @@ const AcademicStructure = () => {
     setLevelForm({
       name: level.name,
       parent_id: level.parent_id || 'none',
+      custom_parent_name: '',
+      is_sub_level: !!level.parent_id,
+      sub_level_parent: level.parent_id || '',
     });
     setIsLevelDialogOpen(true);
   };
@@ -919,35 +973,130 @@ const AcademicStructure = () => {
                       </DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSaveLevel} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="level-name">Level Name *</Label>
-                        <Input
-                          id="level-name"
-                          placeholder="e.g., Nursery, Primary, Secondary"
-                          value={levelForm.name}
-                          onChange={(e) => setLevelForm(prev => ({ ...prev, name: e.target.value }))}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="parent-level">Parent Level</Label>
-                        <Select
-                          value={levelForm.parent_id}
-                          onValueChange={(value) => setLevelForm(prev => ({ ...prev, parent_id: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select parent level (optional)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None (Root Level)</SelectItem>
-                            {getAllLevels(levels).map((level) => (
-                              <SelectItem key={level.id} value={level.id}>
-                                {level.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {!levelForm.is_sub_level ? (
+                        // Parent Level Form
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="parent-level">Parent Level</Label>
+                            <Select
+                              value={levelForm.parent_id}
+                              onValueChange={(value) => {
+                                setLevelForm(prev => ({ 
+                                  ...prev, 
+                                  parent_id: value,
+                                  is_sub_level: value !== 'none' && value !== 'other',
+                                  sub_level_parent: value !== 'none' && value !== 'other' ? value : ''
+                                }));
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="None (Root Level)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">None (Root Level)</SelectItem>
+                                {levels.filter(level => !level.parent_id).map((level) => (
+                                  <SelectItem key={level.id} value={level.id}>
+                                    {level.name}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="other">Other (Type New Level)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {levelForm.parent_id === 'other' && (
+                            <div className="space-y-2">
+                              <Input
+                                placeholder="Enter new parent level name"
+                                value={levelForm.custom_parent_name}
+                                onChange={(e) => setLevelForm(prev => ({ ...prev, custom_parent_name: e.target.value }))}
+                              />
+                            </div>
+                          )}
+
+                          {levelForm.parent_id !== 'none' && levelForm.parent_id !== 'other' && (
+                            <div className="space-y-2">
+                              <Label htmlFor="sub-level">Sub-Level</Label>
+                              <Select
+                                value={levelForm.name}
+                                onValueChange={(value) => {
+                                  if (value === 'other') {
+                                    setLevelForm(prev => ({ ...prev, name: '', is_sub_level: true }));
+                                  } else {
+                                    setLevelForm(prev => ({ ...prev, name: value, is_sub_level: true }));
+                                  }
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select sub-level" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {levels.filter(level => level.parent_id === levelForm.parent_id).map((level) => (
+                                    <SelectItem key={level.id} value={level.name}>
+                                      {level.name}
+                                    </SelectItem>
+                                  ))}
+                                  <SelectItem value="other">Other (Type New sub-Level)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              
+                              {levelForm.name === '' && (
+                                <Input
+                                  placeholder="Enter new sub-level name"
+                                  value={levelForm.name}
+                                  onChange={(e) => setLevelForm(prev => ({ ...prev, name: e.target.value }))}
+                                />
+                              )}
+                            </div>
+                          )}
+
+                          {(levelForm.parent_id === 'none' || levelForm.parent_id === 'other') && (
+                            <div className="space-y-2">
+                              <Label htmlFor="level-name">Level Name *</Label>
+                              <Input
+                                id="level-name"
+                                placeholder="e.g., Nursery, Primary, Secondary"
+                                value={levelForm.name}
+                                onChange={(e) => setLevelForm(prev => ({ ...prev, name: e.target.value }))}
+                                required
+                              />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        // Sub-Level Form
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="sub-parent">Parent Level *</Label>
+                            <Select
+                              value={levelForm.sub_level_parent}
+                              onValueChange={(value) => setLevelForm(prev => ({ ...prev, sub_level_parent: value }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select parent level" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {levels.filter(level => !level.parent_id).map((level) => (
+                                  <SelectItem key={level.id} value={level.id}>
+                                    {level.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="sub-level-name">Sub-Level Name *</Label>
+                            <Input
+                              id="sub-level-name"
+                              placeholder="e.g., O Level, A Level"
+                              value={levelForm.name}
+                              onChange={(e) => setLevelForm(prev => ({ ...prev, name: e.target.value }))}
+                              required
+                            />
+                          </div>
+                        </>
+                      )}
+
                       <div className="flex justify-end gap-3">
                         <Button
                           type="button"

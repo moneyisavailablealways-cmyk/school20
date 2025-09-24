@@ -361,22 +361,22 @@ const SubjectManagement = () => {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="level">Level *</Label>
+                <Label htmlFor="parent_level">Parent-Level</Label>
                 <Select 
                   value={formData.level_id} 
                   onValueChange={(value) => {
                     setFormData({ 
                       ...formData, 
                       level_id: value,
-                      sub_level: '' // Reset sub-level when level changes
+                      sub_level: '' // Reset sub-level when parent level changes
                     });
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select level" />
+                    <SelectValue placeholder="Select parent level" />
                   </SelectTrigger>
                   <SelectContent>
-                    {levels.map((level) => (
+                    {levels.filter(level => level.parent_id === null).map((level) => (
                       <SelectItem key={level.id} value={level.id}>
                         {level.name}
                       </SelectItem>
@@ -385,34 +385,29 @@ const SubjectManagement = () => {
                 </Select>
               </div>
 
-              {/* Sub-Level dropdown - show only if the selected level has children */}
-              {(() => {
-                const selectedLevelData = levels.find(l => l.id === formData.level_id);
-                const hasChildren = selectedLevelData && levels.some(l => l.parent_id === selectedLevelData.id);
-                const subLevels = hasChildren ? levels.filter(l => l.parent_id === selectedLevelData.id) : [];
-                
-                return hasChildren && subLevels.length > 0 ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="sub_level">Sub-Level *</Label>
-                    <Select 
-                      value={formData.sub_level} 
-                      onValueChange={(value) => setFormData({ ...formData, sub_level: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select sub-level" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="All Levels">All Levels</SelectItem>
-                        {subLevels.map((subLevel) => (
+              {/* Sub-Level dropdown - shows when a parent level is selected */}
+              {formData.level_id && (
+                <div className="space-y-2">
+                  <Label htmlFor="sub_level">Sub-Level</Label>
+                  <Select 
+                    value={formData.sub_level} 
+                    onValueChange={(value) => setFormData({ ...formData, sub_level: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select sub-level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {levels
+                        .filter(level => level.parent_id === formData.level_id)
+                        .map((subLevel) => (
                           <SelectItem key={subLevel.id} value={subLevel.name}>
                             {subLevel.name}
                           </SelectItem>
                         ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : null;
-              })()}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center space-x-4">

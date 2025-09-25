@@ -29,8 +29,11 @@ import {
   MapPin,
   Phone,
   Trash2,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 import StudentForm from './StudentForm';
 
 interface Student {
@@ -50,6 +53,13 @@ interface Student {
     phone: string | null;
     avatar_url: string | null;
   };
+  parent_relationships?: {
+    parent: {
+      id: string;
+      first_name: string;
+      last_name: string;
+    };
+  }[];
 }
 
 interface StudentEnrollment {
@@ -102,6 +112,13 @@ const StudentManagement = () => {
             email,
             phone,
             avatar_url
+          ),
+          parent_relationships:parent_student_relationships(
+            parent:profiles!parent_id(
+              id,
+              first_name,
+              last_name
+            )
           )
         `)
         .order('created_at', { ascending: false });
@@ -352,7 +369,10 @@ const StudentManagement = () => {
                   <TableHead>Class & Stream</TableHead>
                   <TableHead>Age</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Contact</TableHead>
+                  <TableHead>Parent</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Gender</TableHead>
+                  <TableHead>Admission Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -360,6 +380,9 @@ const StudentManagement = () => {
                 {filteredStudents.map((student) => {
                   const enrollment = getStudentEnrollment(student.id);
                   const age = calculateAge(student.date_of_birth);
+                  const parentName = student.parent_relationships?.[0]?.parent 
+                    ? `${student.parent_relationships[0].parent.first_name} ${student.parent_relationships[0].parent.last_name}`
+                    : 'Not assigned';
                   
                   return (
                     <TableRow key={student.id}>
@@ -407,21 +430,32 @@ const StudentManagement = () => {
                           <span className="text-muted-foreground">Not enrolled</span>
                         )}
                       </TableCell>
-                      <TableCell>{age} years</TableCell>
+                      <TableCell>{age} yr</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(student.enrollment_status)}>
                           {student.enrollment_status}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          {student.profile?.phone && (
-                            <div className="flex items-center gap-1 text-sm">
-                              <Phone className="h-3 w-3" />
-                              {student.profile.phone}
-                            </div>
-                          )}
-                        </div>
+                        <span className="text-sm">{parentName}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {student.address || 'Not provided'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm capitalize">
+                          {student.gender || 'Not specified'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {student.admission_date 
+                            ? format(new Date(student.admission_date), 'MMM d, yyyy')
+                            : 'Not set'
+                          }
+                        </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">

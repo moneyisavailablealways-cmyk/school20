@@ -11,7 +11,8 @@ import { Separator } from '@/components/ui/separator';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CalendarIcon, Save, X, User, GraduationCap, Contact, AlertTriangle, Users, BookOpen } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { CalendarIcon, Save, X, User, GraduationCap, Contact, AlertTriangle, Users, BookOpen, Upload, ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ interface Profile {
   last_name: string;
   email: string;
   phone: string | null;
+  avatar_url: string | null;
   role: string;
 }
 
@@ -45,6 +47,9 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
   const [relationshipType, setRelationshipType] = useState<string>('');
   const [subjects, setSubjects] = useState<any[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
     student?.date_of_birth ? new Date(student.date_of_birth) : undefined
   );
@@ -99,7 +104,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, avatar_url')
         .eq('role', 'student')
         .order('first_name');
 
@@ -158,7 +163,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, avatar_url')
         .eq('role', 'parent')
         .order('first_name');
 
@@ -278,6 +283,41 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (file: File, profileId: string): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profileId}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('school-assets')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('school-assets')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      return null;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -318,6 +358,25 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
         admission_date: format(admissionDate, 'yyyy-MM-dd'),
         student_id: formData.student_id || generateStudentId(),
       };
+
+      // Handle image upload if a new image was selected
+      let avatarUrl = null;
+      if (imageFile && selectedProfile) {
+        setUploadingImage(true);
+        avatarUrl = await uploadImage(imageFile, selectedProfile);
+        if (avatarUrl) {
+          // Update the profile's avatar_url
+          const { error: avatarError } = await supabase
+            .from('profiles')
+            .update({ avatar_url: avatarUrl })
+            .eq('id', selectedProfile);
+
+          if (avatarError) {
+            console.error('Error updating avatar:', avatarError);
+          }
+        }
+        setUploadingImage(false);
+      }
 
       if (student) {
         // Update existing student
@@ -539,6 +598,33 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Image Upload Section */}
+              <div className="space-y-2">
+                <Label htmlFor="studentImage">Student Photo</Label>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage src={imagePreview || selectedProfileData?.avatar_url} />
+                      <AvatarFallback>
+                        <ImageIcon className="h-8 w-8" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-2">
+                      <Input
+                        id="studentImage"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Upload a photo for the student profile
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1026,13 +1112,13 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
           <X className="mr-2 h-4 w-4" />
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? (
+        <Button type="submit" disabled={loading || uploadingImage}>
+          {loading || uploadingImage ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          {student ? 'Update Student' : 'Add Student'}
+          {uploadingImage ? 'Uploading Image...' : loading ? 'Saving...' : (student ? 'Update Student' : 'Add Student')}
         </Button>
       </div>
     </form>

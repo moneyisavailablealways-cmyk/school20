@@ -63,6 +63,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
     gender: student?.gender || '',
     address: student?.address || '',
     enrollment_status: student?.enrollment_status || 'active',
+    phone: student?.profile?.phone || '',
   });
 
   // Medical information form data
@@ -321,7 +322,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedProfile) {
+    // Only require profile selection for new students
+    if (!student && !selectedProfile) {
       toast({
         title: 'Validation Error',
         description: 'Please select a profile for this student',
@@ -353,36 +355,52 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
     try {
       const studentData = {
         ...formData,
-        profile_id: selectedProfile,
+        profile_id: selectedProfile || student?.profile_id,
         date_of_birth: format(dateOfBirth, 'yyyy-MM-dd'),
         admission_date: format(admissionDate, 'yyyy-MM-dd'),
         student_id: formData.student_id || generateStudentId(),
       };
+      
+      // Remove phone from student data as it belongs to profile
+      const { phone, ...studentDataWithoutPhone } = studentData;
 
-      // Handle image upload if a new image was selected
-      let avatarUrl = null;
-      if (imageFile && selectedProfile) {
-        setUploadingImage(true);
-        avatarUrl = await uploadImage(imageFile, selectedProfile);
-        if (avatarUrl) {
-          // Update the profile's avatar_url
-          const { error: avatarError } = await supabase
+        // Handle image upload if a new image was selected
+        let avatarUrl = null;
+        const profileId = selectedProfile || student?.profile_id;
+        if (imageFile && profileId) {
+          setUploadingImage(true);
+          avatarUrl = await uploadImage(imageFile, profileId);
+          if (avatarUrl) {
+            // Update the profile's avatar_url
+            const { error: avatarError } = await supabase
+              .from('profiles')
+              .update({ avatar_url: avatarUrl })
+              .eq('id', profileId);
+
+            if (avatarError) {
+              console.error('Error updating avatar:', avatarError);
+            }
+          }
+          setUploadingImage(false);
+        }
+
+        // Update profile phone number if changed
+        if (profileId && formData.phone !== (student?.profile?.phone || '')) {
+          const { error: phoneError } = await supabase
             .from('profiles')
-            .update({ avatar_url: avatarUrl })
-            .eq('id', selectedProfile);
+            .update({ phone: formData.phone })
+            .eq('id', profileId);
 
-          if (avatarError) {
-            console.error('Error updating avatar:', avatarError);
+          if (phoneError) {
+            console.error('Error updating phone:', phoneError);
           }
         }
-        setUploadingImage(false);
-      }
 
       if (student) {
         // Update existing student
         const { error } = await supabase
           .from('students')
-          .update(studentData)
+          .update(studentDataWithoutPhone)
           .eq('id', student.id);
 
         if (error) throw error;
@@ -459,7 +477,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
         // Create new student
         const { data: newStudent, error } = await supabase
           .from('students')
-          .insert([studentData])
+          .insert([studentDataWithoutPhone])
           .select()
           .single();
 
@@ -571,34 +589,44 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="profile">Link to Profile *</Label>
-                <Select value={selectedProfile} onValueChange={setSelectedProfile}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a student profile..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {profiles.map((profile) => (
-                      <SelectItem key={profile.id} value={profile.id}>
-                        {profile.first_name} {profile.last_name} - {profile.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedProfileData && (
-                  <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                    Selected: {selectedProfileData.first_name} {selectedProfileData.last_name}
-                    <br />
-                    Email: {selectedProfileData.email}
-                    {selectedProfileData.phone && (
-                      <>
-                        <br />
-                        Phone: {selectedProfileData.phone}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+              {!student && (
+                <div className="space-y-2">
+                  <Label htmlFor="profile">Link to Profile *</Label>
+                  <Select value={selectedProfile} onValueChange={setSelectedProfile}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a student profile..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles.map((profile) => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          {profile.first_name} {profile.last_name} - {profile.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedProfileData && (
+                    <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                      Selected: {selectedProfileData.first_name} {selectedProfileData.last_name}
+                      <br />
+                      Email: {selectedProfileData.email}
+                      {selectedProfileData.phone && (
+                        <>
+                          <br />
+                          Phone: {selectedProfileData.phone}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {student && (
+                <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                  Editing: {student.profile?.first_name} {student.profile?.last_name}
+                  <br />
+                  Email: {student.profile?.email}
+                </div>
+              )}
 
               {/* Image Upload Section */}
               <div className="space-y-2">
@@ -665,6 +693,36 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
                       <SelectItem value="male">Male</SelectItem>
                       <SelectItem value="female">Female</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Contact Phone</Label>
+                  <Input
+                    id="phone"
+                    placeholder="Enter contact phone number"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="enrollment_status">Enrollment Status</Label>
+                  <Select
+                    value={formData.enrollment_status}
+                    onValueChange={(value) => handleInputChange('enrollment_status', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="graduated">Graduated</SelectItem>
+                      <SelectItem value="transferred">Transferred</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -805,23 +863,6 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
                   </Popover>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="enrollment_status">Enrollment Status</Label>
-                  <Select
-                    value={formData.enrollment_status}
-                    onValueChange={(value) => handleInputChange('enrollment_status', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="graduated">Graduated</SelectItem>
-                      <SelectItem value="transferred">Transferred</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

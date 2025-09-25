@@ -145,6 +145,7 @@ const StudentManagement = () => {
           class:classes(name, levels!level_id(name)),
           stream:streams(name)
         `)
+        .eq('status', 'active')
         .order('enrollment_date', { ascending: false });
 
       if (error) throw error;
@@ -367,6 +368,7 @@ const StudentManagement = () => {
                   <TableHead>Student</TableHead>
                   <TableHead>ID / Admission</TableHead>
                   <TableHead>Class & Stream</TableHead>
+                  <TableHead>Contact</TableHead>
                   <TableHead>Age</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Parent</TableHead>
@@ -429,6 +431,11 @@ const StudentManagement = () => {
                         ) : (
                           <span className="text-muted-foreground">Not enrolled</span>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {student.profile?.phone || 'Not provided'}
+                        </span>
                       </TableCell>
                       <TableCell>{age} yr</TableCell>
                       <TableCell>

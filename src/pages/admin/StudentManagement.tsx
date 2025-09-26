@@ -365,7 +365,7 @@ const StudentManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student</TableHead>
+                  <TableHead>Photo & Name</TableHead>
                   <TableHead>ID / Admission</TableHead>
                   <TableHead>Class & Stream</TableHead>
                   <TableHead>Contact</TableHead>

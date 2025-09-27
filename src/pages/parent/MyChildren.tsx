@@ -156,9 +156,15 @@ const MyChildren = () => {
   }, [profile]);
 
   const fetchChildren = async () => {
-    if (!profile?.id) return;
+    if (!profile?.id) {
+      console.log('No profile ID found');
+      setLoading(false);
+      return;
+    }
     
     try {
+      console.log('Fetching children for parent ID:', profile.id);
+      
       // First get the student relationships
       const { data: relationshipsData, error: relationshipsError } = await supabase
         .from('parent_student_relationships')
@@ -189,7 +195,12 @@ const MyChildren = () => {
         `)
         .eq('parent_id', profile.id);
 
-      if (relationshipsError) throw relationshipsError;
+      if (relationshipsError) {
+        console.error('Error fetching relationships:', relationshipsError);
+        throw relationshipsError;
+      }
+
+      console.log('Found relationships:', relationshipsData);
 
       const childrenData = relationshipsData?.map(rel => rel.students).filter(Boolean) || [];
       

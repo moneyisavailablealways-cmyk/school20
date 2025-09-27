@@ -46,6 +46,113 @@ const MyChildren = () => {
 
   useEffect(() => {
     fetchChildren();
+
+    // Set up real-time subscriptions
+    const parentRelationshipsChannel = supabase
+      .channel('parent-student-relationships-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'parent_student_relationships',
+          filter: `parent_id=eq.${profile?.id}`
+        },
+        () => {
+          console.log('Parent-student relationships changed, refetching children');
+          fetchChildren();
+        }
+      )
+      .subscribe();
+
+    const studentsChannel = supabase
+      .channel('students-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'students'
+        },
+        () => {
+          console.log('Students data changed, refetching children');
+          fetchChildren();
+        }
+      )
+      .subscribe();
+
+    const profilesChannel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        () => {
+          console.log('Profiles changed, refetching children');
+          fetchChildren();
+        }
+      )
+      .subscribe();
+
+    const medicalChannel = supabase
+      .channel('medical-info-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'student_medical_info'
+        },
+        () => {
+          console.log('Medical info changed, refetching children');
+          fetchChildren();
+        }
+      )
+      .subscribe();
+
+    const emergencyContactsChannel = supabase
+      .channel('emergency-contacts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'student_emergency_contacts'
+        },
+        () => {
+          console.log('Emergency contacts changed, refetching children');
+          fetchChildren();
+        }
+      )
+      .subscribe();
+
+    const enrollmentsChannel = supabase
+      .channel('enrollments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'student_enrollments'
+        },
+        () => {
+          console.log('Enrollments changed, refetching children');
+          fetchChildren();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(parentRelationshipsChannel);
+      supabase.removeChannel(studentsChannel);
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(medicalChannel);
+      supabase.removeChannel(emergencyContactsChannel);
+      supabase.removeChannel(enrollmentsChannel);
+    };
   }, [profile]);
 
   const fetchChildren = async () => {

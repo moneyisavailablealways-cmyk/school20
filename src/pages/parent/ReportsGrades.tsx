@@ -45,6 +45,51 @@ const ReportsGrades = () => {
     }
   }, [selectedChild]);
 
+  // Real-time subscription for report cards
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const reportCardsChannel = supabase
+      .channel('report-cards-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'report_cards'
+        },
+        () => {
+          console.log('Report cards changed, refetching data');
+          if (selectedChild) {
+            fetchReportCards();
+          }
+        }
+      )
+      .subscribe();
+
+    const parentRelationshipsChannel = supabase
+      .channel('parent-relationships-reports')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'parent_student_relationships',
+          filter: `parent_id=eq.${profile.id}`
+        },
+        () => {
+          console.log('Parent relationships changed, refetching children');
+          fetchChildren();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(reportCardsChannel);
+      supabase.removeChannel(parentRelationshipsChannel);
+    };
+  }, [profile?.id, selectedChild]);
+
   const fetchChildren = async () => {
     if (!profile?.id) return;
     

@@ -26,6 +26,28 @@ const Appointments = () => {
 
   useEffect(() => {
     fetchAppointments();
+
+    // Real-time subscription for appointments
+    const appointmentsChannel = supabase
+      .channel('appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+          filter: `parent_id=eq.${profile?.id}`
+        },
+        () => {
+          console.log('Appointments changed, refetching data');
+          fetchAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(appointmentsChannel);
+    };
   }, [profile]);
 
   const fetchAppointments = async () => {

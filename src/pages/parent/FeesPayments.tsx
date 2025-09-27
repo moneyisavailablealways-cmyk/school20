@@ -59,6 +59,70 @@ const FeesPayments = () => {
     }
   }, [selectedChild]);
 
+  // Real-time subscriptions for invoices and payments
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const invoicesChannel = supabase
+      .channel('invoices-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'invoices'
+        },
+        () => {
+          console.log('Invoices changed, refetching data');
+          if (selectedChild) {
+            fetchInvoices();
+          }
+        }
+      )
+      .subscribe();
+
+    const paymentsChannel = supabase
+      .channel('payments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'payments'
+        },
+        () => {
+          console.log('Payments changed, refetching data');
+          if (selectedChild) {
+            fetchPayments();
+          }
+        }
+      )
+      .subscribe();
+
+    const parentRelationshipsChannel = supabase
+      .channel('parent-relationships-fees')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'parent_student_relationships',
+          filter: `parent_id=eq.${profile.id}`
+        },
+        () => {
+          console.log('Parent relationships changed, refetching children');
+          fetchChildren();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(invoicesChannel);
+      supabase.removeChannel(paymentsChannel);
+      supabase.removeChannel(parentRelationshipsChannel);
+    };
+  }, [profile?.id, selectedChild]);
+
   const fetchChildren = async () => {
     if (!profile?.id) return;
     

@@ -54,6 +54,51 @@ const Attendance = () => {
     }
   }, [selectedChild]);
 
+  // Real-time subscription for attendance records
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const attendanceChannel = supabase
+      .channel('attendance-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance_records'
+        },
+        () => {
+          console.log('Attendance records changed, refetching data');
+          if (selectedChild) {
+            fetchAttendanceRecords();
+          }
+        }
+      )
+      .subscribe();
+
+    const parentRelationshipsChannel = supabase
+      .channel('parent-relationships-attendance')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'parent_student_relationships',
+          filter: `parent_id=eq.${profile.id}`
+        },
+        () => {
+          console.log('Parent relationships changed, refetching children');
+          fetchChildren();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(attendanceChannel);
+      supabase.removeChannel(parentRelationshipsChannel);
+    };
+  }, [profile?.id, selectedChild]);
+
   const fetchChildren = async () => {
     if (!profile?.id) return;
     

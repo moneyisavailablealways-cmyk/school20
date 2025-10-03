@@ -163,9 +163,22 @@ const MyChildren = () => {
     }
     
     try {
-      console.log('Fetching children for parent ID:', profile.id);
+      console.log('Fetching children for parent profile ID:', profile.id);
       
-      // First get the student relationships
+      // First, try to get the parent record if it exists
+      const { data: parentData } = await supabase
+        .from('parents')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+      
+      console.log('Parent record:', parentData);
+      
+      // Use parent.id if exists, otherwise use profile.id (for backward compatibility)
+      const parentIdToUse = parentData?.id || profile.id;
+      console.log('Using parent ID:', parentIdToUse);
+      
+      // Get the student relationships
       const { data: relationshipsData, error: relationshipsError } = await supabase
         .from('parent_student_relationships')
         .select(`
@@ -193,7 +206,12 @@ const MyChildren = () => {
             )
           )
         `)
-        .eq('parent_id', profile.id);
+        .eq('parent_id', parentIdToUse);
+
+      if (relationshipsError) {
+        console.error('Error fetching relationships:', relationshipsError);
+        throw relationshipsError;
+      }
 
       if (relationshipsError) {
         console.error('Error fetching relationships:', relationshipsError);
@@ -201,6 +219,7 @@ const MyChildren = () => {
       }
 
       console.log('Found relationships:', relationshipsData);
+      console.log('Number of children found:', relationshipsData?.length || 0);
 
       const childrenData = relationshipsData?.map(rel => rel.students).filter(Boolean) || [];
       
@@ -233,7 +252,12 @@ const MyChildren = () => {
         })
       );
 
+      console.log('Final enriched children:', enrichedChildren.length);
       setChildren(enrichedChildren as Student[]);
+      
+      if (enrichedChildren.length > 0) {
+        toast.success(`Successfully loaded ${enrichedChildren.length} child${enrichedChildren.length > 1 ? 'ren' : ''}`);
+      }
     } catch (error) {
       console.error('Error fetching children:', error);
       toast.error('Failed to load children information');

@@ -76,6 +76,19 @@ const ParentDashboard = () => {
     if (!profile?.id) return;
     
     try {
+      console.log('Fetching dashboard data for parent profile ID:', profile.id);
+      
+      // First, try to get the parent record if it exists
+      const { data: parentData } = await supabase
+        .from('parents')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+      
+      // Use parent.id if exists, otherwise use profile.id (for backward compatibility)
+      const parentIdToUse = parentData?.id || profile.id;
+      console.log('Using parent ID for dashboard:', parentIdToUse);
+      
       // Fetch children
       const { data: childrenData, error: childrenError } = await supabase
         .from('parent_student_relationships')
@@ -95,10 +108,14 @@ const ParentDashboard = () => {
             )
           )
         `)
-        .eq('parent_id', profile.id);
+        .eq('parent_id', parentIdToUse);
 
-      if (childrenError) throw childrenError;
+      if (childrenError) {
+        console.error('Error fetching children:', childrenError);
+        throw childrenError;
+      }
 
+      console.log('Children data found:', childrenData?.length || 0);
       const studentsData = childrenData?.map(rel => rel.students).filter(Boolean) || [];
       setChildren(studentsData as Student[]);
 
@@ -165,6 +182,9 @@ const ParentDashboard = () => {
 
         setUpcomingPayments(transformedPayments);
       }
+      
+      console.log('Dashboard data loaded successfully');
+      toast.success('Dashboard loaded successfully');
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

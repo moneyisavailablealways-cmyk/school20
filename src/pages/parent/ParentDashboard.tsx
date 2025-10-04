@@ -78,37 +78,11 @@ const ParentDashboard = () => {
     try {
       console.log('Fetching dashboard data for parent profile ID:', profile.id);
       
-      // First, try to get the parent record if it exists
-      const { data: parentData } = await supabase
-        .from('parents')
-        .select('id')
-        .eq('profile_id', profile.id)
-        .maybeSingle();
-      
-      // Use parent.id if exists, otherwise use profile.id (for backward compatibility)
-      const parentIdToUse = parentData?.id || profile.id;
-      console.log('Using parent ID for dashboard:', parentIdToUse);
-      
-      // Fetch children
+      // Fetch children relationships - use profile.id directly as parent_id
       const { data: childrenData, error: childrenError } = await supabase
         .from('parent_student_relationships')
-        .select(`
-          student_id,
-          students!inner (
-            id,
-            student_id,
-            profiles!inner (
-              first_name,
-              last_name
-            ),
-            student_enrollments (
-              classes (
-                name
-              )
-            )
-          )
-        `)
-        .eq('parent_id', parentIdToUse);
+        .select('student_id, relationship_type')
+        .eq('parent_id', profile.id);
 
       if (childrenError) {
         console.error('Error fetching children:', childrenError);
@@ -116,8 +90,45 @@ const ParentDashboard = () => {
       }
 
       console.log('Children data found:', childrenData?.length || 0);
-      const studentsData = childrenData?.map(rel => rel.students).filter(Boolean) || [];
-      setChildren(studentsData as Student[]);
+      
+      // Fetch detailed student information
+      const studentsData = await Promise.all(
+        (childrenData || []).map(async (rel) => {
+          const { data: studentData } = await supabase
+            .from('students')
+            .select('*')
+            .eq('id', rel.student_id)
+            .single();
+
+          if (!studentData) return null;
+
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', studentData.profile_id)
+            .single();
+
+          const { data: enrollmentData } = await supabase
+            .from('student_enrollments')
+            .select(`
+              classes (name)
+            `)
+            .eq('student_id', studentData.id)
+            .limit(1)
+            .maybeSingle();
+
+          return {
+            ...studentData,
+            profiles: profileData || { first_name: '', last_name: '' },
+            student_enrollments: enrollmentData ? [{
+              classes: enrollmentData.classes
+            }] : []
+          };
+        })
+      );
+
+      const validStudents = studentsData.filter(Boolean);
+      setChildren(validStudents as Student[]);
 
       // Fetch announcements
       const { data: announcementsData, error: announcementsError } = await supabase

@@ -165,53 +165,11 @@ const MyChildren = () => {
     try {
       console.log('Fetching children for parent profile ID:', profile.id);
       
-      // First, try to get the parent record if it exists
-      const { data: parentData } = await supabase
-        .from('parents')
-        .select('id')
-        .eq('profile_id', profile.id)
-        .maybeSingle();
-      
-      console.log('Parent record:', parentData);
-      
-      // Use parent.id if exists, otherwise use profile.id (for backward compatibility)
-      const parentIdToUse = parentData?.id || profile.id;
-      console.log('Using parent ID:', parentIdToUse);
-      
-      // Get the student relationships
+      // Get the student relationships - use profile.id directly as parent_id
       const { data: relationshipsData, error: relationshipsError } = await supabase
         .from('parent_student_relationships')
-        .select(`
-          student_id,
-          relationship_type,
-          is_primary_contact,
-          students!inner (
-            id,
-            student_id,
-            date_of_birth,
-            gender,
-            address,
-            enrollment_status,
-            profiles!inner (
-              first_name,
-              last_name,
-              email,
-              phone
-            ),
-            student_enrollments (
-              status,
-              classes (
-                name
-              )
-            )
-          )
-        `)
-        .eq('parent_id', parentIdToUse);
-
-      if (relationshipsError) {
-        console.error('Error fetching relationships:', relationshipsError);
-        throw relationshipsError;
-      }
+        .select('student_id, relationship_type, is_primary_contact')
+        .eq('parent_id', profile.id);
 
       if (relationshipsError) {
         console.error('Error fetching relationships:', relationshipsError);
@@ -221,28 +179,61 @@ const MyChildren = () => {
       console.log('Found relationships:', relationshipsData);
       console.log('Number of children found:', relationshipsData?.length || 0);
 
-      const childrenData = relationshipsData?.map(rel => rel.students).filter(Boolean) || [];
-      
-      // Get medical info and emergency contacts for each child
+      if (!relationshipsData || relationshipsData.length === 0) {
+        setChildren([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch detailed student information for each relationship
       const enrichedChildren = await Promise.all(
-        childrenData.map(async (child) => {
+        relationshipsData.map(async (rel) => {
+          // Fetch student basic info
+          const { data: studentData, error: studentError } = await supabase
+            .from('students')
+            .select('*')
+            .eq('id', rel.student_id)
+            .single();
+
+          if (studentError || !studentData) {
+            console.error('Error fetching student:', studentError);
+            return null;
+          }
+
+          // Fetch student profile
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email, phone')
+            .eq('id', studentData.profile_id)
+            .single();
+
+          // Fetch enrollments and class info
+          const { data: enrollmentData } = await supabase
+            .from('student_enrollments')
+            .select(`
+              status,
+              classes (name)
+            `)
+            .eq('student_id', studentData.id);
+
           // Fetch medical info
           const { data: medicalData } = await supabase
             .from('student_medical_info')
             .select('*')
-            .eq('student_id', child.id)
+            .eq('student_id', studentData.id)
             .maybeSingle();
 
           // Fetch emergency contacts  
           const { data: emergencyData } = await supabase
             .from('student_emergency_contacts')
             .select('*')
-            .eq('student_id', child.id)
+            .eq('student_id', studentData.id)
             .order('is_primary_contact', { ascending: false });
 
           return {
-            ...child,
-            student_enrollments: child.student_enrollments?.map(enrollment => ({
+            ...studentData,
+            profiles: profileData || { first_name: '', last_name: '', email: '', phone: '' },
+            student_enrollments: enrollmentData?.map(enrollment => ({
               class: enrollment.classes?.name || 'N/A',
               status: enrollment.status
             })) || [],
@@ -252,11 +243,12 @@ const MyChildren = () => {
         })
       );
 
-      console.log('Final enriched children:', enrichedChildren.length);
-      setChildren(enrichedChildren as Student[]);
+      const validChildren = enrichedChildren.filter(Boolean);
+      console.log('Final enriched children:', validChildren.length);
+      setChildren(validChildren as Student[]);
       
-      if (enrichedChildren.length > 0) {
-        toast.success(`Successfully loaded ${enrichedChildren.length} child${enrichedChildren.length > 1 ? 'ren' : ''}`);
+      if (validChildren.length > 0) {
+        toast.success(`Successfully loaded ${validChildren.length} child${validChildren.length > 1 ? 'ren' : ''}`);
       }
     } catch (error) {
       console.error('Error fetching children:', error);

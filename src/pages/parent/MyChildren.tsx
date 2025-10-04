@@ -205,7 +205,7 @@ const MyChildren = () => {
             .from('profiles')
             .select('first_name, last_name, email, phone')
             .eq('id', studentData.profile_id)
-            .single();
+            .maybeSingle();
 
           // Fetch enrollments and class info
           const { data: enrollmentData } = await supabase

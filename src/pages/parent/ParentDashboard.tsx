@@ -106,7 +106,7 @@ const ParentDashboard = () => {
             .from('profiles')
             .select('first_name, last_name')
             .eq('id', studentData.profile_id)
-            .single();
+            .maybeSingle();
 
           const { data: enrollmentData } = await supabase
             .from('student_enrollments')
@@ -130,12 +130,12 @@ const ParentDashboard = () => {
       const validStudents = studentsData.filter(Boolean);
       setChildren(validStudents as Student[]);
 
-      // Fetch announcements
+      // Fetch announcements (using or for array column)
       const { data: announcementsData, error: announcementsError } = await supabase
         .from('announcements')
         .select('id, title, created_at, priority')
         .eq('is_active', true)
-        .in('target_audience', [['all'], ['parents']])
+        .or('target_audience.cs.{all},target_audience.cs.{parents}')
         .order('created_at', { ascending: false })
         .limit(3);
 
@@ -171,7 +171,7 @@ const ParentDashboard = () => {
         const avgAttendance = 94; // This would be calculated from real attendance data
         
         setStats({
-          childrenCount: studentsData.length,
+          childrenCount: validStudents.length,
           avgAttendance,
           pendingFees: totalPendingFees,
           newUpdates: announcementsData?.length || 0

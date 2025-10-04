@@ -20,15 +20,15 @@ import { toast } from 'sonner';
 interface Student {
   id: string;
   student_id: string;
-  profiles: {
+  profile: {
     first_name: string;
     last_name: string;
   };
-  student_enrollments: {
-    classes: {
-      name: string;
-    };
-  }[];
+  enrollment?: {
+    classes?: { name: string };
+    streams?: { name: string };
+    status?: string;
+  } | null;
 }
 
 interface Announcement {
@@ -111,18 +111,17 @@ const ParentDashboard = () => {
           const { data: enrollmentData } = await supabase
             .from('student_enrollments')
             .select(`
-              classes (name)
+              status,
+              classes (name),
+              streams (name)
             `)
             .eq('student_id', studentData.id)
-            .limit(1)
             .maybeSingle();
 
           return {
             ...studentData,
-            profiles: profileData || { first_name: '', last_name: '' },
-            student_enrollments: enrollmentData ? [{
-              classes: enrollmentData.classes
-            }] : []
+            profile: profileData || { first_name: 'Unknown', last_name: 'Student' },
+            enrollment: enrollmentData || null
           };
         })
       );
@@ -357,10 +356,12 @@ const ParentDashboard = () => {
                     </div>
                     <div>
                       <h4 className="font-medium text-foreground">
-                        {child.profiles.first_name} {child.profiles.last_name}
+                        {child.profile.first_name} {child.profile.last_name}
                       </h4>
                       <p className="text-sm text-muted-foreground">
-                        {child.student_enrollments?.[0]?.classes?.name || 'No class assigned'}
+                        {child.enrollment?.classes?.name && child.enrollment?.streams?.name
+                          ? `${child.enrollment.classes.name} - ${child.enrollment.streams.name}`
+                          : child.enrollment?.classes?.name || 'No class assigned'}
                       </p>
                     </div>
                   </div>

@@ -98,8 +98,34 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
       fetchStudentRelationships();
       fetchStudentMedicalInfo();
       fetchStudentEmergencyContacts();
+      fetchStudentEnrollment();
     }
   }, [student]);
+
+  const fetchStudentEnrollment = async () => {
+    if (!student?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('student_enrollments')
+        .select('class_id, stream_id, academic_year_id')
+        .eq('student_id', student.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data) {
+        setSelectedClass(data.class_id || '');
+        if (data.class_id) {
+          await fetchStreams(data.class_id);
+          setSelectedStream(data.stream_id || '');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching student enrollment:', error);
+    }
+  };
 
   const fetchProfiles = async () => {
     try {
@@ -466,6 +492,56 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
 
           if (relationshipError) {
             console.error('Error updating parent relationship:', relationshipError);
+          }
+        }
+
+        // Update or create student enrollment
+        if (selectedClass) {
+          // Get current academic year
+          const { data: currentYear } = await supabase
+            .from('academic_years')
+            .select('id')
+            .eq('is_current', true)
+            .maybeSingle();
+
+          // Check if enrollment exists
+          const { data: existingEnrollment } = await supabase
+            .from('student_enrollments')
+            .select('id')
+            .eq('student_id', student.id)
+            .eq('status', 'active')
+            .maybeSingle();
+
+          if (existingEnrollment) {
+            // Update existing enrollment
+            const { error: enrollmentError } = await supabase
+              .from('student_enrollments')
+              .update({
+                class_id: selectedClass,
+                stream_id: selectedStream || null,
+                academic_year_id: currentYear?.id || null,
+              })
+              .eq('id', existingEnrollment.id);
+
+            if (enrollmentError) {
+              console.error('Error updating enrollment:', enrollmentError);
+            }
+          } else {
+            // Create new enrollment
+            const { error: enrollmentError } = await supabase
+              .from('student_enrollments')
+              .insert([{
+                student_id: student.id,
+                class_id: selectedClass,
+                stream_id: selectedStream || null,
+                academic_year_id: currentYear?.id || null,
+                enrollment_date: format(admissionDate, 'yyyy-MM-dd'),
+                status: 'active'
+              }]);
+
+            if (enrollmentError) {
+              console.error('Error creating enrollment:', enrollmentError);
+            }
           }
         }
 

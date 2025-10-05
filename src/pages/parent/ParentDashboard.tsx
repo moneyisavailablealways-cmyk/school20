@@ -78,11 +78,40 @@ const ParentDashboard = () => {
     try {
       console.log('Fetching dashboard data for parent profile ID:', profile.id);
       
-      // Fetch children relationships - use profile.id directly as parent_id
+      // Fetch children with all related data in a single optimized query
       const { data: childrenData, error: childrenError } = await supabase
         .from('parent_student_relationships')
-        .select('student_id, relationship_type')
-        .eq('parent_id', profile.id);
+        .select(`
+          student_id,
+          relationship_type,
+          students!inner (
+            id,
+            student_id,
+            date_of_birth,
+            admission_date,
+            enrollment_status,
+            profiles!inner (
+              id,
+              first_name,
+              last_name,
+              email
+            ),
+            student_enrollments!inner (
+              status,
+              enrollment_date,
+              classes (
+                id,
+                name
+              ),
+              streams (
+                id,
+                name
+              )
+            )
+          )
+        `)
+        .eq('parent_id', profile.id)
+        .eq('students.student_enrollments.status', 'active');
 
       if (childrenError) {
         console.error('Error fetching children:', childrenError);
@@ -91,57 +120,35 @@ const ParentDashboard = () => {
 
       console.log('Children data found:', childrenData?.length || 0);
       
-      // Fetch detailed student information
-      const studentsData = await Promise.all(
-        (childrenData || []).map(async (rel) => {
-          const { data: studentData } = await supabase
-            .from('students')
-            .select('*')
-            .eq('id', rel.student_id)
-            .single();
+      // Transform the data into the expected format
+      const studentsData = (childrenData || []).map((rel: any) => {
+        const student = rel.students;
+        if (!student) return null;
 
-          if (!studentData) return null;
+        // Get the most recent active enrollment
+        const enrollments = student.student_enrollments || [];
+        const activeEnrollment = enrollments.length > 0 
+          ? enrollments.sort((a: any, b: any) => 
+              new Date(b.enrollment_date).getTime() - new Date(a.enrollment_date).getTime()
+            )[0]
+          : null;
 
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('first_name, last_name')
-            .eq('id', studentData.profile_id)
-            .maybeSingle();
+        console.log('Student data:', {
+          student_id: student.student_id,
+          profile: student.profiles,
+          enrollment: activeEnrollment
+        });
 
-          if (profileError) {
-            console.error('Error fetching profile for student:', studentData.student_id, profileError);
-          }
-
-          const { data: enrollmentData, error: enrollmentError } = await supabase
-            .from('student_enrollments')
-            .select(`
-              status,
-              classes (name),
-              streams (name)
-            `)
-            .eq('student_id', studentData.id)
-            .eq('status', 'active')
-            .order('enrollment_date', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (enrollmentError) {
-            console.error('Error fetching enrollment for student:', studentData.student_id, enrollmentError);
-          }
-
-          console.log('Student data:', {
-            student_id: studentData.student_id,
-            profile: profileData,
-            enrollment: enrollmentData
-          });
-
-          return {
-            ...studentData,
-            profile: profileData || { first_name: 'Unknown', last_name: 'Student' },
-            enrollment: enrollmentData || null
-          };
-        })
-      );
+        return {
+          id: student.id,
+          student_id: student.student_id,
+          date_of_birth: student.date_of_birth,
+          admission_date: student.admission_date,
+          enrollment_status: student.enrollment_status,
+          profile: student.profiles || { first_name: 'Unknown', last_name: 'Student' },
+          enrollment: activeEnrollment || null
+        };
+      });
 
       const validStudents = studentsData.filter(Boolean);
       setChildren(validStudents as Student[]);

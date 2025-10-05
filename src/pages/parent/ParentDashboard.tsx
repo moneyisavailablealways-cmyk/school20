@@ -102,13 +102,17 @@ const ParentDashboard = () => {
 
           if (!studentData) return null;
 
-          const { data: profileData } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('first_name, last_name')
             .eq('id', studentData.profile_id)
             .maybeSingle();
 
-          const { data: enrollmentData } = await supabase
+          if (profileError) {
+            console.error('Error fetching profile for student:', studentData.student_id, profileError);
+          }
+
+          const { data: enrollmentData, error: enrollmentError } = await supabase
             .from('student_enrollments')
             .select(`
               status,
@@ -116,7 +120,20 @@ const ParentDashboard = () => {
               streams (name)
             `)
             .eq('student_id', studentData.id)
+            .eq('status', 'active')
+            .order('enrollment_date', { ascending: false })
+            .limit(1)
             .maybeSingle();
+
+          if (enrollmentError) {
+            console.error('Error fetching enrollment for student:', studentData.student_id, enrollmentError);
+          }
+
+          console.log('Student data:', {
+            student_id: studentData.student_id,
+            profile: profileData,
+            enrollment: enrollmentData
+          });
 
           return {
             ...studentData,

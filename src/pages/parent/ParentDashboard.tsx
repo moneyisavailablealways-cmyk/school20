@@ -78,10 +78,19 @@ const ParentDashboard = () => {
     try {
       console.log('Fetching dashboard data for parent profile ID:', profile.id);
       
-      // Fetch children relationships - use profile.id directly as parent_id
+      // Fetch children with all related data in a single query
       const { data: childrenData, error: childrenError } = await supabase
         .from('parent_student_relationships')
-        .select('student_id, relationship_type')
+        .select(`
+          student_id,
+          relationship_type,
+          students!inner (
+            id,
+            student_id,
+            profile_id,
+            enrollment_status
+          )
+        `)
         .eq('parent_id', profile.id);
 
       if (childrenError) {
@@ -89,62 +98,83 @@ const ParentDashboard = () => {
         throw childrenError;
       }
 
-      console.log('Children data found:', childrenData?.length || 0);
+      console.log('Children relationships found:', childrenData?.length || 0);
+
+      if (!childrenData || childrenData.length === 0) {
+        setChildren([]);
+        setStats({
+          childrenCount: 0,
+          avgAttendance: 0,
+          pendingFees: 0,
+          newUpdates: 0
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Get all student IDs
+      const studentIds = childrenData.map(rel => rel.students.id);
+
+      // Fetch profiles for all students
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', childrenData.map(rel => rel.students.profile_id));
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+      }
+
+      // Fetch active enrollments for all students
+      const { data: enrollmentsData, error: enrollmentsError } = await supabase
+        .from('student_enrollments')
+        .select(`
+          student_id,
+          status,
+          enrollment_date,
+          classes (name),
+          streams (name)
+        `)
+        .in('student_id', studentIds)
+        .eq('status', 'active')
+        .order('enrollment_date', { ascending: false });
+
+      if (enrollmentsError) {
+        console.error('Error fetching enrollments:', enrollmentsError);
+      }
+
+      // Create profile and enrollment maps for quick lookup
+      const profileMap = new Map(profilesData?.map(p => [p.id, p]));
+      const enrollmentMap = new Map();
       
-      // Fetch detailed student information
-      const studentsData = await Promise.all(
-        (childrenData || []).map(async (rel) => {
-          const { data: studentData } = await supabase
-            .from('students')
-            .select('*')
-            .eq('id', rel.student_id)
-            .single();
+      // Get the most recent enrollment for each student
+      enrollmentsData?.forEach(enr => {
+        if (!enrollmentMap.has(enr.student_id)) {
+          enrollmentMap.set(enr.student_id, enr);
+        }
+      });
 
-          if (!studentData) return null;
+      // Combine all data
+      const studentsData = childrenData.map(rel => {
+        const student = rel.students;
+        const profile = profileMap.get(student.profile_id);
+        const enrollment = enrollmentMap.get(student.id);
 
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('first_name, last_name')
-            .eq('id', studentData.profile_id)
-            .maybeSingle();
+        console.log('Processing student:', {
+          student_id: student.student_id,
+          profile: profile,
+          enrollment: enrollment
+        });
 
-          if (profileError) {
-            console.error('Error fetching profile for student:', studentData.student_id, profileError);
-          }
+        return {
+          id: student.id,
+          student_id: student.student_id,
+          profile: profile || { first_name: 'Unknown', last_name: 'Student' },
+          enrollment: enrollment || null
+        };
+      });
 
-          const { data: enrollmentData, error: enrollmentError } = await supabase
-            .from('student_enrollments')
-            .select(`
-              status,
-              classes (name),
-              streams (name)
-            `)
-            .eq('student_id', studentData.id)
-            .eq('status', 'active')
-            .order('enrollment_date', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (enrollmentError) {
-            console.error('Error fetching enrollment for student:', studentData.student_id, enrollmentError);
-          }
-
-          console.log('Student data:', {
-            student_id: studentData.student_id,
-            profile: profileData,
-            enrollment: enrollmentData
-          });
-
-          return {
-            ...studentData,
-            profile: profileData || { first_name: 'Unknown', last_name: 'Student' },
-            enrollment: enrollmentData || null
-          };
-        })
-      );
-
-      const validStudents = studentsData.filter(Boolean);
-      setChildren(validStudents as Student[]);
+      setChildren(studentsData as Student[]);
 
       // Fetch announcements (using or for array column)
       const { data: announcementsData, error: announcementsError } = await supabase
@@ -187,7 +217,7 @@ const ParentDashboard = () => {
         const avgAttendance = 94; // This would be calculated from real attendance data
         
         setStats({
-          childrenCount: validStudents.length,
+          childrenCount: studentsData.length,
           avgAttendance,
           pendingFees: totalPendingFees,
           newUpdates: announcementsData?.length || 0

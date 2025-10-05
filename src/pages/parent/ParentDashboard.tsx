@@ -78,29 +78,33 @@ const ParentDashboard = () => {
     try {
       console.log('Fetching dashboard data for parent profile ID:', profile.id);
       
-      // Fetch children with all related data in a single query
-      const { data: childrenData, error: childrenError } = await supabase
-        .from('parent_student_relationships')
+      // Fetch all student data in ONE optimized query using the students table as base
+      // This works because parents have RLS policy to view their children through students table
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
         .select(`
+          id,
           student_id,
-          relationship_type,
-          students!inner (
-            id,
-            student_id,
-            profile_id,
-            enrollment_status
+          enrollment_status,
+          profile_id,
+          profiles!inner (
+            first_name,
+            last_name
+          ),
+          parent_student_relationships!inner (
+            parent_id
           )
         `)
-        .eq('parent_id', profile.id);
+        .eq('parent_student_relationships.parent_id', profile.id);
 
-      if (childrenError) {
-        console.error('Error fetching children:', childrenError);
-        throw childrenError;
+      if (studentsError) {
+        console.error('Error fetching students:', studentsError);
+        throw studentsError;
       }
 
-      console.log('Children relationships found:', childrenData?.length || 0);
+      console.log('Students found:', studentsData?.length || 0, studentsData);
 
-      if (!childrenData || childrenData.length === 0) {
+      if (!studentsData || studentsData.length === 0) {
         setChildren([]);
         setStats({
           childrenCount: 0,
@@ -112,69 +116,64 @@ const ParentDashboard = () => {
         return;
       }
 
-      // Get all student IDs
-      const studentIds = childrenData.map(rel => rel.students.id);
+      // Get student IDs for enrollment lookup
+      const studentIds = studentsData.map(s => s.id);
 
-      // Fetch profiles for all students
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .in('id', childrenData.map(rel => rel.students.profile_id));
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-      }
-
-      // Fetch active enrollments for all students
+      // Fetch enrollments separately (parents can view through relationship)
       const { data: enrollmentsData, error: enrollmentsError } = await supabase
         .from('student_enrollments')
         .select(`
           student_id,
           status,
           enrollment_date,
-          classes (name),
+          classes!inner (name),
           streams (name)
         `)
         .in('student_id', studentIds)
         .eq('status', 'active')
         .order('enrollment_date', { ascending: false });
 
+      console.log('Enrollments found:', enrollmentsData?.length || 0, enrollmentsData);
+
       if (enrollmentsError) {
         console.error('Error fetching enrollments:', enrollmentsError);
       }
 
-      // Create profile and enrollment maps for quick lookup
-      const profileMap = new Map(profilesData?.map(p => [p.id, p]));
+      // Create enrollment map
       const enrollmentMap = new Map();
-      
-      // Get the most recent enrollment for each student
       enrollmentsData?.forEach(enr => {
         if (!enrollmentMap.has(enr.student_id)) {
           enrollmentMap.set(enr.student_id, enr);
         }
       });
 
-      // Combine all data
-      const studentsData = childrenData.map(rel => {
-        const student = rel.students;
-        const profile = profileMap.get(student.profile_id);
+      // Transform data
+      const childrenList = studentsData.map(student => {
         const enrollment = enrollmentMap.get(student.id);
-
-        console.log('Processing student:', {
+        
+        console.log('Student data:', {
+          id: student.id,
           student_id: student.student_id,
-          profile: profile,
+          profile: student.profiles,
           enrollment: enrollment
         });
 
         return {
           id: student.id,
           student_id: student.student_id,
-          profile: profile || { first_name: 'Unknown', last_name: 'Student' },
-          enrollment: enrollment || null
+          profile: {
+            first_name: student.profiles.first_name,
+            last_name: student.profiles.last_name
+          },
+          enrollment: enrollment ? {
+            classes: enrollment.classes,
+            streams: enrollment.streams,
+            status: enrollment.status
+          } : null
         };
       });
 
-      setChildren(studentsData as Student[]);
+      setChildren(childrenList as Student[]);
 
       // Fetch announcements (using or for array column)
       const { data: announcementsData, error: announcementsError } = await supabase

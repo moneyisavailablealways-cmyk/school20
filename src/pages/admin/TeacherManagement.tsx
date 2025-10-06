@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -20,6 +22,7 @@ import {
   Calendar,
   Users,
   Trash2,
+  BookOpen,
 } from 'lucide-react';
 
 interface Teacher {
@@ -35,6 +38,45 @@ interface Teacher {
   created_at: string;
 }
 
+interface TeacherDetails {
+  id: string;
+  profile_id: string;
+  employee_id?: string;
+  qualification?: string;
+  experience_years?: number;
+  joining_date?: string;
+  department?: string;
+  salary?: number;
+  is_class_teacher?: boolean;
+}
+
+interface Subject {
+  id: string;
+  name: string;
+  code: string;
+  level_id: string;
+  sub_level: string | null;
+  is_core: boolean;
+  is_active: boolean;
+  level?: {
+    name: string;
+  };
+}
+
+interface Class {
+  id: string;
+  name: string;
+  level_id?: string;
+  class_teacher_id?: string;
+}
+
+interface TeacherSpecialization {
+  id: string;
+  teacher_id: string;
+  subject_id: string;
+  class_id?: string;
+}
+
 const TeacherManagement = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,8 +90,21 @@ const TeacherManagement = () => {
     email: '',
     phone: '',
     role: 'teacher' as 'teacher' | 'head_teacher',
-    is_active: true
+    is_active: true,
+    employee_id: '',
+    qualification: '',
+    experience_years: 0,
+    joining_date: '',
+    department: '',
+    salary: undefined as number | undefined,
+    is_class_teacher: false,
+    assigned_class_id: ''
   });
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [subjectClassAssignments, setSubjectClassAssignments] = useState<{ subjectId: string; classIds: string[] }[]>([]);
+  const [teacherDetailsId, setTeacherDetailsId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,24 +133,119 @@ const TeacherManagement = () => {
     }
   };
 
-  const openEditDialog = (teacher: Teacher) => {
+  const openEditDialog = async (teacher: Teacher) => {
     setEditingTeacher(teacher);
+    
+    // Fetch teacher details
+    const { data: teacherDetails } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('profile_id', teacher.id)
+      .single();
+
+    // Fetch teacher specializations
+    const { data: specializations } = await supabase
+      .from('teacher_specializations')
+      .select('*')
+      .eq('teacher_id', teacherDetails?.id);
+
+    // Fetch all subjects and classes
+    const { data: subjectsData } = await supabase
+      .from('subjects')
+      .select(`
+        *,
+        level:levels(name)
+      `)
+      .eq('is_active', true)
+      .order('name');
+
+    const { data: classesData } = await supabase
+      .from('classes')
+      .select('*')
+      .order('name');
+
+    setSubjects(subjectsData || []);
+    setClasses(classesData || []);
+
+    // Set selected subjects and class assignments
+    if (specializations) {
+      const uniqueSubjectIds = [...new Set(specializations.map(s => s.subject_id))];
+      setSelectedSubjects(uniqueSubjectIds);
+
+      const assignments = uniqueSubjectIds.map(subjectId => ({
+        subjectId,
+        classIds: specializations
+          .filter(s => s.subject_id === subjectId && s.class_id)
+          .map(s => s.class_id!)
+      }));
+      setSubjectClassAssignments(assignments);
+    } else {
+      setSelectedSubjects([]);
+      setSubjectClassAssignments([]);
+    }
+
+    setTeacherDetailsId(teacherDetails?.id || null);
     setEditForm({
       first_name: teacher.first_name,
       last_name: teacher.last_name,
       email: teacher.email,
       phone: teacher.phone || '',
       role: teacher.role as 'teacher' | 'head_teacher',
-      is_active: teacher.is_active
+      is_active: teacher.is_active,
+      employee_id: teacherDetails?.employee_id || '',
+      qualification: teacherDetails?.qualification || '',
+      experience_years: teacherDetails?.experience_years || 0,
+      joining_date: teacherDetails?.joining_date || new Date().toISOString().split('T')[0],
+      department: teacherDetails?.department || '',
+      salary: teacherDetails?.salary,
+      is_class_teacher: teacherDetails?.is_class_teacher || false,
+      assigned_class_id: classesData?.find(c => c.class_teacher_id === teacher.id)?.id || ''
     });
     setEditDialogOpen(true);
+  };
+
+  const handleSubjectToggle = (subjectId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedSubjects(prev => [...prev, subjectId]);
+      setSubjectClassAssignments(prev => [...prev, { subjectId, classIds: [] }]);
+    } else {
+      setSelectedSubjects(prev => prev.filter(id => id !== subjectId));
+      setSubjectClassAssignments(prev => prev.filter(assignment => assignment.subjectId !== subjectId));
+    }
+  };
+
+  const handleClassToggle = (subjectId: string, classId: string, checked: boolean) => {
+    setSubjectClassAssignments(prev => 
+      prev.map(assignment => {
+        if (assignment.subjectId === subjectId) {
+          return {
+            ...assignment,
+            classIds: checked 
+              ? [...assignment.classIds, classId]
+              : assignment.classIds.filter(id => id !== classId)
+          };
+        }
+        return assignment;
+      })
+    );
   };
 
   const handleEditSubmit = async () => {
     if (!editingTeacher) return;
 
     try {
-      const { error } = await supabase
+      // Validate at least one subject is selected
+      if (selectedSubjects.length === 0) {
+        toast({
+          title: 'Error',
+          description: 'Please select at least one subject specialization',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Update profile
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           first_name: editForm.first_name,
@@ -107,11 +257,101 @@ const TeacherManagement = () => {
         })
         .eq('user_id', editingTeacher.user_id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      // Update or insert teacher details
+      const teacherDetailsData = {
+        profile_id: editingTeacher.id,
+        employee_id: editForm.employee_id,
+        qualification: editForm.qualification,
+        experience_years: editForm.experience_years,
+        joining_date: editForm.joining_date,
+        department: editForm.department,
+        salary: editForm.salary,
+        is_class_teacher: editForm.is_class_teacher,
+        specialization: selectedSubjects.map(id => subjects.find(s => s.id === id)?.name).join(', ')
+      };
+
+      let finalTeacherDetailsId = teacherDetailsId;
+
+      if (teacherDetailsId) {
+        const { error: teacherError } = await supabase
+          .from('teachers')
+          .update(teacherDetailsData)
+          .eq('id', teacherDetailsId);
+
+        if (teacherError) throw teacherError;
+      } else {
+        const { data: newTeacher, error: teacherError } = await supabase
+          .from('teachers')
+          .insert(teacherDetailsData)
+          .select()
+          .single();
+
+        if (teacherError) throw teacherError;
+        finalTeacherDetailsId = newTeacher.id;
+      }
+
+      // Update class teacher assignment
+      if (editForm.is_class_teacher && editForm.assigned_class_id) {
+        const { error: classError } = await supabase
+          .from('classes')
+          .update({ class_teacher_id: editingTeacher.id })
+          .eq('id', editForm.assigned_class_id);
+
+        if (classError) throw classError;
+      } else {
+        // Remove class teacher assignment if unchecked
+        const { error: classError } = await supabase
+          .from('classes')
+          .update({ class_teacher_id: null })
+          .eq('class_teacher_id', editingTeacher.id);
+
+        if (classError) throw classError;
+      }
+
+      // Update teacher specializations
+      if (finalTeacherDetailsId) {
+        // Delete existing specializations
+        const { error: deleteError } = await supabase
+          .from('teacher_specializations')
+          .delete()
+          .eq('teacher_id', finalTeacherDetailsId);
+
+        if (deleteError) throw deleteError;
+
+        // Insert new specializations
+        const specializationInserts = [];
+        for (const assignment of subjectClassAssignments) {
+          if (assignment.classIds.length === 0) {
+            specializationInserts.push({
+              teacher_id: finalTeacherDetailsId,
+              subject_id: assignment.subjectId,
+              class_id: null
+            });
+          } else {
+            for (const classId of assignment.classIds) {
+              specializationInserts.push({
+                teacher_id: finalTeacherDetailsId,
+                subject_id: assignment.subjectId,
+                class_id: classId
+              });
+            }
+          }
+        }
+
+        if (specializationInserts.length > 0) {
+          const { error: specializationError } = await supabase
+            .from('teacher_specializations')
+            .insert(specializationInserts);
+
+          if (specializationError) throw specializationError;
+        }
+      }
 
       toast({
         title: 'Success',
-        description: 'Teacher updated successfully',
+        description: 'Teacher updated successfully with all details',
       });
 
       setEditDialogOpen(false);
@@ -121,7 +361,7 @@ const TeacherManagement = () => {
       console.error('Error updating teacher:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update teacher',
+        description: error.message || 'Failed to update teacher',
         variant: 'destructive',
       });
     }
@@ -356,74 +596,272 @@ const TeacherManagement = () => {
 
       {/* Edit Teacher Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Edit Teacher</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5" />
+              Edit Teacher
+            </DialogTitle>
             <DialogDescription>
-              Update teacher information. Click save when you're done.
+              Update teacher information including professional details and subject specializations
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first_name">First Name</Label>
-                <Input
-                  id="first_name"
-                  value={editForm.first_name}
-                  onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
-                />
+          
+          <ScrollArea className="max-h-[calc(90vh-180px)] pr-4">
+            <div className="space-y-6 py-4">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Basic Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="first_name">First Name</Label>
+                    <Input
+                      id="first_name"
+                      value={editForm.first_name}
+                      onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="last_name">Last Name</Label>
+                    <Input
+                      id="last_name"
+                      value={editForm.last_name}
+                      onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Role</Label>
+                    <Select value={editForm.role} onValueChange={(value: 'teacher' | 'head_teacher') => setEditForm({ ...editForm, role: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="teacher">Teacher</SelectItem>
+                        <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={editForm.is_active ? 'active' : 'inactive'} onValueChange={(value) => setEditForm({ ...editForm, is_active: value === 'active' })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="last_name">Last Name</Label>
-                <Input
-                  id="last_name"
-                  value={editForm.last_name}
-                  onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
-                />
+
+              {/* Professional Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Professional Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="employee_id">Employee ID</Label>
+                    <Input
+                      id="employee_id"
+                      placeholder="EMP001"
+                      value={editForm.employee_id}
+                      onChange={(e) => setEditForm({ ...editForm, employee_id: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="department">Department</Label>
+                    <Input
+                      id="department"
+                      placeholder="Science"
+                      value={editForm.department}
+                      onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="qualification">Qualification</Label>
+                  <Input
+                    id="qualification"
+                    placeholder="M.Sc. Mathematics"
+                    value={editForm.qualification}
+                    onChange={(e) => setEditForm({ ...editForm, qualification: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="experience_years">Experience (Years)</Label>
+                    <Input
+                      id="experience_years"
+                      type="number"
+                      placeholder="5"
+                      value={editForm.experience_years}
+                      onChange={(e) => setEditForm({ ...editForm, experience_years: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="joining_date">Joining Date</Label>
+                    <Input
+                      id="joining_date"
+                      type="date"
+                      value={editForm.joining_date}
+                      onChange={(e) => setEditForm({ ...editForm, joining_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="salary">Salary (Optional)</Label>
+                    <Input
+                      id="salary"
+                      type="number"
+                      placeholder="50000"
+                      value={editForm.salary || ''}
+                      onChange={(e) => setEditForm({ ...editForm, salary: parseFloat(e.target.value) || undefined })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3 space-y-0">
+                  <Checkbox
+                    id="is_class_teacher"
+                    checked={editForm.is_class_teacher}
+                    onCheckedChange={(checked) => setEditForm({ ...editForm, is_class_teacher: !!checked })}
+                  />
+                  <div className="space-y-1 leading-none">
+                    <Label htmlFor="is_class_teacher">Class Teacher</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Check if this teacher will be assigned as a class teacher
+                    </p>
+                  </div>
+                </div>
+
+                {editForm.is_class_teacher && (
+                  <div className="space-y-2">
+                    <Label htmlFor="assigned_class_id">Assign to Class</Label>
+                    <Select 
+                      value={editForm.assigned_class_id} 
+                      onValueChange={(value) => setEditForm({ ...editForm, assigned_class_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a class to assign" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {classes
+                          .filter(c => !c.class_teacher_id || c.class_teacher_id === editingTeacher?.id)
+                          .map((classItem) => (
+                            <SelectItem key={classItem.id} value={classItem.id}>
+                              {classItem.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      Select which class this teacher will be responsible for
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Subject Specializations */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  <h3 className="text-lg font-semibold">Subject Specializations</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Select the subjects this teacher specializes in and assign them to specific classes
+                </p>
+                
+                <div className="space-y-4">
+                  {subjects.map((subject) => (
+                    <div key={subject.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          id={`subject-${subject.id}`}
+                          checked={selectedSubjects.includes(subject.id)}
+                          onCheckedChange={(checked) => handleSubjectToggle(subject.id, !!checked)}
+                        />
+                        <label 
+                          htmlFor={`subject-${subject.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {subject.name} ({subject.code}) - {subject.level?.name || 'No Level'}
+                        </label>
+                      </div>
+
+                      {selectedSubjects.includes(subject.id) && (
+                        <div className="ml-6 space-y-2">
+                          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <Users className="h-4 w-4" />
+                            Assign to Classes:
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {classes.map((classItem) => (
+                              <div key={classItem.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`class-${subject.id}-${classItem.id}`}
+                                  checked={
+                                    subjectClassAssignments
+                                      .find(a => a.subjectId === subject.id)
+                                      ?.classIds.includes(classItem.id) || false
+                                  }
+                                  onCheckedChange={(checked) => 
+                                    handleClassToggle(subject.id, classItem.id, !!checked)
+                                  }
+                                />
+                                <label 
+                                  htmlFor={`class-${subject.id}-${classItem.id}`}
+                                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  {classItem.name}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                          {classes.length === 0 && (
+                            <p className="text-sm text-muted-foreground ml-6">
+                              No classes available
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {selectedSubjects.length === 0 && (
+                  <p className="text-sm text-destructive">
+                    Please select at least one subject specialization
+                  </p>
+                )}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={editForm.phone}
-                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Select value={editForm.role} onValueChange={(value: 'teacher' | 'head_teacher') => setEditForm({ ...editForm, role: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="teacher">Teacher</SelectItem>
-                  <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={editForm.is_active ? 'active' : 'inactive'} onValueChange={(value) => setEditForm({ ...editForm, is_active: value === 'active' })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          </ScrollArea>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
               Cancel

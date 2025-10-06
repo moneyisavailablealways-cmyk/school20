@@ -99,6 +99,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
       fetchStudentMedicalInfo();
       fetchStudentEmergencyContacts();
       fetchStudentEnrollment();
+      fetchStudentSubjects();
     }
   }, [student]);
 
@@ -297,6 +298,26 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
       }
     } catch (error) {
       console.error('Error fetching emergency contacts:', error);
+    }
+  };
+
+  const fetchStudentSubjects = async () => {
+    if (!student?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('student_subject_enrollments')
+        .select('subject_id')
+        .eq('student_id', student.id)
+        .eq('status', 'active');
+
+      if (error) throw error;
+      
+      if (data) {
+        setSelectedSubjects(data.map(enrollment => enrollment.subject_id));
+      }
+    } catch (error) {
+      console.error('Error fetching student subjects:', error);
     }
   };
 
@@ -543,6 +564,41 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
               console.error('Error creating enrollment:', enrollmentError);
             }
           }
+
+          // Update subject enrollments
+          if (selectedSubjects.length > 0) {
+            // First, deactivate existing subject enrollments
+            await supabase
+              .from('student_subject_enrollments')
+              .update({ status: 'inactive' })
+              .eq('student_id', student.id)
+              .eq('status', 'active');
+
+            // Insert or reactivate selected subjects
+            const subjectEnrollments = selectedSubjects.map(subjectId => ({
+              student_id: student.id,
+              subject_id: subjectId,
+              academic_year_id: currentYear?.id || null,
+              enrollment_date: format(new Date(), 'yyyy-MM-dd'),
+              status: 'active'
+            }));
+
+            const { error: subjectsError } = await supabase
+              .from('student_subject_enrollments')
+              .upsert(subjectEnrollments, {
+                onConflict: 'student_id,subject_id,academic_year_id',
+                ignoreDuplicates: false
+              });
+
+            if (subjectsError) {
+              console.error('Error updating subject enrollments:', subjectsError);
+              toast({
+                title: 'Warning',
+                description: 'Student updated but some subjects could not be saved',
+                variant: 'destructive',
+              });
+            }
+          }
         }
 
         toast({
@@ -595,6 +651,13 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
 
         // Create student enrollment if class is selected
         if (selectedClass && newStudent) {
+          // Get current academic year
+          const { data: currentYear } = await supabase
+            .from('academic_years')
+            .select('id')
+            .eq('is_current', true)
+            .maybeSingle();
+
           const { error: enrollmentError } = await supabase
             .from('student_enrollments')
             .insert([{
@@ -607,6 +670,30 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
 
           if (enrollmentError) {
             console.error('Error creating enrollment:', enrollmentError);
+          }
+
+          // Save subject enrollments if subjects are selected
+          if (selectedSubjects.length > 0) {
+            const subjectEnrollments = selectedSubjects.map(subjectId => ({
+              student_id: newStudent.id,
+              subject_id: subjectId,
+              academic_year_id: currentYear?.id || null,
+              enrollment_date: format(admissionDate, 'yyyy-MM-dd'),
+              status: 'active'
+            }));
+
+            const { error: subjectsError } = await supabase
+              .from('student_subject_enrollments')
+              .insert(subjectEnrollments);
+
+            if (subjectsError) {
+              console.error('Error saving subject enrollments:', subjectsError);
+              toast({
+                title: 'Warning',
+                description: 'Student created but some subjects could not be saved',
+                variant: 'destructive',
+              });
+            }
           }
         }
 

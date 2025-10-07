@@ -2,58 +2,54 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Calendar, Clock, Edit, Trash2, Users, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import AddTimetableDialog from '@/components/AddTimetableDialog';
+import EditTimetableDialog from '@/components/EditTimetableDialog';
 
 interface TimetableEntry {
   id: string;
-  day: string;
-  time_slot: string;
-  subject: string;
-  teacher: string;
-  class: string;
-  room: string;
-  duration: number;
-}
-
-interface TimeSlot {
-  id: string;
+  day_of_week: number;
   start_time: string;
   end_time: string;
-  duration: number;
+  class_id: string;
+  subject_id: string;
+  teacher_id: string;
+  room_number: string;
+  subject?: {
+    name: string;
+  };
+  teacher?: {
+    first_name: string;
+    last_name: string;
+  };
+  class?: {
+    name: string;
+  };
 }
 
 const Timetable = () => {
   const [timetableEntries, setTimetableEntries] = useState<TimetableEntry[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedDay, setSelectedDay] = useState<string>('all');
-  const [isNewEntryDialogOpen, setIsNewEntryDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
-
-  const [entryForm, setEntryForm] = useState({
-    day: '',
-    time_slot: '',
-    subject: '',
-    teacher: '',
-    class: '',
-    room: '',
-    duration: '45',
-  });
+  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
 
   const { toast } = useToast();
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const classes = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
-  const subjects = ['Mathematics', 'English', 'Science', 'History', 'Geography', 'Art', 'Physical Education', 'Music'];
-  const teachers = ['Mr. Smith', 'Ms. Johnson', 'Dr. Brown', 'Mrs. Davis', 'Mr. Wilson', 'Ms. Taylor'];
+
+  // Helper function to convert day number to day name
+  const getDayName = (dayNumber: number): string => {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return dayNames[dayNumber] || '';
+  };
 
   useEffect(() => {
     fetchData();
@@ -63,74 +59,37 @@ const Timetable = () => {
     try {
       setLoading(true);
       
-      // Mock time slots
-      const mockTimeSlots: TimeSlot[] = [
-        { id: '1', start_time: '08:00', end_time: '08:45', duration: 45 },
-        { id: '2', start_time: '08:45', end_time: '09:30', duration: 45 },
-        { id: '3', start_time: '09:45', end_time: '10:30', duration: 45 },
-        { id: '4', start_time: '10:30', end_time: '11:15', duration: 45 },
-        { id: '5', start_time: '11:30', end_time: '12:15', duration: 45 },
-        { id: '6', start_time: '13:00', end_time: '13:45', duration: 45 },
-        { id: '7', start_time: '13:45', end_time: '14:30', duration: 45 },
-        { id: '8', start_time: '14:30', end_time: '15:15', duration: 45 },
-      ];
+      // Fetch timetable entries with related data
+      const { data: timetableData, error: timetableError } = await supabase
+        .from('timetables')
+        .select(`
+          id,
+          day_of_week,
+          start_time,
+          end_time,
+          room_number,
+          class_id,
+          subject_id,
+          teacher_id,
+          subject:subjects(name),
+          teacher:profiles!timetables_teacher_id_fkey(first_name, last_name),
+          class:classes(name)
+        `)
+        .order('day_of_week')
+        .order('start_time');
 
-      // Mock timetable entries
-      const mockEntries: TimetableEntry[] = [
-        {
-          id: '1',
-          day: 'Monday',
-          time_slot: '08:00 - 08:45',
-          subject: 'Mathematics',
-          teacher: 'Mr. Smith',
-          class: 'Grade 7',
-          room: 'Room 101',
-          duration: 45,
-        },
-        {
-          id: '2',
-          day: 'Monday',
-          time_slot: '08:45 - 09:30',
-          subject: 'English',
-          teacher: 'Ms. Johnson',
-          class: 'Grade 7',
-          room: 'Room 102',
-          duration: 45,
-        },
-        {
-          id: '3',
-          day: 'Monday',
-          time_slot: '09:45 - 10:30',
-          subject: 'Science',
-          teacher: 'Dr. Brown',
-          class: 'Grade 7',
-          room: 'Lab 1',
-          duration: 45,
-        },
-        {
-          id: '4',
-          day: 'Tuesday',
-          time_slot: '08:00 - 08:45',
-          subject: 'History',
-          teacher: 'Mrs. Davis',
-          class: 'Grade 7',
-          room: 'Room 103',
-          duration: 45,
-        },
-        {
-          id: '5',
-          day: 'Wednesday',
-          time_slot: '08:00 - 08:45',
-          subject: 'Mathematics',
-          teacher: 'Mr. Wilson',
-          class: 'Grade 6',
-          room: 'Room 201',
-          duration: 45,
-        },
-      ];
+      if (timetableError) throw timetableError;
 
-      setTimeSlots(mockTimeSlots);
-      setTimetableEntries(mockEntries);
+      // Fetch classes for filter
+      const { data: classesData, error: classesError } = await supabase
+        .from('classes')
+        .select('id, name')
+        .order('name');
+
+      if (classesError) throw classesError;
+
+      setTimetableEntries(timetableData || []);
+      setClasses(classesData || []);
     } catch (error: any) {
       console.error('Error fetching data:', error);
       toast({
@@ -143,97 +102,50 @@ const Timetable = () => {
     }
   };
 
-  const handleSubmitEntry = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      const newEntry: TimetableEntry = {
-        id: Date.now().toString(),
-        ...entryForm,
-        duration: parseInt(entryForm.duration),
-      };
-
-      if (editingEntry) {
-        setTimetableEntries(prev => 
-          prev.map(entry => entry.id === editingEntry.id ? { ...newEntry, id: editingEntry.id } : entry)
-        );
-        toast({
-          title: 'Success',
-          description: 'Timetable entry updated successfully',
-        });
-      } else {
-        setTimetableEntries(prev => [newEntry, ...prev]);
-        toast({
-          title: 'Success',
-          description: 'Timetable entry added successfully',
-        });
-      }
-      
-      setEntryForm({
-        day: '',
-        time_slot: '',
-        subject: '',
-        teacher: '',
-        class: '',
-        room: '',
-        duration: '45',
-      });
-      
-      setIsNewEntryDialogOpen(false);
-      setEditingEntry(null);
-    } catch (error: any) {
-      console.error('Error saving entry:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save timetable entry',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleEditEntry = (entry: TimetableEntry) => {
+  const handleEdit = (entry: TimetableEntry) => {
     setEditingEntry(entry);
-    setEntryForm({
-      day: entry.day,
-      time_slot: entry.time_slot,
-      subject: entry.subject,
-      teacher: entry.teacher,
-      class: entry.class,
-      room: entry.room,
-      duration: entry.duration.toString(),
-    });
-    setIsNewEntryDialogOpen(true);
+    setIsEditDialogOpen(true);
   };
 
-  const handleDeleteEntry = async (id: string) => {
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this schedule entry?')) {
+      return;
+    }
+
     try {
-      setTimetableEntries(prev => prev.filter(entry => entry.id !== id));
+      const { error } = await supabase
+        .from('timetables')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
       toast({
         title: 'Success',
-        description: 'Timetable entry deleted successfully',
+        description: 'Schedule entry deleted successfully',
       });
+
+      fetchData();
     } catch (error: any) {
       console.error('Error deleting entry:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete timetable entry',
+        description: error.message || 'Failed to delete schedule entry',
         variant: 'destructive',
       });
     }
   };
 
   const filteredEntries = timetableEntries.filter(entry => {
-    const matchesClass = selectedClass === 'all' || entry.class === selectedClass;
-    const matchesDay = selectedDay === 'all' || entry.day === selectedDay;
+    const matchesClass = selectedClass === 'all' || entry.class?.name === selectedClass;
+    const matchesDay = selectedDay === 'all' || getDayName(entry.day_of_week) === selectedDay;
     return matchesClass && matchesDay;
   });
 
-  // Group entries by day and time for grid view
+  // Group entries by day for grid view
   const groupedEntries = days.reduce((acc, day) => {
-    acc[day] = filteredEntries.filter(entry => entry.day === day).sort((a, b) => {
-      const timeA = a.time_slot.split(' - ')[0];
-      const timeB = b.time_slot.split(' - ')[0];
-      return timeA.localeCompare(timeB);
+    acc[day] = filteredEntries.filter(entry => getDayName(entry.day_of_week) === day).sort((a, b) => {
+      return a.start_time.localeCompare(b.start_time);
     });
     return acc;
   }, {} as Record<string, TimetableEntry[]>);
@@ -253,124 +165,26 @@ const Timetable = () => {
           <h1 className="text-3xl font-bold">Timetable Management</h1>
           <p className="text-muted-foreground">Manage class schedules and time slots</p>
         </div>
-        <Dialog open={isNewEntryDialogOpen} onOpenChange={setIsNewEntryDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingEntry(null);
-              setEntryForm({
-                day: '',
-                time_slot: '',
-                subject: '',
-                teacher: '',
-                class: '',
-                room: '',
-                duration: '45',
-              });
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Schedule
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingEntry ? 'Edit Schedule' : 'Add New Schedule'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmitEntry} className="space-y-4">
-              <div>
-                <Label htmlFor="day">Day</Label>
-                <Select value={entryForm.day} onValueChange={(value) => setEntryForm(prev => ({ ...prev, day: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select day" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {days.map((day) => (
-                      <SelectItem key={day} value={day}>{day}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="time_slot">Time Slot</Label>
-                <Select value={entryForm.time_slot} onValueChange={(value) => setEntryForm(prev => ({ ...prev, time_slot: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select time slot" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeSlots.map((slot) => (
-                      <SelectItem key={slot.id} value={`${slot.start_time} - ${slot.end_time}`}>
-                        {slot.start_time} - {slot.end_time}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="class">Class</Label>
-                <Select value={entryForm.class} onValueChange={(value) => setEntryForm(prev => ({ ...prev, class: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select class" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {classes.map((cls) => (
-                      <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="subject">Subject</Label>
-                <Select value={entryForm.subject} onValueChange={(value) => setEntryForm(prev => ({ ...prev, subject: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subjects.map((subject) => (
-                      <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="teacher">Teacher</Label>
-                <Select value={entryForm.teacher} onValueChange={(value) => setEntryForm(prev => ({ ...prev, teacher: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select teacher" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teachers.map((teacher) => (
-                      <SelectItem key={teacher} value={teacher}>{teacher}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="room">Room</Label>
-                <Input
-                  id="room"
-                  value={entryForm.room}
-                  onChange={(e) => setEntryForm(prev => ({ ...prev, room: e.target.value }))}
-                  placeholder="e.g., Room 101, Lab 1"
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsNewEntryDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  {editingEntry ? 'Update' : 'Add'} Schedule
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsAddDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Schedule
+        </Button>
       </div>
+
+      <AddTimetableDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onSuccess={fetchData}
+      />
+
+      {editingEntry && (
+        <EditTimetableDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          entry={editingEntry}
+          onSuccess={fetchData}
+        />
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -414,7 +228,7 @@ const Timetable = () => {
               <SelectContent>
                 <SelectItem value="all">All Classes</SelectItem>
                 {classes.map((cls) => (
-                  <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                  <SelectItem key={cls.id} value={cls.name}>{cls.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -442,54 +256,55 @@ const Timetable = () => {
         <CardContent>
           <div className="overflow-x-auto">
             <div className="grid grid-cols-6 gap-2 min-w-[800px]">
-              <div className="font-semibold p-2 border rounded">Time</div>
+              <div className="font-semibold p-2 border rounded">Day</div>
               {days.map(day => (
                 <div key={day} className="font-semibold p-2 border rounded text-center">
                   {day}
                 </div>
               ))}
               
-              {timeSlots.map(slot => (
-                <React.Fragment key={slot.id}>
+              {days.map(day => (
+                <React.Fragment key={day}>
                   <div className="p-2 border rounded text-sm font-medium">
-                    {slot.start_time}<br />-<br />{slot.end_time}
+                    {day}
                   </div>
-                  {days.map(day => {
-                    const entry = groupedEntries[day]?.find(e => 
-                      e.time_slot === `${slot.start_time} - ${slot.end_time}`
-                    );
-                    
-                    return (
-                      <div key={`${day}-${slot.id}`} className="p-2 border rounded min-h-[80px]">
-                        {entry && (
-                          <div className="bg-primary/10 p-2 rounded text-xs">
-                            <div className="font-medium">{entry.subject}</div>
-                            <div className="text-muted-foreground">{entry.class}</div>
-                            <div className="text-muted-foreground">{entry.teacher}</div>
-                            <div className="text-muted-foreground">{entry.room}</div>
-                            <div className="flex space-x-1 mt-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditEntry(entry)}
-                                className="h-6 w-6 p-0"
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteEntry(entry.id)}
-                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
+                  <div className="col-span-5 p-2 border rounded min-h-[120px]">
+                    <div className="space-y-2">
+                      {groupedEntries[day]?.map((entry) => (
+                        <div key={entry.id} className="bg-primary/10 p-2 rounded text-xs">
+                          <div className="font-medium">{entry.subject?.name}</div>
+                          <div className="text-muted-foreground">{entry.class?.name}</div>
+                          <div className="text-muted-foreground">
+                            {entry.teacher?.first_name} {entry.teacher?.last_name}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          <div className="text-muted-foreground">
+                            {entry.start_time} - {entry.end_time}
+                          </div>
+                          {entry.room_number && (
+                            <div className="text-muted-foreground">{entry.room_number}</div>
+                          )}
+                          <div className="flex space-x-1 mt-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(entry)}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(entry.id)}
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </React.Fragment>
               ))}
             </div>
@@ -521,31 +336,33 @@ const Timetable = () => {
                 {filteredEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell>
-                      <Badge variant="outline">{entry.day}</Badge>
+                      <Badge variant="outline">{getDayName(entry.day_of_week)}</Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       <div className="flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
-                        {entry.time_slot}
+                        {entry.start_time} - {entry.end_time}
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium">{entry.class}</TableCell>
-                    <TableCell>{entry.subject}</TableCell>
-                    <TableCell>{entry.teacher}</TableCell>
-                    <TableCell>{entry.room}</TableCell>
+                    <TableCell className="font-medium">{entry.class?.name}</TableCell>
+                    <TableCell>{entry.subject?.name}</TableCell>
+                    <TableCell>
+                      {entry.teacher?.first_name} {entry.teacher?.last_name}
+                    </TableCell>
+                    <TableCell>{entry.room_number || '-'}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEditEntry(entry)}
+                          onClick={() => handleEdit(entry)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteEntry(entry.id)}
+                          onClick={() => handleDelete(entry.id)}
                           className="text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />

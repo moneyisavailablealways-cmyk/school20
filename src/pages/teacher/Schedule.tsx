@@ -51,7 +51,40 @@ const Schedule = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      if (!profile?.id) {
+        setLoading(false);
+        return;
+      }
+
+      // Get all class IDs where teacher is assigned
+      const { data: classTeacherClasses } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('class_teacher_id', profile.id);
+
+      const { data: sectionTeacherStreams } = await supabase
+        .from('streams')
+        .select('class_id')
+        .eq('section_teacher_id', profile.id);
+
+      const { data: specializations } = await supabase
+        .from('teacher_specializations')
+        .select('class_id, subject_id')
+        .eq('teacher_id', profile.id);
+
+      // Collect all unique class IDs and subject IDs
+      const classIds = new Set<string>();
+      const subjectIds = new Set<string>();
+      
+      classTeacherClasses?.forEach(c => classIds.add(c.id));
+      sectionTeacherStreams?.forEach(s => classIds.add(s.class_id));
+      specializations?.forEach(s => {
+        if (s.class_id) classIds.add(s.class_id);
+        if (s.subject_id) subjectIds.add(s.subject_id);
+      });
+
+      // Fetch timetables for these classes and subjects
+      let query = supabase
         .from('timetables')
         .select(`
           *,
@@ -63,9 +96,17 @@ const Schedule = () => {
             code
           )
         `)
-        .eq('teacher_id', profile?.id)
         .order('day_of_week')
         .order('start_time');
+
+      // Filter by teacher_id OR (class_id AND subject_id from specializations)
+      if (classIds.size > 0) {
+        query = query.or(`teacher_id.eq.${profile.id},class_id.in.(${Array.from(classIds).join(',')})`);
+      } else {
+        query = query.eq('teacher_id', profile.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching schedule:', error);
@@ -77,10 +118,21 @@ const Schedule = () => {
         return;
       }
 
+      // Filter to only include entries that match teacher's specializations
+      const filteredData = data?.filter(entry => {
+        // Include if directly assigned as teacher
+        if (entry.teacher_id === profile.id) return true;
+        
+        // Include if class and subject match teacher's specializations
+        return specializations?.some(spec => 
+          spec.class_id === entry.class_id && spec.subject_id === entry.subject_id
+        );
+      });
+
       // Group entries by day
       const groupedByDay = daysOfWeek.map((dayName, index) => {
         const dayNumber = index + 1; // Monday = 1, Tuesday = 2, etc.
-        const dayEntries = (data || []).filter(entry => entry.day_of_week === dayNumber);
+        const dayEntries = (filteredData || []).filter(entry => entry.day_of_week === dayNumber);
         
         return {
           day: dayName,

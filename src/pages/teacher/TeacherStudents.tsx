@@ -53,32 +53,16 @@ const TeacherStudents = () => {
       setLoading(true);
 
       // Get classes where teacher is the class teacher
-      const { data: teacherClasses, error: classError } = await supabase
+      const { data: classTeacherClasses, error: classError } = await supabase
         .from('classes')
         .select(`
           id,
-          name,
-          student_enrollments!inner (
-            student_id,
-            students!inner (
-              id,
-              student_id,
-              date_of_birth,
-              gender,
-              profiles!inner (
-                first_name,
-                last_name,
-                email,
-                phone,
-                avatar_url
-              )
-            )
-          )
+          name
         `)
         .eq('class_teacher_id', profile.id);
 
       // Get streams where teacher is the section teacher
-      const { data: teacherStreams, error: streamError } = await supabase
+      const { data: sectionTeacherStreams, error: streamError } = await supabase
         .from('streams')
         .select(`
           id,
@@ -87,67 +71,100 @@ const TeacherStudents = () => {
           classes!inner (
             id,
             name
-          ),
-          student_enrollments!inner (
-            student_id,
-            students!inner (
-              id,
-              student_id,
-              date_of_birth,
-              gender,
-              profiles!inner (
-                first_name,
-                last_name,
-                email,
-                phone,
-                avatar_url
-              )
-            )
           )
         `)
         .eq('section_teacher_id', profile.id);
 
+      // Get classes/subjects from teacher_specializations
+      const { data: specializations, error: specError } = await supabase
+        .from('teacher_specializations')
+        .select(`
+          class_id,
+          subject_id,
+          classes!inner (
+            id,
+            name
+          ),
+          subjects (
+            id,
+            name
+          )
+        `)
+        .eq('teacher_id', profile.id);
+
       if (classError) throw classError;
       if (streamError) throw streamError;
+      if (specError) throw specError;
 
-      const processedClassesData: ClassData[] = [];
+      // Collect all unique class IDs
+      const classIds = new Set<string>();
+      
+      classTeacherClasses?.forEach(c => classIds.add(c.id));
+      sectionTeacherStreams?.forEach(s => classIds.add(s.class_id));
+      specializations?.forEach(s => s.class_id && classIds.add(s.class_id));
 
-      // Process classes
-      if (teacherClasses) {
-        teacherClasses.forEach(classItem => {
-          const students = classItem.student_enrollments
-            .map(enrollment => enrollment.students)
-            .filter(Boolean);
-
-          if (students.length > 0) {
-            processedClassesData.push({
-              class_id: classItem.id,
-              class_name: classItem.name,
-              students: students
-            });
-          }
-        });
+      if (classIds.size === 0) {
+        setClassesData([]);
+        setLoading(false);
+        return;
       }
 
-      // Process streams
-      if (teacherStreams) {
-        teacherStreams.forEach(streamItem => {
-          const students = streamItem.student_enrollments
-            .map(enrollment => enrollment.students)
-            .filter(Boolean);
+      // Fetch students for all these classes
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('student_enrollments')
+        .select(`
+          student_id,
+          class_id,
+          stream_id,
+          status,
+          classes!inner (
+            id,
+            name
+          ),
+          streams (
+            id,
+            name
+          ),
+          students!inner (
+            id,
+            student_id,
+            date_of_birth,
+            gender,
+            profiles!inner (
+              first_name,
+              last_name,
+              email,
+              phone,
+              avatar_url
+            )
+          )
+        `)
+        .in('class_id', Array.from(classIds))
+        .eq('status', 'active');
 
-          if (students.length > 0) {
-            processedClassesData.push({
-              class_id: streamItem.classes.id,
-              class_name: streamItem.classes.name,
-              stream_name: streamItem.name,
-              students: students
-            });
-          }
-        });
-      }
+      if (enrollError) throw enrollError;
 
-      setClassesData(processedClassesData);
+      // Process and group students by class/stream
+      const classMap = new Map<string, ClassData>();
+
+      enrollments?.forEach(enrollment => {
+        const key = enrollment.stream_id 
+          ? `${enrollment.class_id}-${enrollment.stream_id}`
+          : enrollment.class_id;
+
+        if (!classMap.has(key)) {
+          classMap.set(key, {
+            class_id: enrollment.class_id,
+            class_name: enrollment.classes.name,
+            stream_name: enrollment.streams?.name,
+            students: []
+          });
+        }
+
+        classMap.get(key)!.students.push(enrollment.students);
+      });
+
+      setClassesData(Array.from(classMap.values()));
 
     } catch (error: any) {
       console.error('Error fetching teacher students:', error);

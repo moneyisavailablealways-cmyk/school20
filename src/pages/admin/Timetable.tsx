@@ -142,13 +142,21 @@ const Timetable = () => {
     return matchesClass && matchesDay;
   });
 
-  // Group entries by day for grid view
-  const groupedEntries = days.reduce((acc, day) => {
-    acc[day] = filteredEntries.filter(entry => getDayName(entry.day_of_week) === day).sort((a, b) => {
-      return a.start_time.localeCompare(b.start_time);
-    });
-    return acc;
-  }, {} as Record<string, TimetableEntry[]>);
+  // Extract unique time slots and sort them
+  const timeSlots = Array.from(
+    new Set(filteredEntries.map(entry => `${entry.start_time}-${entry.end_time}`))
+  ).sort();
+
+  // Group entries by time slot and day
+  const getEntryForSlotAndDay = (timeSlot: string, day: string): TimetableEntry | undefined => {
+    const [startTime, endTime] = timeSlot.split('-');
+    return filteredEntries.find(
+      entry =>
+        entry.start_time === startTime &&
+        entry.end_time === endTime &&
+        getDayName(entry.day_of_week) === day
+    );
+  };
 
   if (loading) {
     return (
@@ -255,59 +263,87 @@ const Timetable = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <div className="grid grid-cols-6 gap-2 min-w-[800px]">
-              <div className="font-semibold p-2 border rounded">Day</div>
-              {days.map(day => (
-                <div key={day} className="font-semibold p-2 border rounded text-center">
-                  {day}
-                </div>
-              ))}
-              
-              {days.map(day => (
-                <React.Fragment key={day}>
-                  <div className="p-2 border rounded text-sm font-medium">
-                    {day}
-                  </div>
-                  <div className="col-span-5 p-2 border rounded min-h-[120px]">
-                    <div className="space-y-2">
-                      {groupedEntries[day]?.map((entry) => (
-                        <div key={entry.id} className="bg-primary/10 p-2 rounded text-xs">
-                          <div className="font-medium">{entry.subject?.name}</div>
-                          <div className="text-muted-foreground">{entry.class?.name}</div>
-                          <div className="text-muted-foreground">
-                            {entry.teacher?.first_name} {entry.teacher?.last_name}
-                          </div>
-                          <div className="text-muted-foreground">
-                            {entry.start_time} - {entry.end_time}
-                          </div>
-                          {entry.room_number && (
-                            <div className="text-muted-foreground">{entry.room_number}</div>
-                          )}
-                          <div className="flex space-x-1 mt-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(entry)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(entry.id)}
-                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </React.Fragment>
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-32 font-semibold">Time</TableHead>
+                  {days.map(day => (
+                    <TableHead key={day} className="text-center font-semibold min-w-[180px]">
+                      {day}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {timeSlots.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
+                      <h3 className="mt-2 text-sm font-medium">No schedules found</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Get started by creating a new class schedule.
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  timeSlots.map((timeSlot) => {
+                    const [startTime, endTime] = timeSlot.split('-');
+                    return (
+                      <TableRow key={timeSlot}>
+                        <TableCell className="font-medium text-sm align-top py-3">
+                          <div>{startTime}</div>
+                          <div className="text-muted-foreground">-</div>
+                          <div>{endTime}</div>
+                        </TableCell>
+                        {days.map(day => {
+                          const entry = getEntryForSlotAndDay(timeSlot, day);
+                          return (
+                            <TableCell key={day} className="align-top p-2">
+                              {entry ? (
+                                <div className="bg-primary/5 hover:bg-primary/10 transition-colors p-3 rounded-lg border border-border">
+                                  <div className="font-semibold text-sm mb-1">
+                                    {entry.subject?.name}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground space-y-0.5">
+                                    <div>{entry.class?.name}</div>
+                                    <div>
+                                      {entry.teacher?.first_name} {entry.teacher?.last_name}
+                                    </div>
+                                    {entry.room_number && (
+                                      <div>Room {entry.room_number}</div>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-1 mt-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleEdit(entry)}
+                                      className="h-7 w-7"
+                                    >
+                                      <Edit className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDelete(entry.id)}
+                                      className="h-7 w-7 text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="h-full min-h-[80px]" />
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

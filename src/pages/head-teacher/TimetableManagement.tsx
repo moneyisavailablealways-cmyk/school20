@@ -1,115 +1,112 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Plus, Calendar, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AddTimetableDialog from '@/components/AddTimetableDialog';
 import EditTimetableDialog from '@/components/EditTimetableDialog';
 
 interface TimetableEntry {
   id: string;
-  class_id: string;
-  subject_id: string;
-  teacher_id: string;
   day_of_week: number;
   start_time: string;
   end_time: string;
+  class_id: string;
+  subject_id: string;
+  teacher_id: string;
   room_number: string;
-  class?: {
-    name: string;
-  };
   subject?: {
     name: string;
-    code: string;
   };
   teacher?: {
     first_name: string;
     last_name: string;
+  };
+  class?: {
+    name: string;
   };
 }
 
 const TimetableManagement = () => {
   const [timetableEntries, setTimetableEntries] = useState<TimetableEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDay, setSelectedDay] = useState(1); // Monday
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string>('all');
+  const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
+  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
+
   const { toast } = useToast();
 
-  const daysOfWeek = [
-    { value: 1, label: 'Monday' },
-    { value: 2, label: 'Tuesday' },
-    { value: 3, label: 'Wednesday' },
-    { value: 4, label: 'Thursday' },
-    { value: 5, label: 'Friday' },
-    { value: 6, label: 'Saturday' },
-    { value: 7, label: 'Sunday' }
-  ];
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  // Helper function to convert day number to day name
+  const getDayName = (dayNumber: number): string => {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return dayNames[dayNumber] || '';
+  };
 
   useEffect(() => {
     fetchTimetableEntries();
-  }, [selectedDay]);
+  }, []);
 
   const fetchTimetableEntries = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      
+      const { data: timetableData, error: timetableError } = await supabase
         .from('timetables')
         .select(`
-          *,
-          class:classes!timetables_class_id_fkey(
-            name
-          ),
-          subject:subjects!timetables_subject_id_fkey(
-            name,
-            code
-          ),
-          teacher:profiles!timetables_teacher_id_fkey(
-            first_name,
-            last_name
-          )
+          id,
+          day_of_week,
+          start_time,
+          end_time,
+          room_number,
+          class_id,
+          subject_id,
+          teacher_id,
+          subject:subjects(name),
+          teacher:profiles!timetables_teacher_id_fkey(first_name, last_name),
+          class:classes(name)
         `)
-        .eq('day_of_week', selectedDay)
+        .order('day_of_week')
         .order('start_time');
 
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to fetch timetable entries"
-        });
-        return;
-      }
+      if (timetableError) throw timetableError;
 
-      setTimetableEntries(data || []);
-    } catch (error) {
-      console.error('Error fetching timetable:', error);
+      // Fetch classes for filter
+      const { data: classesData, error: classesError } = await supabase
+        .from('classes')
+        .select('id, name')
+        .order('name');
+
+      if (classesError) throw classesError;
+
+      setTimetableEntries(timetableData || []);
+      setClasses(classesData || []);
+    } catch (error: any) {
+      console.error('Error fetching timetable entries:', error);
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred"
+        title: 'Error',
+        description: 'Failed to fetch timetable entries',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTime = (time: string) => {
-    return new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
   const handleEdit = (entry: TimetableEntry) => {
-    setSelectedEntry(entry);
-    setShowEditDialog(true);
+    setEditingEntry(entry);
+    setIsEditDialogOpen(true);
   };
 
-  const handleDelete = async (entry: TimetableEntry) => {
-    if (!confirm('Are you sure you want to delete this timetable entry?')) {
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this schedule entry?')) {
       return;
     }
 
@@ -117,29 +114,51 @@ const TimetableManagement = () => {
       const { error } = await supabase
         .from('timetables')
         .delete()
-        .eq('id', entry.id);
+        .eq('id', id);
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: 'Timetable entry deleted successfully'
+        description: 'Schedule entry deleted successfully',
       });
 
       fetchTimetableEntries();
     } catch (error: any) {
-      console.error('Error deleting timetable entry:', error);
+      console.error('Error deleting entry:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to delete timetable entry',
-        variant: 'destructive'
+        description: error.message || 'Failed to delete schedule entry',
+        variant: 'destructive',
       });
     }
   };
 
+  const filteredEntries = timetableEntries.filter(entry => {
+    const matchesClass = selectedClass === 'all' || entry.class?.name === selectedClass;
+    const matchesDay = selectedDay === 'all' || getDayName(entry.day_of_week) === selectedDay;
+    return matchesClass && matchesDay;
+  });
+
+  // Extract unique time slots and sort them
+  const timeSlots = Array.from(
+    new Set(filteredEntries.map(entry => `${entry.start_time}-${entry.end_time}`))
+  ).sort();
+
+  // Group entries by time slot and day
+  const getEntryForSlotAndDay = (timeSlot: string, day: string): TimetableEntry | undefined => {
+    const [startTime, endTime] = timeSlot.split('-');
+    return filteredEntries.find(
+      entry =>
+        entry.start_time === startTime &&
+        entry.end_time === endTime &&
+        getDayName(entry.day_of_week) === day
+    );
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div className="flex items-center justify-center min-h-96">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -152,102 +171,151 @@ const TimetableManagement = () => {
           <h1 className="text-3xl font-bold">Timetable Management</h1>
           <p className="text-muted-foreground">Manage class schedules and time slots</p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)}>
+        <Button onClick={() => setIsAddDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Schedule
         </Button>
       </div>
 
-      <div className="flex space-x-2 overflow-x-auto pb-2">
-        {daysOfWeek.map((day) => (
-          <Button
-            key={day.value}
-            variant={selectedDay === day.value ? "default" : "outline"}
-            onClick={() => setSelectedDay(day.value)}
-            className="min-w-fit"
-          >
-            {day.label}
-          </Button>
-        ))}
-      </div>
-
-      <div className="grid gap-4">
-        {timetableEntries.length === 0 ? (
-          <Card>
-            <CardContent className="flex items-center justify-center p-8">
-              <div className="text-center">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Classes Scheduled</h3>
-                <p className="text-muted-foreground">
-                  No classes are scheduled for {daysOfWeek.find(d => d.value === selectedDay)?.label}.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          timetableEntries.map((entry) => (
-            <Card key={entry.id}>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <CardTitle className="flex items-center space-x-2">
-                      <Badge variant="outline">{entry.subject?.code}</Badge>
-                      <span>{entry.subject?.name}</span>
-                    </CardTitle>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 mr-1" />
-                        Class {entry.class?.name}
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-1" />
-                        {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
-                      </div>
-                      {entry.room_number && (
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          Room {entry.room_number}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm">
-                    <span className="font-medium">Teacher: </span>
-                    {entry.teacher?.first_name} {entry.teacher?.last_name}
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(entry)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(entry)}>
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-
       <AddTimetableDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
         onSuccess={fetchTimetableEntries}
       />
 
-      <EditTimetableDialog
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        onSuccess={fetchTimetableEntries}
-        entry={selectedEntry}
-      />
+      {editingEntry && (
+        <EditTimetableDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          entry={editingEntry}
+          onSuccess={fetchTimetableEntries}
+        />
+      )}
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Select value={selectedClass} onValueChange={setSelectedClass}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by class" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {classes.map((cls) => (
+                  <SelectItem key={cls.id} value={cls.name}>{cls.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedDay} onValueChange={setSelectedDay}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by day" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Days</SelectItem>
+                {days.map((day) => (
+                  <SelectItem key={day} value={day}>{day}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Weekly Timetable Grid */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Weekly Timetable</CardTitle>
+          <CardDescription>Class schedule overview</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-40 font-semibold text-base border-r bg-muted/30">Time</TableHead>
+                  {days.map(day => (
+                    <TableHead key={day} className="text-center font-semibold text-base border-r min-w-[180px] bg-muted/30">
+                      {day}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {timeSlots.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
+                      <h3 className="mt-2 text-sm font-medium">No schedules found</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Get started by creating a new class schedule.
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  timeSlots.map((timeSlot) => {
+                    const [startTime, endTime] = timeSlot.split('-');
+                    return (
+                      <TableRow key={timeSlot} className="border-b">
+                        <TableCell className="font-medium text-sm align-top py-4 px-4 border-r bg-muted/20">
+                          <div className="text-center">
+                            <div className="font-semibold">{startTime}</div>
+                            <div className="text-muted-foreground my-1">-</div>
+                            <div className="font-semibold">{endTime}</div>
+                          </div>
+                        </TableCell>
+                        {days.map(day => {
+                          const entry = getEntryForSlotAndDay(timeSlot, day);
+                          return (
+                            <TableCell key={day} className="align-top p-3 border-r">
+                              {entry ? (
+                                <div className="bg-primary/10 p-3 rounded-md h-full min-h-[120px] flex flex-col">
+                                  <div className="font-semibold text-sm mb-1.5 text-foreground">
+                                    {entry.subject?.name}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground space-y-1 flex-grow">
+                                    <div className="font-medium">{entry.class?.name}</div>
+                                    <div>
+                                      {entry.teacher?.first_name} {entry.teacher?.last_name}
+                                    </div>
+                                    {entry.room_number && (
+                                      <div className="font-medium">Room {entry.room_number}</div>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-1 mt-2 pt-2 border-t border-border/50">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleEdit(entry)}
+                                      className="h-6 w-6"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDelete(entry.id)}
+                                      className="h-6 w-6 text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="h-full min-h-[120px]" />
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -43,7 +43,7 @@ const Timetable = () => {
 
   const { toast } = useToast();
 
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   // Helper function to convert day number to day name
   const getDayName = (dayNumber: number): string => {
@@ -266,9 +266,9 @@ const Timetable = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-32 font-semibold">Time</TableHead>
+                  <TableHead className="w-40 font-semibold text-base border-r bg-muted/30">Time</TableHead>
                   {days.map(day => (
-                    <TableHead key={day} className="text-center font-semibold min-w-[180px]">
+                    <TableHead key={day} className="text-center font-semibold text-base border-r min-w-[180px] bg-muted/30">
                       {day}
                     </TableHead>
                   ))}
@@ -289,51 +289,53 @@ const Timetable = () => {
                   timeSlots.map((timeSlot) => {
                     const [startTime, endTime] = timeSlot.split('-');
                     return (
-                      <TableRow key={timeSlot}>
-                        <TableCell className="font-medium text-sm align-top py-3">
-                          <div>{startTime}</div>
-                          <div className="text-muted-foreground">-</div>
-                          <div>{endTime}</div>
+                      <TableRow key={timeSlot} className="border-b">
+                        <TableCell className="font-medium text-sm align-top py-4 px-4 border-r bg-muted/20">
+                          <div className="text-center">
+                            <div className="font-semibold">{startTime}</div>
+                            <div className="text-muted-foreground my-1">-</div>
+                            <div className="font-semibold">{endTime}</div>
+                          </div>
                         </TableCell>
                         {days.map(day => {
                           const entry = getEntryForSlotAndDay(timeSlot, day);
                           return (
-                            <TableCell key={day} className="align-top p-2">
+                            <TableCell key={day} className="align-top p-3 border-r">
                               {entry ? (
-                                <div className="bg-primary/5 hover:bg-primary/10 transition-colors p-3 rounded-lg border border-border">
-                                  <div className="font-semibold text-sm mb-1">
+                                <div className="bg-primary/10 p-3 rounded-md h-full min-h-[120px] flex flex-col">
+                                  <div className="font-semibold text-sm mb-1.5 text-foreground">
                                     {entry.subject?.name}
                                   </div>
-                                  <div className="text-xs text-muted-foreground space-y-0.5">
-                                    <div>{entry.class?.name}</div>
+                                  <div className="text-xs text-muted-foreground space-y-1 flex-grow">
+                                    <div className="font-medium">{entry.class?.name}</div>
                                     <div>
                                       {entry.teacher?.first_name} {entry.teacher?.last_name}
                                     </div>
                                     {entry.room_number && (
-                                      <div>Room {entry.room_number}</div>
+                                      <div className="font-medium">Room {entry.room_number}</div>
                                     )}
                                   </div>
-                                  <div className="flex gap-1 mt-2">
+                                  <div className="flex gap-1 mt-2 pt-2 border-t border-border/50">
                                     <Button
                                       variant="ghost"
                                       size="icon"
                                       onClick={() => handleEdit(entry)}
-                                      className="h-7 w-7"
+                                      className="h-6 w-6"
                                     >
-                                      <Edit className="h-3.5 w-3.5" />
+                                      <Edit className="h-3 w-3" />
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="icon"
                                       onClick={() => handleDelete(entry.id)}
-                                      className="h-7 w-7 text-destructive hover:text-destructive"
+                                      className="h-6 w-6 text-destructive hover:text-destructive"
                                     >
-                                      <Trash2 className="h-3.5 w-3.5" />
+                                      <Trash2 className="h-3 w-3" />
                                     </Button>
                                   </div>
                                 </div>
                               ) : (
-                                <div className="h-full min-h-[80px]" />
+                                <div className="h-full min-h-[120px]" />
                               )}
                             </TableCell>
                           );

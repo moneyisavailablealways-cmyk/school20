@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Search, Users, GraduationCap, Mail, Phone, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface StudentProfile {
@@ -37,16 +35,10 @@ const TeacherStudents = () => {
   const { toast } = useToast();
   const [classesData, setClassesData] = useState<ClassData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredClassesData, setFilteredClassesData] = useState<ClassData[]>([]);
 
   useEffect(() => {
     fetchTeacherStudents();
   }, [profile?.id]);
-
-  useEffect(() => {
-    filterStudents();
-  }, [classesData, searchTerm]);
 
   const fetchTeacherStudents = async () => {
     if (!profile?.id) return;
@@ -235,48 +227,25 @@ const TeacherStudents = () => {
     }
   };
 
-  const filterStudents = () => {
-    if (!searchTerm.trim()) {
-      setFilteredClassesData(classesData);
-      return;
+  // Group classes data by class for better UI organization
+  const groupedByClass = classesData.reduce((acc, item) => {
+    const classKey = item.class_id;
+    if (!acc[classKey]) {
+      acc[classKey] = {
+        className: item.class_name,
+        streamName: item.stream_name,
+        subjects: []
+      };
     }
-
-    const filtered = classesData.map(classData => ({
-      ...classData,
-      students: classData.students.filter(student => {
-        const fullName = `${student.profiles.first_name} ${student.profiles.last_name}`.toLowerCase();
-        const studentId = student.student_id.toLowerCase();
-        const email = student.profiles.email.toLowerCase();
-        
-        return fullName.includes(searchTerm.toLowerCase()) ||
-               studentId.includes(searchTerm.toLowerCase()) ||
-               email.includes(searchTerm.toLowerCase());
-      })
-    })).filter(classData => classData.students.length > 0);
-
-    setFilteredClassesData(filtered);
-  };
-
-  const getTotalStudents = () => {
-    const uniqueStudents = new Set();
-    classesData.forEach(classData => {
-      classData.students.forEach(student => uniqueStudents.add(student.id));
+    
+    acc[classKey].subjects.push({
+      subjectId: item.subject_id || 'all',
+      subjectName: item.subject_name || 'All Students',
+      students: item.students
     });
-    return uniqueStudents.size;
-  };
-
-  const calculateAge = (dateOfBirth: string) => {
-    const today = new Date();
-    const birth = new Date(dateOfBirth);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
     
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    
-    return age;
-  };
+    return acc;
+  }, {} as Record<string, any>);
 
   if (loading) {
     return (
@@ -287,128 +256,65 @@ const TeacherStudents = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">My Students</h1>
-        <p className="text-muted-foreground">
-          Students in classes and streams you teach
-        </p>
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          placeholder="Search students by name, ID, or email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{getTotalStudents()}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Classes</CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{classesData.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Subjects</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Array.from(new Set(classesData.filter(c => c.subject_name).map(c => c.subject_name))).length}
-            </div>
-          </CardContent>
-        </Card>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground">My Students</h1>
       </div>
 
       {/* Classes and Students */}
-      {filteredClassesData.length === 0 ? (
+      {Object.keys(groupedByClass).length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Students Found</h3>
-            <p className="text-muted-foreground text-center">
-              {searchTerm ? 'No students match your search criteria.' : 'No classes or students are assigned to you yet.'}
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <p className="text-muted-foreground text-center text-lg">
+              No classes or students are assigned to you yet.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-8">
-          {filteredClassesData.map((classData, index) => (
-            <div key={`${classData.class_id}-${classData.subject_id || 'all'}-${index}`} className="space-y-6">
+        <div className="space-y-12">
+          {Object.entries(groupedByClass).map(([classId, classInfo]: [string, any]) => (
+            <div key={classId} className="space-y-6">
               {/* Class Header */}
-              <div className="border-b pb-4">
-                <h2 className="text-2xl font-bold text-foreground">
-                  {classData.class_name}
-                  {classData.stream_name && (
-                    <span className="text-lg text-muted-foreground ml-2">
-                      • {classData.stream_name}
-                    </span>
-                  )}
-                  {classData.subject_name && (
-                    <span className="text-lg text-primary ml-2">
-                      • {classData.subject_name}
-                    </span>
-                  )}
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {classData.students.length} student{classData.students.length !== 1 ? 's' : ''}
-                </p>
-              </div>
+              <h2 className="text-3xl font-bold text-foreground">
+                {classInfo.className}
+                {classInfo.streamName && (
+                  <span className="text-muted-foreground"> • {classInfo.streamName}</span>
+                )}
+              </h2>
 
-              {/* Students List */}
-              <div className="space-y-3">
-                {classData.students.map((student) => (
-                  <Card key={student.id} className="hover:shadow-md transition-all duration-200 hover:scale-[1.01]">
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-4">
-                        <Avatar className="h-12 w-12 border-2 border-primary/20">
-                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                            {student.profiles.first_name[0]}{student.profiles.last_name[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1 space-y-1">
-                          <h4 className="font-semibold text-foreground">
-                            {student.profiles.first_name} {student.profiles.last_name}
-                          </h4>
-                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                            <span>ID: {student.student_id}</span>
-                            <span className="capitalize">{student.gender}</span>
-                            <span>Age: {calculateAge(student.date_of_birth)}</span>
-                          </div>
-                          <div className="flex items-center space-x-2 text-sm">
-                            <Mail className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-muted-foreground">{student.profiles.email}</span>
-                          </div>
-                          {student.profiles.phone && (
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Phone className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-muted-foreground">{student.profiles.phone}</span>
+              {/* Subject Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {classInfo.subjects.map((subject: any) => (
+                  <Card key={subject.subjectId} className="overflow-hidden">
+                    <div className="p-6 space-y-4">
+                      {/* Subject Title */}
+                      <h3 className="text-2xl font-bold text-foreground mb-6">
+                        {subject.subjectName}
+                      </h3>
+
+                      {/* Students in this subject */}
+                      <div className="space-y-4">
+                        {subject.students.map((student: Student) => (
+                          <div key={student.id} className="flex items-center space-x-4">
+                            <Avatar className="h-14 w-14">
+                              <AvatarFallback className="bg-muted text-foreground font-semibold text-lg">
+                                {student.profiles.first_name[0]}{student.profiles.last_name[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-lg text-foreground">
+                                {student.profiles.first_name} {student.profiles.last_name}
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                {student.profiles.email}
+                              </p>
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        ))}
                       </div>
-                    </CardContent>
+                    </div>
                   </Card>
                 ))}
               </div>

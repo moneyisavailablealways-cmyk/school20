@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, BookOpen, Calendar, Clock } from 'lucide-react';
@@ -7,6 +8,106 @@ import { Link } from 'react-router-dom';
 
 const TeacherDashboard = () => {
   const { profile } = useAuth();
+  const [stats, setStats] = React.useState({
+    totalClasses: 0,
+    totalStudents: 0,
+    todaysClasses: 0,
+  });
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchTeacherStats();
+  }, [profile?.id]);
+
+  const fetchTeacherStats = async () => {
+    if (!profile?.id) return;
+
+    try {
+      // Get teacher record
+      const { data: teacherData } = await supabase
+        .from('teachers')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .single();
+
+      if (!teacherData) {
+        setLoading(false);
+        return;
+      }
+
+      const teacherId = teacherData.id;
+
+      // Count classes where user is class teacher
+      const { count: classTeacherCount } = await supabase
+        .from('classes')
+        .select('*', { count: 'exact', head: true })
+        .eq('class_teacher_id', profile.id);
+
+      // Count streams where user is stream teacher
+      const { count: streamTeacherCount } = await supabase
+        .from('streams')
+        .select('*', { count: 'exact', head: true })
+        .eq('section_teacher_id', profile.id);
+
+      // Count unique classes from subject specializations
+      const { data: specializations } = await supabase
+        .from('teacher_specializations')
+        .select('class_id')
+        .eq('teacher_id', teacherId)
+        .not('class_id', 'is', null);
+
+      const uniqueClassIds = new Set(specializations?.map(s => s.class_id) || []);
+      const subjectClassCount = uniqueClassIds.size;
+
+      const totalClasses = (classTeacherCount || 0) + (streamTeacherCount || 0) + subjectClassCount;
+
+      // Get all class IDs teacher is involved with
+      const allClassIds = new Set<string>();
+      
+      const { data: classTeacherClasses } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('class_teacher_id', profile.id);
+      
+      classTeacherClasses?.forEach(c => allClassIds.add(c.id));
+
+      const { data: streamClasses } = await supabase
+        .from('streams')
+        .select('class_id')
+        .eq('section_teacher_id', profile.id);
+      
+      streamClasses?.forEach(s => allClassIds.add(s.class_id));
+
+      specializations?.forEach(s => s.class_id && allClassIds.add(s.class_id));
+
+      // Count unique students across all these classes
+      if (allClassIds.size > 0) {
+        const { data: enrollments } = await supabase
+          .from('student_enrollments')
+          .select('student_id')
+          .in('class_id', Array.from(allClassIds))
+          .eq('status', 'active');
+
+        const uniqueStudents = new Set(enrollments?.map(e => e.student_id) || []);
+        
+        setStats({
+          totalClasses,
+          totalStudents: uniqueStudents.size,
+          todaysClasses: 0, // Would need timetable data
+        });
+      } else {
+        setStats({
+          totalClasses,
+          totalStudents: 0,
+          todaysClasses: 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const quickActions = [
     {
@@ -32,22 +133,22 @@ const TeacherDashboard = () => {
     },
   ];
 
-  const stats = [
+  const statsCards = [
     {
       title: 'My Classes',
-      value: '0', // This would be fetched from the database
+      value: loading ? '...' : stats.totalClasses.toString(),
       icon: BookOpen,
       color: 'text-blue-600',
     },
     {
       title: 'Total Students',
-      value: '0', // This would be fetched from the database
+      value: loading ? '...' : stats.totalStudents.toString(),
       icon: Users,
       color: 'text-green-600',
     },
     {
       title: 'Today\'s Classes',
-      value: '0', // This would be fetched from the database
+      value: loading ? '...' : stats.todaysClasses.toString(),
       icon: Clock,
       color: 'text-orange-600',
     },
@@ -65,7 +166,7 @@ const TeacherDashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        {stats.map((stat) => (
+        {statsCards.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>

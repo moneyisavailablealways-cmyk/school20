@@ -15,11 +15,18 @@ interface StreamData {
   class_id: string;
 }
 
+interface SubjectData {
+  id: string;
+  name: string;
+}
+
 interface ClassData {
   id: string;
   name: string;
   max_students: number;
   sections?: StreamData[];
+  subjects?: SubjectData[];
+  studentCount?: number;
 }
 
 const MyClasses = () => {
@@ -38,60 +45,136 @@ const MyClasses = () => {
     try {
       const results: any[] = [];
 
-      // Use any to avoid complex TypeScript inference
-      const supabaseClient: any = supabase;
+      // Get teacher record
+      const { data: teacherData } = await supabase
+        .from('teachers')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .single();
+
+      const teacherId = teacherData?.id;
 
       // Query 1: Classes where user is class teacher
-      const classResponse = await supabaseClient
+      const { data: classData } = await supabase
         .from('classes')
         .select('id, name, max_students')
         .eq('class_teacher_id', profile.id);
 
-      const classData = classResponse.data || [];
-
       // Query 2: Streams where user is stream teacher
-      const streamResponse = await supabaseClient
+      const { data: streamData } = await supabase
         .from('streams')
         .select('id, name, max_students, class_id')
-        .eq('stream_teacher_id', profile.id);
-      
-      const streamData = streamResponse.data || [];
+        .eq('section_teacher_id', profile.id);
+
+      // Query 3: Subject specializations
+      let specializations: any[] = [];
+      if (teacherId) {
+        const { data: specData } = await supabase
+          .from('teacher_specializations')
+          .select(`
+            class_id,
+            subject_id,
+            classes!inner (id, name, max_students),
+            subjects (id, name)
+          `)
+          .eq('teacher_id', teacherId)
+          .not('class_id', 'is', null);
+        
+        specializations = specData || [];
+      }
 
       // Add class teacher classes
-      for (const cls of classData) {
+      for (const cls of classData || []) {
+        const { count: studentCount } = await supabase
+          .from('student_enrollments')
+          .select('*', { count: 'exact', head: true })
+          .eq('class_id', cls.id)
+          .eq('status', 'active');
+
         results.push({
           id: cls.id,
           name: cls.name,
           max_students: cls.max_students,
           sections: [],
+          subjects: [],
+          studentCount: studentCount || 0,
           teacherRole: 'Class Teacher'
         });
       }
 
       // Add stream teacher classes
-      for (const stream of streamData) {
-        const existing = results.find(r => r.id === stream.class_id);
+      for (const stream of streamData || []) {
+        let existing = results.find(r => r.id === stream.class_id);
         if (!existing) {
           // Get class details
-          const classDetailsResponse = await supabaseClient
+          const { data: classDetails } = await supabase
             .from('classes')
             .select('id, name, max_students')
             .eq('id', stream.class_id)
             .single();
           
-          const classDetails = classDetailsResponse.data;
-          
           if (classDetails) {
-            results.push({
+            const { count: studentCount } = await supabase
+              .from('student_enrollments')
+              .select('*', { count: 'exact', head: true })
+              .eq('stream_id', stream.id)
+              .eq('status', 'active');
+
+            existing = {
               id: classDetails.id,
               name: classDetails.name,
               max_students: classDetails.max_students,
               sections: [stream],
+              subjects: [],
+              studentCount: studentCount || 0,
               teacherRole: 'Stream Teacher'
-            });
+            };
+            results.push(existing);
           }
         } else {
           existing.sections.push(stream);
+        }
+      }
+
+      // Add subject-based classes
+      const subjectClassMap = new Map<string, any>();
+      for (const spec of specializations) {
+        const classId = spec.class_id;
+        
+        if (!subjectClassMap.has(classId)) {
+          // Check if already added as class/stream teacher
+          let existing = results.find(r => r.id === classId);
+          
+          if (!existing) {
+            const { count: studentCount } = await supabase
+              .from('student_subject_enrollments')
+              .select('*', { count: 'exact', head: true })
+              .eq('subject_id', spec.subject_id)
+              .eq('status', 'active');
+
+            existing = {
+              id: spec.classes.id,
+              name: spec.classes.name,
+              max_students: spec.classes.max_students,
+              sections: [],
+              subjects: [{ id: spec.subjects.id, name: spec.subjects.name }],
+              studentCount: studentCount || 0,
+              teacherRole: 'Subject Teacher'
+            };
+            results.push(existing);
+            subjectClassMap.set(classId, existing);
+          } else {
+            // Add subject to existing class
+            if (!existing.subjects) existing.subjects = [];
+            existing.subjects.push({ id: spec.subjects.id, name: spec.subjects.name });
+            if (existing.teacherRole === 'Class Teacher') {
+              existing.teacherRole = 'Class & Subject Teacher';
+            }
+          }
+        } else {
+          // Add subject to existing entry in map
+          const existingEntry = subjectClassMap.get(classId);
+          existingEntry.subjects.push({ id: spec.subjects.id, name: spec.subjects.name });
         }
       }
 
@@ -151,9 +234,22 @@ const MyClasses = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Max Students:</span>
-                  <span className="font-medium">{classData.max_students}</span>
+                  <span className="text-muted-foreground">Students:</span>
+                  <span className="font-medium">{classData.studentCount || 0}</span>
                 </div>
+
+                {classData.subjects && classData.subjects.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Subjects:</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {classData.subjects.map((subject) => (
+                        <Badge key={subject.id} variant="outline" className="text-xs">
+                          {subject.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {classData.sections && classData.sections.length > 0 && (
                   <div>

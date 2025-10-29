@@ -27,6 +27,8 @@ interface ClassData {
   class_id: string;
   class_name: string;
   stream_name?: string;
+  subject_id?: string;
+  subject_name?: string;
   students: Student[];
 }
 
@@ -52,56 +54,72 @@ const TeacherStudents = () => {
     try {
       setLoading(true);
 
+      // Get teacher record
+      const { data: teacherData } = await supabase
+        .from('teachers')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .single();
+
+      const teacherId = teacherData?.id;
+
       // Get classes where teacher is the class teacher
-      const { data: classTeacherClasses, error: classError } = await supabase
+      const { data: classTeacherClasses } = await supabase
         .from('classes')
-        .select(`
-          id,
-          name
-        `)
+        .select('id, name')
         .eq('class_teacher_id', profile.id);
 
       // Get streams where teacher is the section teacher
-      const { data: sectionTeacherStreams, error: streamError } = await supabase
+      const { data: sectionTeacherStreams } = await supabase
         .from('streams')
         .select(`
           id,
           name,
           class_id,
-          classes!inner (
-            id,
-            name
-          )
+          classes!inner (id, name)
         `)
         .eq('section_teacher_id', profile.id);
 
-      // Get classes/subjects from teacher_specializations
-      const { data: specializations, error: specError } = await supabase
-        .from('teacher_specializations')
-        .select(`
-          class_id,
-          subject_id,
-          classes!inner (
-            id,
-            name
-          ),
-          subjects (
-            id,
-            name
-          )
-        `)
-        .eq('teacher_id', profile.id);
+      // Get subject specializations
+      let specializations: any[] = [];
+      if (teacherId) {
+        const { data: specData } = await supabase
+          .from('teacher_specializations')
+          .select(`
+            class_id,
+            subject_id,
+            classes!inner (id, name),
+            subjects (id, name)
+          `)
+          .eq('teacher_id', teacherId)
+          .not('class_id', 'is', null);
+        
+        specializations = specData || [];
+      }
 
-      if (classError) throw classError;
-      if (streamError) throw streamError;
-      if (specError) throw specError;
-
-      // Collect all unique class IDs
+      // Collect all unique class IDs and build subject map
       const classIds = new Set<string>();
+      const classSubjects = new Map<string, any[]>();
       
-      classTeacherClasses?.forEach(c => classIds.add(c.id));
-      sectionTeacherStreams?.forEach(s => classIds.add(s.class_id));
-      specializations?.forEach(s => s.class_id && classIds.add(s.class_id));
+      (classTeacherClasses || []).forEach(c => {
+        classIds.add(c.id);
+        if (!classSubjects.has(c.id)) classSubjects.set(c.id, []);
+      });
+      
+      (sectionTeacherStreams || []).forEach(s => {
+        classIds.add(s.class_id);
+        if (!classSubjects.has(s.class_id)) classSubjects.set(s.class_id, []);
+      });
+      
+      specializations.forEach(s => {
+        if (s.class_id) {
+          classIds.add(s.class_id);
+          if (!classSubjects.has(s.class_id)) {
+            classSubjects.set(s.class_id, []);
+          }
+          classSubjects.get(s.class_id)!.push(s.subjects);
+        }
+      });
 
       if (classIds.size === 0) {
         setClassesData([]);
@@ -109,22 +127,16 @@ const TeacherStudents = () => {
         return;
       }
 
-      // Fetch students for all these classes
-      const { data: enrollments, error: enrollError } = await supabase
+      // Fetch all student enrollments for these classes
+      const { data: enrollments } = await supabase
         .from('student_enrollments')
         .select(`
           student_id,
           class_id,
           stream_id,
           status,
-          classes!inner (
-            id,
-            name
-          ),
-          streams (
-            id,
-            name
-          ),
+          classes!inner (id, name),
+          streams (id, name),
           students!inner (
             id,
             student_id,
@@ -142,26 +154,71 @@ const TeacherStudents = () => {
         .in('class_id', Array.from(classIds))
         .eq('status', 'active');
 
-      if (enrollError) throw enrollError;
+      // For subject teachers, also get subject enrollments
+      const studentSubjectMap = new Map<string, Set<string>>();
+      if (specializations.length > 0) {
+        const subjectIds = specializations.map(s => s.subject_id);
+        const { data: subjectEnrollments } = await supabase
+          .from('student_subject_enrollments')
+          .select('student_id, subject_id')
+          .in('subject_id', subjectIds)
+          .eq('status', 'active');
 
-      // Process and group students by class/stream
-      const classMap = new Map<string, ClassData>();
+        (subjectEnrollments || []).forEach(se => {
+          if (!studentSubjectMap.has(se.student_id)) {
+            studentSubjectMap.set(se.student_id, new Set());
+          }
+          studentSubjectMap.get(se.student_id)!.add(se.subject_id);
+        });
+      }
 
-      enrollments?.forEach(enrollment => {
-        const key = enrollment.stream_id 
-          ? `${enrollment.class_id}-${enrollment.stream_id}`
-          : enrollment.class_id;
+      // Process and group students by class/stream and subject
+      const classMap = new Map<string, any>();
 
-        if (!classMap.has(key)) {
-          classMap.set(key, {
-            class_id: enrollment.class_id,
-            class_name: enrollment.classes.name,
-            stream_name: enrollment.streams?.name,
-            students: []
+      (enrollments || []).forEach(enrollment => {
+        const classId = enrollment.class_id;
+        const subjects = classSubjects.get(classId) || [];
+        
+        // If this is a subject teacher, group by subject
+        if (subjects.length > 0) {
+          subjects.forEach(subject => {
+            const studentSubjects = studentSubjectMap.get(enrollment.student_id);
+            
+            // Only include student if they're enrolled in this subject
+            if (studentSubjects && studentSubjects.has(subject.id)) {
+              const key = `${classId}-${subject.id}`;
+              
+              if (!classMap.has(key)) {
+                classMap.set(key, {
+                  class_id: classId,
+                  class_name: enrollment.classes.name,
+                  stream_name: enrollment.streams?.name,
+                  subject_id: subject.id,
+                  subject_name: subject.name,
+                  students: []
+                });
+              }
+              
+              classMap.get(key)!.students.push(enrollment.students);
+            }
           });
-        }
+        } else {
+          // Class teacher - show all students
+          const key = enrollment.stream_id 
+            ? `${classId}-${enrollment.stream_id}`
+            : classId;
 
-        classMap.get(key)!.students.push(enrollment.students);
+          if (!classMap.has(key)) {
+            classMap.set(key, {
+              class_id: classId,
+              class_name: enrollment.classes.name,
+              stream_name: enrollment.streams?.name,
+              students: []
+            });
+          }
+
+          classMap.get(key)!.students.push(enrollment.students);
+        }
       });
 
       setClassesData(Array.from(classMap.values()));
@@ -277,7 +334,7 @@ const TeacherStudents = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {classesData.reduce((total, classData) => total + (classData.stream_name ? 2 : 1), 0)}
+              {Array.from(new Set(classesData.filter(c => c.subject_name).map(c => c.subject_name))).length}
             </div>
           </CardContent>
         </Card>
@@ -297,7 +354,7 @@ const TeacherStudents = () => {
       ) : (
         <div className="space-y-8">
           {filteredClassesData.map((classData, index) => (
-            <div key={`${classData.class_id}-${index}`} className="space-y-6">
+            <div key={`${classData.class_id}-${classData.subject_id || 'all'}-${index}`} className="space-y-6">
               {/* Class Header */}
               <div className="border-b pb-4">
                 <h2 className="text-2xl font-bold text-foreground">
@@ -307,107 +364,53 @@ const TeacherStudents = () => {
                       • {classData.stream_name}
                     </span>
                   )}
+                  {classData.subject_name && (
+                    <span className="text-lg text-primary ml-2">
+                      • {classData.subject_name}
+                    </span>
+                  )}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   {classData.students.length} student{classData.students.length !== 1 ? 's' : ''}
                 </p>
               </div>
 
-              {/* Subjects Section - For demo, we'll show Mathematics and English as common subjects */}
-              <div className="grid gap-8 lg:grid-cols-2">
-                {/* Mathematics Section */}
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
-                    <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">Mathematics</h3>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                      {classData.students.length} student{classData.students.length !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    {classData.students.map((student) => (
-                      <Card key={`math-${student.id}`} className="hover:shadow-md transition-all duration-200 hover:scale-[1.02] border-l-4 border-l-blue-500">
-                        <CardContent className="p-4">
-                          <div className="flex items-center space-x-4">
-                            <Avatar className="h-12 w-12 border-2 border-blue-200 dark:border-blue-700">
-                              <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100 font-semibold">
-                                {student.profiles.first_name[0]}{student.profiles.last_name[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                            
-                            <div className="flex-1 space-y-1">
-                              <h4 className="font-semibold text-foreground">
-                                {student.profiles.first_name} {student.profiles.last_name}
-                              </h4>
-                              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                <span>ID: {student.student_id}</span>
-                                <span className="capitalize">{student.gender}</span>
-                                <span>Age: {calculateAge(student.date_of_birth)}</span>
-                              </div>
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Mail className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-muted-foreground">{student.profiles.email}</span>
-                              </div>
-                              {student.profiles.phone && (
-                                <div className="flex items-center space-x-2 text-sm">
-                                  <Phone className="h-3 w-3 text-muted-foreground" />
-                                  <span className="text-muted-foreground">{student.profiles.phone}</span>
-                                </div>
-                              )}
-                            </div>
+              {/* Students List */}
+              <div className="space-y-3">
+                {classData.students.map((student) => (
+                  <Card key={student.id} className="hover:shadow-md transition-all duration-200 hover:scale-[1.01]">
+                    <CardContent className="p-4">
+                      <div className="flex items-center space-x-4">
+                        <Avatar className="h-12 w-12 border-2 border-primary/20">
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                            {student.profiles.first_name[0]}{student.profiles.last_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1 space-y-1">
+                          <h4 className="font-semibold text-foreground">
+                            {student.profiles.first_name} {student.profiles.last_name}
+                          </h4>
+                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                            <span>ID: {student.student_id}</span>
+                            <span className="capitalize">{student.gender}</span>
+                            <span>Age: {calculateAge(student.date_of_birth)}</span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-
-                {/* English Section */}
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 rounded-lg p-4 border border-green-200/50 dark:border-green-800/50">
-                    <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">English</h3>
-                    <p className="text-sm text-green-700 dark:text-green-300">
-                      {classData.students.length} student{classData.students.length !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    {classData.students.map((student) => (
-                      <Card key={`english-${student.id}`} className="hover:shadow-md transition-all duration-200 hover:scale-[1.02] border-l-4 border-l-green-500">
-                        <CardContent className="p-4">
-                          <div className="flex items-center space-x-4">
-                            <Avatar className="h-12 w-12 border-2 border-green-200 dark:border-green-700">
-                              <AvatarFallback className="bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100 font-semibold">
-                                {student.profiles.first_name[0]}{student.profiles.last_name[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                            
-                            <div className="flex-1 space-y-1">
-                              <h4 className="font-semibold text-foreground">
-                                {student.profiles.first_name} {student.profiles.last_name}
-                              </h4>
-                              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                <span>ID: {student.student_id}</span>
-                                <span className="capitalize">{student.gender}</span>
-                                <span>Age: {calculateAge(student.date_of_birth)}</span>
-                              </div>
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Mail className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-muted-foreground">{student.profiles.email}</span>
-                              </div>
-                              {student.profiles.phone && (
-                                <div className="flex items-center space-x-2 text-sm">
-                                  <Phone className="h-3 w-3 text-muted-foreground" />
-                                  <span className="text-muted-foreground">{student.profiles.phone}</span>
-                                </div>
-                              )}
-                            </div>
+                          <div className="flex items-center space-x-2 text-sm">
+                            <Mail className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">{student.profiles.email}</span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+                          {student.profiles.phone && (
+                            <div className="flex items-center space-x-2 text-sm">
+                              <Phone className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-muted-foreground">{student.profiles.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           ))}

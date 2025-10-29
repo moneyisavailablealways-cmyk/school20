@@ -63,68 +63,16 @@ const ClassStudents = () => {
       if (classError) throw classError;
       setClassName(classData?.name || '');
 
-      // Get teacher record
-      const { data: teacherData } = await supabase
-        .from('teachers')
-        .select('id')
-        .eq('profile_id', profile.id)
-        .single();
-
-      const teacherId = teacherData?.id;
-
-      // Check if teacher is class teacher for this class
-      const { data: classTeacherData } = await supabase
-        .from('classes')
-        .select('id')
-        .eq('id', classId)
-        .eq('class_teacher_id', profile.id)
-        .single();
-
-      const isClassTeacher = !!classTeacherData;
-
-      // Check if teacher is stream teacher for any stream in this class
-      const { data: streamTeacherData } = await supabase
-        .from('streams')
-        .select('id')
+      // Fetch all active students enrolled in this class
+      const { data: enrollmentData, error: enrollmentError } = await supabase
+        .from('student_enrollments')
+        .select('student_id')
         .eq('class_id', classId)
-        .eq('section_teacher_id', profile.id);
+        .eq('status', 'active');
 
-      const isStreamTeacher = streamTeacherData && streamTeacherData.length > 0;
+      if (enrollmentError) throw enrollmentError;
 
-      let studentIds: string[] = [];
-
-      if (isClassTeacher || isStreamTeacher) {
-        // If class teacher or stream teacher, fetch all students in the class
-        const { data: enrollmentData, error: enrollmentError } = await supabase
-          .from('student_enrollments')
-          .select('student_id')
-          .eq('class_id', classId)
-          .eq('status', 'active');
-
-        if (enrollmentError) throw enrollmentError;
-        studentIds = enrollmentData.map((e: any) => e.student_id);
-      } else if (teacherId) {
-        // If subject teacher, fetch students enrolled in teacher's subjects for this class
-        const { data: specializationData } = await supabase
-          .from('teacher_specializations')
-          .select('subject_id')
-          .eq('teacher_id', teacherId)
-          .eq('class_id', classId);
-
-        if (specializationData && specializationData.length > 0) {
-          const subjectIds = specializationData.map((s: any) => s.subject_id);
-          
-          const { data: subjectEnrollmentData } = await supabase
-            .from('student_subject_enrollments')
-            .select('student_id')
-            .in('subject_id', subjectIds)
-            .eq('status', 'active');
-
-          if (subjectEnrollmentData) {
-            studentIds = [...new Set(subjectEnrollmentData.map((e: any) => e.student_id))];
-          }
-        }
-      }
+      const studentIds = enrollmentData?.map((e: any) => e.student_id) || [];
 
       if (studentIds.length === 0) {
         setStudents([]);

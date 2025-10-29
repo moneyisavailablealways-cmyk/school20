@@ -63,45 +63,126 @@ const ClassStudents = () => {
       if (classError) throw classError;
       setClassName(classData?.name || '');
 
-      // Fetch students enrolled in this class
-      const { data: enrollmentData, error: enrollmentError } = await supabase
-        .from('student_enrollments')
+      // Get teacher record
+      const { data: teacherData } = await supabase
+        .from('teachers')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .single();
+
+      const teacherId = teacherData?.id;
+
+      // Check if teacher is class teacher for this class
+      const { data: classTeacherData } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('id', classId)
+        .eq('class_teacher_id', profile.id)
+        .single();
+
+      const isClassTeacher = !!classTeacherData;
+
+      // Check if teacher is stream teacher for any stream in this class
+      const { data: streamTeacherData } = await supabase
+        .from('streams')
+        .select('id')
+        .eq('class_id', classId)
+        .eq('section_teacher_id', profile.id);
+
+      const isStreamTeacher = streamTeacherData && streamTeacherData.length > 0;
+
+      let studentIds: string[] = [];
+
+      if (isClassTeacher || isStreamTeacher) {
+        // If class teacher or stream teacher, fetch all students in the class
+        const { data: enrollmentData, error: enrollmentError } = await supabase
+          .from('student_enrollments')
+          .select('student_id')
+          .eq('class_id', classId)
+          .eq('status', 'active');
+
+        if (enrollmentError) throw enrollmentError;
+        studentIds = enrollmentData.map((e: any) => e.student_id);
+      } else if (teacherId) {
+        // If subject teacher, fetch students enrolled in teacher's subjects for this class
+        const { data: specializationData } = await supabase
+          .from('teacher_specializations')
+          .select('subject_id')
+          .eq('teacher_id', teacherId)
+          .eq('class_id', classId);
+
+        if (specializationData && specializationData.length > 0) {
+          const subjectIds = specializationData.map((s: any) => s.subject_id);
+          
+          const { data: subjectEnrollmentData } = await supabase
+            .from('student_subject_enrollments')
+            .select('student_id')
+            .in('subject_id', subjectIds)
+            .eq('status', 'active');
+
+          if (subjectEnrollmentData) {
+            studentIds = [...new Set(subjectEnrollmentData.map((e: any) => e.student_id))];
+          }
+        }
+      }
+
+      if (studentIds.length === 0) {
+        setStudents([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch full student details
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
         .select(`
+          id,
           student_id,
-          status,
-          enrollment_date,
-          students!inner (
+          date_of_birth,
+          gender,
+          enrollment_status,
+          profiles!inner (
             id,
-            student_id,
-            date_of_birth,
-            gender,
-            enrollment_status,
-            profiles!inner (
-              id,
-              first_name,
-              last_name,
-              email,
-              phone
-            )
+            first_name,
+            last_name,
+            email,
+            phone
           )
         `)
+        .in('id', studentIds);
+
+      if (studentError) throw studentError;
+
+      // Get enrollment dates
+      const { data: enrollmentDates } = await supabase
+        .from('student_enrollments')
+        .select('student_id, enrollment_date, status')
         .eq('class_id', classId)
-        .eq('status', 'active');
+        .in('student_id', studentIds);
 
-      if (enrollmentError) throw enrollmentError;
+      const enrollmentMap = new Map(
+        enrollmentDates?.map((e: any) => [e.student_id, e]) || []
+      );
 
-      const formattedStudents = enrollmentData.map((enrollment: any) => ({
-        id: enrollment.students.id,
-        student_id: enrollment.students.student_id,
-        profile: enrollment.students.profiles,
-        date_of_birth: enrollment.students.date_of_birth,
-        gender: enrollment.students.gender,
-        enrollment_status: enrollment.students.enrollment_status,
-        enrollment: {
-          status: enrollment.status,
-          enrollment_date: enrollment.enrollment_date
-        }
-      }));
+      const formattedStudents = studentData.map((student: any) => {
+        const enrollment = enrollmentMap.get(student.id) || { 
+          status: 'active', 
+          enrollment_date: new Date().toISOString() 
+        };
+        
+        return {
+          id: student.id,
+          student_id: student.student_id,
+          profile: student.profiles,
+          date_of_birth: student.date_of_birth,
+          gender: student.gender,
+          enrollment_status: student.enrollment_status,
+          enrollment: {
+            status: enrollment.status,
+            enrollment_date: enrollment.enrollment_date
+          }
+        };
+      });
 
       setStudents(formattedStudents);
     } catch (error: any) {

@@ -269,14 +269,9 @@ const MyClasses = () => {
 
                 <div className="flex gap-2 pt-2">
                   <Button asChild variant="outline" size="sm" className="flex-1">
-                    <Link to="/teacher/students">
+                    <Link to={`/teacher/classes/${classData.id}/students`}>
                       <Users className="h-4 w-4 mr-1" />
-                      Students
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <Link to={`/teacher/classes/${classData.id}`}>
-                      <Eye className="h-4 w-4" />
+                      View Students
                     </Link>
                   </Button>
                 </div>

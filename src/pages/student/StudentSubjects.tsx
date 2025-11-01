@@ -54,15 +54,16 @@ const StudentSubjects = () => {
 
       const { data: enrollmentData } = await supabase
         .from('student_enrollments')
-        .select('class_id')
+        .select('class_id, student_id')
         .eq('student_id', studentData.id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
       if (!enrollmentData) return [];
 
-      const { data, error } = await supabase
-        .from('teacher_enrollments')
+      // Fetch subjects the student is actually enrolled in
+      const { data: subjectEnrollments, error } = await supabase
+        .from('student_subject_enrollments')
         .select(`
           *,
           subjects:subject_id (
@@ -70,35 +71,66 @@ const StudentSubjects = () => {
             code,
             description,
             is_core,
-            level:levels(name),
+            level_id,
             sub_level
           )
         `)
-        .eq('class_id', enrollmentData.class_id)
+        .eq('student_id', enrollmentData.student_id)
         .eq('status', 'active');
 
       if (error) throw error;
-      
-      // Get teacher details separately
-      const teacherPromises = (data || []).map(async (enrollment) => {
-        const { data: teacherData } = await supabase
-          .from('teachers')
-          .select(`
-            profiles:profile_id (
-              first_name,
-              last_name
-            )
-          `)
-          .eq('id', enrollment.teacher_id)
-          .single();
+
+      // Enrich with level names and teacher details
+      const enrichedPromises = (subjectEnrollments || []).map(async (enrollment) => {
+        // Get level name
+        let levelName = null;
+        if (enrollment.subjects?.level_id) {
+          const { data: levelData } = await supabase
+            .from('levels')
+            .select('name')
+            .eq('id', enrollment.subjects.level_id)
+            .single();
+          levelName = levelData?.name;
+        }
+
+        // Get teacher for this subject in the student's class
+        const { data: teacherEnrollment } = await supabase
+          .from('teacher_enrollments')
+          .select('teacher_id, workload_hours')
+          .eq('subject_id', enrollment.subject_id)
+          .eq('class_id', enrollmentData.class_id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        let teacherInfo = null;
+        if (teacherEnrollment?.teacher_id) {
+          const { data: teacherData } = await supabase
+            .from('teachers')
+            .select(`
+              profile_id,
+              profiles:profile_id (
+                first_name,
+                last_name
+              )
+            `)
+            .eq('id', teacherEnrollment.teacher_id)
+            .maybeSingle();
+          
+          teacherInfo = teacherData;
+        }
 
         return {
           ...enrollment,
-          teachers: teacherData
+          subjects: {
+            ...enrollment.subjects,
+            level: levelName ? { name: levelName } : null
+          },
+          teachers: teacherInfo,
+          workload_hours: teacherEnrollment?.workload_hours || 0
         };
       });
 
-      const enrichedData = await Promise.all(teacherPromises);
+      const enrichedData = await Promise.all(enrichedPromises);
       return enrichedData;
     },
     enabled: !!profile?.id

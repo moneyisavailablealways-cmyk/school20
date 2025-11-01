@@ -125,15 +125,70 @@ const SubjectManagement = () => {
           description: 'Subject updated successfully',
         });
       } else {
-        const { error } = await supabase
+        const { data: newSubject, error } = await supabase
           .from('subjects')
-          .insert([subjectData]);
+          .insert([subjectData])
+          .select()
+          .single();
 
         if (error) throw error;
-        toast({
-          title: 'Success',
-          description: 'Subject created successfully',
-        });
+
+        // If the subject is core, automatically assign it to all students
+        if (formData.is_core && newSubject) {
+          // Get current academic year
+          const { data: currentYear } = await supabase
+            .from('academic_years')
+            .select('id')
+            .eq('is_current', true)
+            .single();
+
+          // Fetch all active students
+          const { data: students, error: studentsError } = await supabase
+            .from('students')
+            .select('id')
+            .eq('enrollment_status', 'active');
+
+          if (studentsError) {
+            console.error('Error fetching students:', studentsError);
+          } else if (students && students.length > 0) {
+            // Create enrollments for all students
+            const enrollments = students.map(student => ({
+              student_id: student.id,
+              subject_id: newSubject.id,
+              academic_year_id: currentYear?.id || null,
+              status: 'active',
+              enrollment_date: new Date().toISOString().split('T')[0]
+            }));
+
+            const { error: enrollmentError } = await supabase
+              .from('student_subject_enrollments')
+              .insert(enrollments);
+
+            if (enrollmentError) {
+              console.error('Error creating enrollments:', enrollmentError);
+              toast({
+                title: 'Warning',
+                description: 'Subject created but failed to auto-assign to students',
+                variant: 'destructive',
+              });
+            } else {
+              toast({
+                title: 'Success',
+                description: `Core subject created and assigned to ${students.length} students`,
+              });
+            }
+          } else {
+            toast({
+              title: 'Success',
+              description: 'Subject created successfully',
+            });
+          }
+        } else {
+          toast({
+            title: 'Success',
+            description: 'Subject created successfully',
+          });
+        }
       }
 
       setIsDialogOpen(false);

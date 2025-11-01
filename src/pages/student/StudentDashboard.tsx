@@ -1,12 +1,121 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { BookOpen, Calendar, BarChart3, Library, Clock, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const StudentDashboard = () => {
   const { profile } = useAuth();
+
+  // Fetch student data
+  const { data: studentData } = useQuery({
+    queryKey: ['student', profile?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('students')
+        .select('id')
+        .eq('profile_id', profile?.id)
+        .single();
+      return data;
+    },
+    enabled: !!profile?.id
+  });
+
+  // Fetch enrolled subjects count
+  const { data: subjectsCount, isLoading: subjectsLoading } = useQuery({
+    queryKey: ['student-subjects-count', studentData?.id],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('student_subject_enrollments')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', studentData?.id)
+        .eq('status', 'active');
+      return count || 0;
+    },
+    enabled: !!studentData?.id
+  });
+
+  // Fetch today's schedule
+  const { data: todaySchedule, isLoading: scheduleLoading } = useQuery({
+    queryKey: ['student-today-schedule', studentData?.id],
+    queryFn: async () => {
+      const { data: enrollmentData } = await supabase
+        .from('student_enrollments')
+        .select('class_id')
+        .eq('student_id', studentData?.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (!enrollmentData) return [];
+
+      const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const dayOfWeek = today === 0 ? 7 : today; // Convert to 1 = Monday, 7 = Sunday
+
+      const { data: timetableData } = await supabase
+        .from('timetables')
+        .select(`
+          *,
+          subjects:subject_id (name)
+        `)
+        .eq('class_id', enrollmentData.class_id)
+        .eq('day_of_week', dayOfWeek)
+        .order('start_time');
+
+      if (!timetableData) return [];
+
+      // Fetch teacher details separately
+      const enrichedData = await Promise.all(
+        timetableData.map(async (item) => {
+          if (item.teacher_id) {
+            const { data: teacherData } = await supabase
+              .from('teachers')
+              .select('profile_id, profiles:profile_id(first_name, last_name)')
+              .eq('id', item.teacher_id)
+              .maybeSingle();
+            
+            return {
+              ...item,
+              teachers: teacherData
+            };
+          }
+          return item;
+        })
+      );
+
+      return enrichedData;
+    },
+    enabled: !!studentData?.id
+  });
+
+  // Fetch recent grades
+  const { data: recentGrades, isLoading: gradesLoading } = useQuery({
+    queryKey: ['student-recent-grades', studentData?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('report_cards')
+        .select('*')
+        .eq('student_id', studentData?.id)
+        .eq('is_published', true)
+        .order('issued_date', { ascending: false })
+        .limit(3);
+      return data || [];
+    },
+    enabled: !!studentData?.id
+  });
+
+  const formatTime = (timeString: string) => {
+    const time = new Date(`2000-01-01T${timeString}`);
+    return time.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
 
   const quickActions = [
     {
@@ -41,20 +150,20 @@ const StudentDashboard = () => {
 
   const stats = [
     {
-      title: 'Enrolled Courses',
-      value: '6', // This would be fetched from the database
+      title: 'Enrolled Subjects',
+      value: subjectsLoading ? '...' : String(subjectsCount || 0),
       icon: BookOpen,
       color: 'text-blue-600',
     },
     {
       title: 'Today\'s Classes',
-      value: '4', // This would be fetched from the database
+      value: scheduleLoading ? '...' : String(todaySchedule?.length || 0),
       icon: Clock,
       color: 'text-green-600',
     },
     {
-      title: 'Assignments Due',
-      value: '3', // This would be fetched from the database
+      title: 'Recent Reports',
+      value: gradesLoading ? '...' : String(recentGrades?.length || 0),
       icon: CheckCircle,
       color: 'text-orange-600',
     },
@@ -117,49 +226,100 @@ const StudentDashboard = () => {
           <CardDescription>Your classes for today</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {[
-              { time: '08:00 - 09:00', subject: 'Mathematics', teacher: 'Mr. Johnson', room: 'Room 101' },
-              { time: '09:00 - 10:00', subject: 'English Literature', teacher: 'Ms. Smith', room: 'Room 205' },
-              { time: '11:00 - 12:00', subject: 'Physics', teacher: 'Dr. Brown', room: 'Lab 1' },
-              { time: '14:00 - 15:00', subject: 'History', teacher: 'Mrs. Davis', room: 'Room 302' },
-            ].map((classItem, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="text-sm font-medium text-primary">
-                    {classItem.time}
-                  </div>
-                  <div>
-                    <div className="font-medium">{classItem.subject}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {classItem.teacher}
+          {scheduleLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : todaySchedule && todaySchedule.length > 0 ? (
+            <div className="space-y-3">
+              {todaySchedule.map((classItem) => (
+                <div
+                  key={classItem.id}
+                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="text-sm font-medium text-primary">
+                      {formatTime(classItem.start_time)} - {formatTime(classItem.end_time)}
+                    </div>
+                    <div>
+                      <div className="font-medium">{classItem.subjects?.name}</div>
+                      {'teachers' in classItem && classItem.teachers?.profiles && (
+                        <div className="text-sm text-muted-foreground">
+                          {classItem.teachers.profiles.first_name} {classItem.teachers.profiles.last_name}
+                        </div>
+                      )}
                     </div>
                   </div>
+                  {classItem.room_number && (
+                    <div className="text-sm text-muted-foreground">
+                      Room {classItem.room_number}
+                    </div>
+                  )}
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {classItem.room}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No classes scheduled for today</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Recent Grades */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Grades</CardTitle>
+          <CardTitle>Recent Report Cards</CardTitle>
           <CardDescription>Your latest assessment results</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-muted-foreground py-8">
-            <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No recent grades to display</p>
-            <p className="text-sm">Your assessment results will appear here</p>
-          </div>
+          {gradesLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : recentGrades && recentGrades.length > 0 ? (
+            <div className="space-y-3">
+              {recentGrades.map((grade) => (
+                <div
+                  key={grade.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div>
+                    <div className="font-medium">{grade.term}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Issued: {new Date(grade.issued_date).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {grade.overall_grade && (
+                      <Badge variant="secondary" className="mb-1">
+                        Grade: {grade.overall_grade}
+                      </Badge>
+                    )}
+                    {grade.overall_percentage && (
+                      <div className="text-sm font-medium">
+                        {Number(grade.overall_percentage).toFixed(1)}%
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <Button asChild variant="outline" className="w-full mt-2">
+                <Link to="/student/grades">View All Grades</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No report cards available yet</p>
+              <p className="text-sm">Your assessment results will appear here</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

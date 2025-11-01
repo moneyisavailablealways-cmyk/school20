@@ -212,8 +212,20 @@ const ParentDashboard = () => {
         // Calculate stats
         const totalPendingFees = paymentsData?.reduce((sum, payment) => sum + Number(payment.balance_amount), 0) || 0;
         
-        // Calculate average attendance (mock for now - would need attendance_records table)
-        const avgAttendance = 94; // This would be calculated from real attendance data
+        // Calculate average attendance from real data
+        let avgAttendance = 0;
+        if (studentIds.length > 0) {
+          const { data: attendanceData } = await supabase
+            .from('attendance_records')
+            .select('status')
+            .in('student_id', studentIds)
+            .gte('date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]); // Last 30 days
+          
+          if (attendanceData && attendanceData.length > 0) {
+            const presentCount = attendanceData.filter(a => a.status === 'present').length;
+            avgAttendance = Math.round((presentCount / attendanceData.length) * 100);
+          }
+        }
         
         setStats({
           childrenCount: studentsData.length,

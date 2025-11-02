@@ -1922,30 +1922,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      delete_academic_year: {
-        Args: { year_id: string }
-        Returns: boolean
-      }
-      delete_class: {
-        Args: { class_id: string }
-        Returns: boolean
-      }
-      delete_level: {
-        Args: { level_id: string }
-        Returns: boolean
-      }
-      delete_stream: {
-        Args: { stream_id: string }
-        Returns: boolean
-      }
-      generate_invoice_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      is_admin_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      delete_academic_year: { Args: { year_id: string }; Returns: boolean }
+      delete_class: { Args: { class_id: string }; Returns: boolean }
+      delete_level: { Args: { level_id: string }; Returns: boolean }
+      delete_stream: { Args: { stream_id: string }; Returns: boolean }
+      generate_invoice_number: { Args: never; Returns: string }
+      is_admin_user: { Args: never; Returns: boolean }
       log_activity: {
         Args: {
           p_activity_type: string

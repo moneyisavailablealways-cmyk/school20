@@ -17,22 +17,30 @@ const StudentSchedule = () => {
   const { data: timetable, isLoading } = useQuery({
     queryKey: ['student-timetable', profile?.id],
     queryFn: async () => {
-      const { data: studentData } = await supabase
+      const { data: studentData, error: studentError } = await supabase
         .from('students')
         .select('id')
         .eq('profile_id', profile?.id)
         .single();
 
-      if (!studentData) return [];
+      if (studentError || !studentData) {
+        console.log('No student record found for profile:', profile?.id);
+        return [];
+      }
 
-      const { data: enrollmentData } = await supabase
+      const { data: enrollmentData, error: enrollmentError } = await supabase
         .from('student_enrollments')
-        .select('class_id')
+        .select('class_id, classes(name)')
         .eq('student_id', studentData.id)
         .eq('status', 'active')
         .single();
 
-      if (!enrollmentData) return [];
+      if (enrollmentError || !enrollmentData) {
+        console.log('No active enrollment found for student:', studentData.id);
+        return [];
+      }
+
+      console.log('Student enrolled in class:', enrollmentData.classes?.name);
 
       const { data, error } = await supabase
         .from('timetables')
@@ -54,7 +62,15 @@ const StudentSchedule = () => {
         .order('day_of_week')
         .order('start_time');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching timetables:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        console.log('No timetables found for class:', enrollmentData.class_id);
+      }
+      
       return data || [];
     },
     enabled: !!profile?.id
@@ -187,8 +203,11 @@ const StudentSchedule = () => {
           <CardContent className="py-8 text-center">
             <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">No Schedule Found</h3>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-2">
               Your class schedule is not available yet.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Check browser console (F12) for detailed information.
             </p>
           </CardContent>
         </Card>

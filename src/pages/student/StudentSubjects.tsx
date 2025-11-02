@@ -44,22 +44,28 @@ const StudentSubjects = () => {
   const { data: subjects, isLoading: subjectsLoading } = useQuery({
     queryKey: ['student-subjects', profile?.id],
     queryFn: async () => {
-      const { data: studentData } = await supabase
+      const { data: studentData, error: studentError } = await supabase
         .from('students')
         .select('id')
         .eq('profile_id', profile?.id)
         .single();
 
-      if (!studentData) return [];
+      if (studentError || !studentData) {
+        console.log('No student record found for profile:', profile?.id);
+        return [];
+      }
 
-      const { data: enrollmentData } = await supabase
+      const { data: enrollmentData, error: enrollmentError } = await supabase
         .from('student_enrollments')
         .select('class_id, student_id')
         .eq('student_id', studentData.id)
         .eq('status', 'active')
         .maybeSingle();
 
-      if (!enrollmentData) return [];
+      if (enrollmentError || !enrollmentData) {
+        console.log('No active enrollment found for student:', studentData.id);
+        return [];
+      }
 
       // Fetch subjects the student is actually enrolled in
       const { data: subjectEnrollments, error } = await supabase
@@ -252,8 +258,11 @@ const StudentSubjects = () => {
           <CardContent className="py-8 text-center">
             <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">No Subjects Found</h3>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-2">
               You are not currently enrolled in any subjects.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Check browser console (F12) for detailed information.
             </p>
           </CardContent>
         </Card>

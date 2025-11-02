@@ -119,10 +119,10 @@ const StudentDashboard = () => {
 
   const quickActions = [
     {
-      title: 'View Courses',
-      description: 'See your enrolled courses and subjects',
+      title: 'View Subjects',
+      description: 'See your enrolled subjects',
       icon: BookOpen,
-      href: '/student/courses',
+      href: '/student/subjects',
       color: 'text-blue-600',
     },
     {

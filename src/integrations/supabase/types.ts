@@ -1928,6 +1928,8 @@ export type Database = {
       delete_stream: { Args: { stream_id: string }; Returns: boolean }
       generate_invoice_number: { Args: never; Returns: string }
       is_admin_user: { Args: never; Returns: boolean }
+      is_staff_admin: { Args: never; Returns: boolean }
+      is_teacher: { Args: never; Returns: boolean }
       log_activity: {
         Args: {
           p_activity_type: string
@@ -1936,6 +1938,10 @@ export type Database = {
           p_user_id?: string
         }
         Returns: string
+      }
+      teacher_can_view_enrollment: {
+        Args: { enrollment_class_id: string; enrollment_stream_id: string }
+        Returns: boolean
       }
     }
     Enums: {

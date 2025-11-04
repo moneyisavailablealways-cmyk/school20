@@ -51,7 +51,8 @@ const StudentSchedule = () => {
             code
           ),
           teachers:teacher_id (
-            profiles (
+            profile_id,
+            profiles:profile_id (
               first_name,
               last_name
             )

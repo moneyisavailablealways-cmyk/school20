@@ -120,31 +120,73 @@ const TeacherStudents = () => {
       }
 
       // Fetch all student enrollments for these classes
-      const { data: enrollments } = await supabase
+      const { data: enrollments, error: enrollError } = await supabase
         .from('student_enrollments')
         .select(`
           student_id,
           class_id,
           stream_id,
-          status,
-          classes!inner (id, name),
-          streams (id, name),
-          students!inner (
-            id,
-            student_id,
-            date_of_birth,
-            gender,
-            profiles!inner (
-              first_name,
-              last_name,
-              email,
-              phone,
-              avatar_url
-            )
-          )
+          status
         `)
         .in('class_id', Array.from(classIds))
         .eq('status', 'active');
+
+      if (enrollError) {
+        console.error('Error fetching enrollments:', enrollError);
+        throw enrollError;
+      }
+
+      if (!enrollments || enrollments.length === 0) {
+        setClassesData([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get class and stream details
+      const { data: classDetails } = await supabase
+        .from('classes')
+        .select('id, name')
+        .in('id', Array.from(classIds));
+
+      const { data: streamDetails } = await supabase
+        .from('streams')
+        .select('id, name, class_id');
+
+      // Get student details separately
+      const studentIds = [...new Set(enrollments.map(e => e.student_id))];
+      const { data: students, error: studentsError } = await supabase
+        .from('students')
+        .select(`
+          id,
+          student_id,
+          date_of_birth,
+          gender,
+          profile_id
+        `)
+        .in('id', studentIds);
+
+      if (studentsError) {
+        console.error('Error fetching students:', studentsError);
+        throw studentsError;
+      }
+
+      // Get profiles for these students
+      const profileIds = students?.map(s => s.profile_id) || [];
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, phone, avatar_url')
+        .in('id', profileIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      // Create maps for easy lookup
+      const classMap = new Map(classDetails?.map(c => [c.id, c]) || []);
+      const streamMap = new Map(streamDetails?.map(s => [s.id, s]) || []);
+      const studentMap = new Map(students?.map(s => [s.id, s]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       // For subject teachers, also get subject enrollments
       const studentSubjectMap = new Map<string, Set<string>>();
@@ -165,11 +207,34 @@ const TeacherStudents = () => {
       }
 
       // Process and group students by class/stream and subject
-      const classMap = new Map<string, any>();
+      const groupedClassMap = new Map<string, any>();
 
-      (enrollments || []).forEach(enrollment => {
+      enrollments.forEach(enrollment => {
         const classId = enrollment.class_id;
+        const student = studentMap.get(enrollment.student_id);
+        const profile = student ? profileMap.get(student.profile_id) : null;
+        const classDetail = classMap.get(classId);
+        const streamDetail = enrollment.stream_id ? streamMap.get(enrollment.stream_id) : null;
+
+        // Skip if we don't have student or profile data
+        if (!student || !profile || !classDetail) return;
+
         const subjects = classSubjects.get(classId) || [];
+        
+        // Build student object
+        const studentData = {
+          id: student.id,
+          student_id: student.student_id,
+          date_of_birth: student.date_of_birth,
+          gender: student.gender,
+          profiles: {
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            email: profile.email,
+            phone: profile.phone,
+            avatar_url: profile.avatar_url
+          }
+        };
         
         // If this is a subject teacher, group by subject
         if (subjects.length > 0) {
@@ -180,18 +245,18 @@ const TeacherStudents = () => {
             if (studentSubjects && studentSubjects.has(subject.id)) {
               const key = `${classId}-${subject.id}`;
               
-              if (!classMap.has(key)) {
-                classMap.set(key, {
+              if (!groupedClassMap.has(key)) {
+                groupedClassMap.set(key, {
                   class_id: classId,
-                  class_name: enrollment.classes.name,
-                  stream_name: enrollment.streams?.name,
+                  class_name: classDetail.name,
+                  stream_name: streamDetail?.name,
                   subject_id: subject.id,
                   subject_name: subject.name,
                   students: []
                 });
               }
               
-              classMap.get(key)!.students.push(enrollment.students);
+              groupedClassMap.get(key)!.students.push(studentData);
             }
           });
         } else {
@@ -200,20 +265,20 @@ const TeacherStudents = () => {
             ? `${classId}-${enrollment.stream_id}`
             : classId;
 
-          if (!classMap.has(key)) {
-            classMap.set(key, {
+          if (!groupedClassMap.has(key)) {
+            groupedClassMap.set(key, {
               class_id: classId,
-              class_name: enrollment.classes.name,
-              stream_name: enrollment.streams?.name,
+              class_name: classDetail.name,
+              stream_name: streamDetail?.name,
               students: []
             });
           }
 
-          classMap.get(key)!.students.push(enrollment.students);
+          groupedClassMap.get(key)!.students.push(studentData);
         }
       });
 
-      setClassesData(Array.from(classMap.values()));
+      setClassesData(Array.from(groupedClassMap.values()));
 
     } catch (error: any) {
       console.error('Error fetching teacher students:', error);

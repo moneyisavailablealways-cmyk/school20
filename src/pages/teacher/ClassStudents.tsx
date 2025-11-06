@@ -117,10 +117,17 @@ const ClassStudents = () => {
       const studentIds = enrollmentData.map((e: any) => e.student_id);
       console.log('Found student IDs:', studentIds);
 
-      // Fetch students separately to avoid RLS issues
+      // Fetch students with profiles in one query to work with RLS
       const { data: studentData, error: studentError } = await supabase
         .from('students')
-        .select('id, student_id, date_of_birth, gender, enrollment_status, profile_id')
+        .select(`
+          id, 
+          student_id, 
+          date_of_birth, 
+          gender, 
+          enrollment_status,
+          profile:profiles(id, first_name, last_name, email, phone)
+        `)
         .in('id', studentIds);
 
       if (studentError) {
@@ -135,72 +142,38 @@ const ClassStudents = () => {
         return;
       }
 
-      console.log('Student data:', studentData);
+      console.log('Student data with profiles:', studentData);
 
-      // Fetch profiles separately with better error handling
-      const profileIds = studentData.map((s: any) => s.profile_id).filter(Boolean);
-      console.log('Profile IDs to fetch:', profileIds);
-      
-      if (profileIds.length === 0) {
-        console.log('No profile IDs found');
-        setStudents([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email, phone')
-        .in('id', profileIds);
-
-      if (profileError) {
-        console.error('Profile error:', profileError);
-        // Continue anyway, we'll handle missing profiles
-      }
-
-      console.log('Profile data:', profileData);
-
-      // Create maps for quick lookup
+      // Create enrollment map for quick lookup
       const enrollmentMap = new Map(
         enrollmentData.map((e: any) => [e.student_id, e])
       );
-      const profileMap = new Map(
-        profileData?.map((p: any) => [p.id, p]) || []
-      );
 
-      // Combine the data
+      // Format the data
       const formattedStudents = studentData
         .map((student: any) => {
           const enrollment = enrollmentMap.get(student.id);
-          const profile = profileMap.get(student.profile_id);
+          const profile = student.profile;
 
-          if (!profile) {
-            console.log('No profile found for student:', student.id, 'profile_id:', student.profile_id);
-            // Return with placeholder data instead of null
-            return {
-              id: student.id,
-              student_id: student.student_id,
-              profile: {
-                id: student.profile_id,
-                first_name: 'Unknown',
-                last_name: 'Student',
-                email: 'N/A',
-                phone: 'N/A'
-              },
-              date_of_birth: student.date_of_birth,
-              gender: student.gender,
-              enrollment_status: student.enrollment_status,
-              enrollment: {
-                status: enrollment?.status || 'active',
-                enrollment_date: enrollment?.enrollment_date || new Date().toISOString()
-              }
-            };
-          }
+          // Handle missing or incomplete profile data
+          const profileData = profile ? {
+            id: profile.id,
+            first_name: profile.first_name || 'Unknown',
+            last_name: profile.last_name || 'Student',
+            email: profile.email || 'N/A',
+            phone: profile.phone || 'N/A'
+          } : {
+            id: '',
+            first_name: 'Unknown',
+            last_name: 'Student',
+            email: 'N/A',
+            phone: 'N/A'
+          };
 
           return {
             id: student.id,
             student_id: student.student_id,
-            profile: profile,
+            profile: profileData,
             date_of_birth: student.date_of_birth,
             gender: student.gender,
             enrollment_status: student.enrollment_status,

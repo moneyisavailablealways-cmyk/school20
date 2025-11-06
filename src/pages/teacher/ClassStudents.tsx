@@ -49,10 +49,39 @@ const ClassStudents = () => {
     filterStudents();
   }, [searchTerm, students]);
 
+  // Real-time subscription for student enrollment changes
+  useEffect(() => {
+    if (!classId) return;
+
+    const channel = supabase
+      .channel(`class-students-${classId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'student_enrollments',
+          filter: `class_id=eq.${classId}`
+        },
+        (payload) => {
+          console.log('Student enrollment changed:', payload);
+          // Refetch students when enrollments change
+          fetchClassStudents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [classId]);
+
   const fetchClassStudents = async () => {
     if (!classId || !profile?.id) return;
 
     try {
+      setLoading(true);
+      
       // First, get class details
       const { data: classData, error: classError } = await supabase
         .from('classes')
@@ -66,73 +95,99 @@ const ClassStudents = () => {
       // Fetch all active students enrolled in this class
       const { data: enrollmentData, error: enrollmentError } = await supabase
         .from('student_enrollments')
-        .select('student_id')
+        .select('student_id, enrollment_date, status')
         .eq('class_id', classId)
         .eq('status', 'active');
 
-      if (enrollmentError) throw enrollmentError;
+      if (enrollmentError) {
+        console.error('Enrollment error:', enrollmentError);
+        throw enrollmentError;
+      }
 
-      const studentIds = enrollmentData?.map((e: any) => e.student_id) || [];
-
-      if (studentIds.length === 0) {
+      if (!enrollmentData || enrollmentData.length === 0) {
+        console.log('No enrollments found for class:', classId);
         setStudents([]);
         setLoading(false);
         return;
       }
 
-      // Fetch full student details
+      const studentIds = enrollmentData.map((e: any) => e.student_id);
+      console.log('Found student IDs:', studentIds);
+
+      // Fetch students separately to avoid RLS issues
       const { data: studentData, error: studentError } = await supabase
         .from('students')
-        .select(`
-          id,
-          student_id,
-          date_of_birth,
-          gender,
-          enrollment_status,
-          profiles!inner (
-            id,
-            first_name,
-            last_name,
-            email,
-            phone
-          )
-        `)
+        .select('id, student_id, date_of_birth, gender, enrollment_status, profile_id')
         .in('id', studentIds);
 
-      if (studentError) throw studentError;
+      if (studentError) {
+        console.error('Student error:', studentError);
+        throw studentError;
+      }
 
-      // Get enrollment dates
-      const { data: enrollmentDates } = await supabase
-        .from('student_enrollments')
-        .select('student_id, enrollment_date, status')
-        .eq('class_id', classId)
-        .in('student_id', studentIds);
+      if (!studentData || studentData.length === 0) {
+        console.log('No student data found');
+        setStudents([]);
+        setLoading(false);
+        return;
+      }
 
+      // Fetch profiles separately
+      const profileIds = studentData.map((s: any) => s.profile_id).filter(Boolean);
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, phone')
+        .in('id', profileIds);
+
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        throw profileError;
+      }
+
+      // Create maps for quick lookup
       const enrollmentMap = new Map(
-        enrollmentDates?.map((e: any) => [e.student_id, e]) || []
+        enrollmentData.map((e: any) => [e.student_id, e])
+      );
+      const profileMap = new Map(
+        profileData?.map((p: any) => [p.id, p]) || []
       );
 
-      const formattedStudents = studentData.map((student: any) => {
-        const enrollment = enrollmentMap.get(student.id) || { 
-          status: 'active', 
-          enrollment_date: new Date().toISOString() 
-        };
-        
-        return {
-          id: student.id,
-          student_id: student.student_id,
-          profile: student.profiles,
-          date_of_birth: student.date_of_birth,
-          gender: student.gender,
-          enrollment_status: student.enrollment_status,
-          enrollment: {
-            status: enrollment.status,
-            enrollment_date: enrollment.enrollment_date
-          }
-        };
-      });
+      // Combine the data
+      const formattedStudents = studentData
+        .map((student: any) => {
+          const enrollment = enrollmentMap.get(student.id);
+          const profile = profileMap.get(student.profile_id);
 
+          if (!profile) {
+            console.log('No profile found for student:', student.id);
+            return null;
+          }
+
+          return {
+            id: student.id,
+            student_id: student.student_id,
+            profile: profile,
+            date_of_birth: student.date_of_birth,
+            gender: student.gender,
+            enrollment_status: student.enrollment_status,
+            enrollment: {
+              status: enrollment?.status || 'active',
+              enrollment_date: enrollment?.enrollment_date || new Date().toISOString()
+            }
+          };
+        })
+        .filter((s: any) => s !== null);
+
+      console.log('Formatted students:', formattedStudents);
       setStudents(formattedStudents);
+      
+      // Show success toast when students are loaded
+      if (formattedStudents.length > 0) {
+        toast({
+          title: 'Student list updated',
+          description: `Found ${formattedStudents.length} student${formattedStudents.length > 1 ? 's' : ''}`,
+        });
+      }
     } catch (error: any) {
       console.error('Error fetching class students:', error);
       toast({

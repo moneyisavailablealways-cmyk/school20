@@ -39,6 +39,32 @@ const MyClasses = () => {
     fetchMyClasses();
   }, [profile?.id]);
 
+  // Real-time subscription for enrollment changes
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const channel = supabase
+      .channel('teacher-class-enrollments')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'student_enrollments'
+        },
+        (payload) => {
+          console.log('Enrollment changed:', payload);
+          // Refetch classes when any enrollment changes
+          fetchMyClasses();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
+
   const fetchMyClasses = async () => {
     if (!profile?.id) return;
 

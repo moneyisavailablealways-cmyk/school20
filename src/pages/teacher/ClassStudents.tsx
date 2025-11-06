@@ -89,7 +89,10 @@ const ClassStudents = () => {
         .eq('id', classId)
         .single();
 
-      if (classError) throw classError;
+      if (classError) {
+        console.error('Class error:', classError);
+        throw classError;
+      }
       setClassName(classData?.name || '');
 
       // Fetch all active students enrolled in this class
@@ -132,8 +135,19 @@ const ClassStudents = () => {
         return;
       }
 
-      // Fetch profiles separately
+      console.log('Student data:', studentData);
+
+      // Fetch profiles separately with better error handling
       const profileIds = studentData.map((s: any) => s.profile_id).filter(Boolean);
+      console.log('Profile IDs to fetch:', profileIds);
+      
+      if (profileIds.length === 0) {
+        console.log('No profile IDs found');
+        setStudents([]);
+        setLoading(false);
+        return;
+      }
+
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email, phone')
@@ -141,8 +155,10 @@ const ClassStudents = () => {
 
       if (profileError) {
         console.error('Profile error:', profileError);
-        throw profileError;
+        // Continue anyway, we'll handle missing profiles
       }
+
+      console.log('Profile data:', profileData);
 
       // Create maps for quick lookup
       const enrollmentMap = new Map(
@@ -159,8 +175,26 @@ const ClassStudents = () => {
           const profile = profileMap.get(student.profile_id);
 
           if (!profile) {
-            console.log('No profile found for student:', student.id);
-            return null;
+            console.log('No profile found for student:', student.id, 'profile_id:', student.profile_id);
+            // Return with placeholder data instead of null
+            return {
+              id: student.id,
+              student_id: student.student_id,
+              profile: {
+                id: student.profile_id,
+                first_name: 'Unknown',
+                last_name: 'Student',
+                email: 'N/A',
+                phone: 'N/A'
+              },
+              date_of_birth: student.date_of_birth,
+              gender: student.gender,
+              enrollment_status: student.enrollment_status,
+              enrollment: {
+                status: enrollment?.status || 'active',
+                enrollment_date: enrollment?.enrollment_date || new Date().toISOString()
+              }
+            };
           }
 
           return {
@@ -175,8 +209,7 @@ const ClassStudents = () => {
               enrollment_date: enrollment?.enrollment_date || new Date().toISOString()
             }
           };
-        })
-        .filter((s: any) => s !== null);
+        });
 
       console.log('Formatted students:', formattedStudents);
       setStudents(formattedStudents);
@@ -192,7 +225,7 @@ const ClassStudents = () => {
       console.error('Error fetching class students:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch class students',
+        description: error.message || 'Failed to fetch class students',
         variant: 'destructive',
       });
     } finally {

@@ -37,15 +37,18 @@ import ClassStudents from "./pages/teacher/ClassStudents";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
 import Schedule from "./pages/teacher/Schedule";
+import TeacherAppointments from "./pages/teacher/Appointments";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentSubjects from "./pages/student/StudentSubjects";
 import StudentSchedule from "./pages/student/StudentSchedule";
 import StudentGrades from "./pages/student/StudentGrades";
 import StudentLibrary from "./pages/student/StudentLibrary";
 import StudentProfile from "./pages/student/StudentProfile";
+import StudentAppointments from "./pages/student/Appointments";
 import PrincipalDashboard from "./pages/principal/PrincipalDashboard";
 import PerformanceAnalytics from "./pages/principal/PerformanceAnalytics";
 import ApprovalsCenter from "./pages/principal/ApprovalsCenter";
+import PrincipalAppointments from "./pages/principal/Appointments";
 import HeadTeacherDashboard from "./pages/head-teacher/HeadTeacherDashboard";
 import TeacherSupervision from "./pages/head-teacher/TeacherSupervision";
 import MarksApproval from "./pages/head-teacher/MarksApproval";
@@ -53,6 +56,7 @@ import DisciplineRecords from "./pages/head-teacher/DisciplineRecords";
 import TimetableManagement from "./pages/head-teacher/TimetableManagement";
 import AcademicReports from "./pages/head-teacher/AcademicReports";
 import HeadTeacherProfile from "./pages/head-teacher/HeadTeacherProfile";
+import HeadTeacherAppointments from "./pages/head-teacher/Appointments";
 import BursarDashboard from "./pages/bursar/BursarDashboard";
 import FeeStructures from "./pages/bursar/FeeStructures";
 import Invoices from "./pages/bursar/Invoices";
@@ -62,6 +66,7 @@ import RecordPayment from "./pages/bursar/RecordPayment";
 import Scholarships from "./pages/bursar/Scholarships";
 import BursarReports from "./pages/bursar/Reports";
 import BursarProfile from "./pages/bursar/BursarProfile";
+import BursarAppointments from "./pages/bursar/Appointments";
 import ParentDashboard from './pages/parent/ParentDashboard';
 import MyChildren from './pages/parent/MyChildren';
 import Attendance from './pages/parent/Attendance';
@@ -77,6 +82,7 @@ import LibraryReservations from "./pages/librarian/LibraryReservations";
 import LibraryFines from "./pages/librarian/LibraryFines";
 import LibraryReports from "./pages/librarian/LibraryReports";
 import LibrarianProfile from "./pages/librarian/LibrarianProfile";
+import LibrarianAppointments from "./pages/librarian/Appointments";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -138,6 +144,7 @@ const App = () => (
               <Route path="classes/:classId/students" element={<ClassStudents />} />
               <Route path="students" element={<TeacherStudents />} />
               <Route path="schedule" element={<Schedule />} />
+              <Route path="appointments" element={<TeacherAppointments />} />
               <Route path="profile" element={<TeacherProfile />} />
             </Route>
             
@@ -156,6 +163,7 @@ const App = () => (
               <Route path="discipline" element={<DisciplineRecords />} />
               <Route path="timetable" element={<TimetableManagement />} />
               <Route path="reports" element={<AcademicReports />} />
+              <Route path="appointments" element={<HeadTeacherAppointments />} />
               <Route path="profile" element={<HeadTeacherProfile />} />
             </Route>
             
@@ -173,6 +181,7 @@ const App = () => (
               <Route path="schedule" element={<StudentSchedule />} />
               <Route path="grades" element={<StudentGrades />} />
               <Route path="library" element={<StudentLibrary />} />
+              <Route path="appointments" element={<StudentAppointments />} />
               <Route path="profile" element={<StudentProfile />} />
             </Route>
             
@@ -193,6 +202,7 @@ const App = () => (
               <Route path="payments/new" element={<RecordPayment />} />
               <Route path="scholarships" element={<Scholarships />} />
               <Route path="reports" element={<BursarReports />} />
+              <Route path="appointments" element={<BursarAppointments />} />
               <Route path="profile" element={<BursarProfile />} />
             </Route>
 
@@ -230,6 +240,7 @@ const App = () => (
               <Route path="reservations" element={<LibraryReservations />} />
               <Route path="fines" element={<LibraryFines />} />
               <Route path="reports" element={<LibraryReports />} />
+              <Route path="appointments" element={<LibrarianAppointments />} />
               <Route path="profile" element={<LibrarianProfile />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

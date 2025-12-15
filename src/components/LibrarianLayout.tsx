@@ -10,7 +10,8 @@ import {
   LogOut,
   Library,
   Bookmark,
-  AlertTriangle
+  AlertTriangle,
+  CalendarCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,6 +35,7 @@ const navigation = [
   { name: 'Reservations', href: '/librarian/reservations', icon: Bookmark },
   { name: 'Fines', href: '/librarian/fines', icon: AlertTriangle },
   { name: 'Reports', href: '/librarian/reports', icon: BarChart3 },
+  { name: 'Appointments', href: '/librarian/appointments', icon: CalendarCheck },
 ];
 
 const LibrarianLayout = () => {

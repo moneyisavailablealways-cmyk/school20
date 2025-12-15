@@ -12,7 +12,8 @@ import {
   LogOut,
   Settings,
   GraduationCap,
-  Calculator
+  Calculator,
+  CalendarCheck
 } from 'lucide-react';
 
 const BursarLayout = () => {
@@ -26,6 +27,7 @@ const BursarLayout = () => {
     { name: 'Payments', href: '/bursar/payments', icon: CreditCard },
     { name: 'Scholarships', href: '/bursar/scholarships', icon: GraduationCap },
     { name: 'Reports', href: '/bursar/reports', icon: Receipt },
+    { name: 'Appointments', href: '/bursar/appointments', icon: CalendarCheck },
     { name: 'Profile', href: '/bursar/profile', icon: User },
   ];
 

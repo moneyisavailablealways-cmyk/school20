@@ -12,7 +12,8 @@ import {
   LogOut,
   GraduationCap,
   ClipboardCheck,
-  BookOpen
+  BookOpen,
+  CalendarCheck
 } from 'lucide-react';
 
 const HeadTeacherLayout = () => {
@@ -26,6 +27,7 @@ const HeadTeacherLayout = () => {
     { name: 'Discipline Records', href: '/head-teacher/discipline', icon: AlertTriangle },
     { name: 'Timetable Management', href: '/head-teacher/timetable', icon: Calendar },
     { name: 'Academic Reports', href: '/head-teacher/reports', icon: ClipboardCheck },
+    { name: 'Appointments', href: '/head-teacher/appointments', icon: CalendarCheck },
     { name: 'Profile', href: '/head-teacher/profile', icon: User },
   ];
 

@@ -1,8 +1,8 @@
 import React from 'react';
 import AppointmentsPage from '@/pages/shared/AppointmentsPage';
 
-const Appointments = () => {
+const LibrarianAppointments = () => {
   return <AppointmentsPage />;
 };
 
-export default Appointments;
+export default LibrarianAppointments;

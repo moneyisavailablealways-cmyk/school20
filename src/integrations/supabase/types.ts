@@ -1930,6 +1930,10 @@ export type Database = {
       is_admin_user: { Args: never; Returns: boolean }
       is_staff_admin: { Args: never; Returns: boolean }
       is_teacher: { Args: never; Returns: boolean }
+      is_teacher_of_student: {
+        Args: { student_profile_id: string }
+        Returns: boolean
+      }
       log_activity: {
         Args: {
           p_activity_type: string

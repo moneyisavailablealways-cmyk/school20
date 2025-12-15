@@ -99,6 +99,14 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
     );
   };
 
+  const handleSelectAll = () => {
+    if (selectedRecipients.length === recipients.length) {
+      setSelectedRecipients([]);
+    } else {
+      setSelectedRecipients(recipients.map(r => r.id));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -311,20 +319,31 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
                     <Users className="h-4 w-4" />
                     Select Recipients *
                   </Label>
-                  <Select value={filterRole} onValueChange={setFilterRole}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Filter by role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Roles</SelectItem>
-                      <SelectItem value="teacher">Teachers</SelectItem>
-                      <SelectItem value="parent">Parents</SelectItem>
-                      <SelectItem value="head_teacher">Head Teachers</SelectItem>
-                      <SelectItem value="principal">Principals</SelectItem>
-                      <SelectItem value="bursar">Bursars</SelectItem>
-                      <SelectItem value="librarian">Librarians</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAll}
+                      disabled={recipients.length === 0}
+                    >
+                      {selectedRecipients.length === recipients.length && recipients.length > 0 ? 'Deselect All' : 'Select All'}
+                    </Button>
+                    <Select value={filterRole} onValueChange={setFilterRole}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Filter by role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        <SelectItem value="teacher">Teachers</SelectItem>
+                        <SelectItem value="parent">Parents</SelectItem>
+                        <SelectItem value="head_teacher">Head Teachers</SelectItem>
+                        <SelectItem value="principal">Principals</SelectItem>
+                        <SelectItem value="bursar">Bursars</SelectItem>
+                        <SelectItem value="librarian">Librarians</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
                 <div className="border rounded-lg p-2 max-h-48 overflow-y-auto">

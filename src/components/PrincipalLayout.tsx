@@ -12,7 +12,8 @@ import {
   Building,
   FileText,
   TrendingUp,
-  CheckSquare
+  CheckSquare,
+  CalendarCheck
 } from 'lucide-react';
 
 const PrincipalLayout = () => {
@@ -24,6 +25,7 @@ const PrincipalLayout = () => {
     { name: 'Performance', href: '/principal/performance', icon: TrendingUp },
     { name: 'Approvals', href: '/principal/approvals', icon: CheckSquare },
     { name: 'Report Cards', href: '/principal/reports', icon: FileCheck },
+    { name: 'Appointments', href: '/principal/appointments', icon: CalendarCheck },
     { name: 'Policies', href: '/principal/policies', icon: Shield },
     { name: 'Compliance', href: '/principal/compliance', icon: FileText },
     { name: 'Profile', href: '/principal/profile', icon: User },

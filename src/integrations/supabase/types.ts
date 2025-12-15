@@ -121,6 +121,107 @@ export type Database = {
           },
         ]
       }
+      appointment_recipients: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          id: string
+          recipient_id: string
+          recipient_role: string
+          response_date: string | null
+          response_notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          id?: string
+          recipient_id: string
+          recipient_role: string
+          response_date?: string | null
+          response_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          id?: string
+          recipient_id?: string
+          recipient_role?: string
+          response_date?: string | null
+          response_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_recipients_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_recipients_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_requests: {
+        Row: {
+          appointment_date: string
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          meeting_type: string | null
+          message: string | null
+          sender_id: string
+          sender_role: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          meeting_type?: string | null
+          message?: string | null
+          sender_id: string
+          sender_role: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          meeting_type?: string | null
+          message?: string | null
+          sender_id?: string
+          sender_role?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_requests_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           appointment_date: string

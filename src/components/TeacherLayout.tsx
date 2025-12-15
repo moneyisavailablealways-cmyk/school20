@@ -8,7 +8,8 @@ import {
   Calendar, 
   User,
   LogOut,
-  GraduationCap
+  GraduationCap,
+  CalendarCheck
 } from 'lucide-react';
 
 const TeacherLayout = () => {
@@ -20,6 +21,7 @@ const TeacherLayout = () => {
     { name: 'My Classes', href: '/teacher/classes', icon: Users },
     { name: 'Students', href: '/teacher/students', icon: GraduationCap },
     { name: 'Schedule', href: '/teacher/schedule', icon: Calendar },
+    { name: 'Appointments', href: '/teacher/appointments', icon: CalendarCheck },
     { name: 'Profile', href: '/teacher/profile', icon: User },
   ];
 

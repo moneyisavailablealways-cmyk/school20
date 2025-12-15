@@ -9,7 +9,8 @@ import {
   LogOut,
   GraduationCap,
   Library,
-  BarChart3
+  BarChart3,
+  CalendarCheck
 } from 'lucide-react';
 
 const StudentLayout = () => {
@@ -22,6 +23,7 @@ const StudentLayout = () => {
     { name: 'Schedule', href: '/student/schedule', icon: Calendar },
     { name: 'Grades', href: '/student/grades', icon: BarChart3 },
     { name: 'Library', href: '/student/library', icon: Library },
+    { name: 'Appointments', href: '/student/appointments', icon: CalendarCheck },
     { name: 'Profile', href: '/student/profile', icon: User },
   ];
 

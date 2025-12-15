@@ -2028,6 +2028,8 @@ export type Database = {
       delete_level: { Args: { level_id: string }; Returns: boolean }
       delete_stream: { Args: { stream_id: string }; Returns: boolean }
       generate_invoice_number: { Args: never; Returns: string }
+      get_current_profile_id: { Args: never; Returns: string }
+      is_admin_or_principal: { Args: never; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_staff_admin: { Args: never; Returns: boolean }
       is_teacher: { Args: never; Returns: boolean }

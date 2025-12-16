@@ -76,41 +76,42 @@ serve(async (req) => {
       )
     }
 
-    console.log(`Attempting to delete user: ${userId}`)
+    console.log(`Attempting to deactivate user: ${userId}`)
 
-    // First, delete the profile (this will cascade to related tables if foreign keys are set up)
-    const { error: profileDeleteError } = await supabase
+    // Step 1: Soft delete - Set profile as inactive
+    const { error: profileUpdateError } = await supabase
       .from('profiles')
-      .delete()
+      .update({ is_active: false })
       .eq('user_id', userId)
 
-    if (profileDeleteError) {
-      console.error('Error deleting profile:', profileDeleteError)
+    if (profileUpdateError) {
+      console.error('Error deactivating profile:', profileUpdateError)
       return new Response(
-        JSON.stringify({ error: `Failed to delete profile: ${profileDeleteError.message}` }),
+        JSON.stringify({ error: `Failed to deactivate profile: ${profileUpdateError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`Profile deleted for user: ${userId}`)
+    console.log(`Profile deactivated for user: ${userId}`)
 
-    // Then delete the auth user using admin API
-    const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId)
+    // Step 2: Ban the auth user to prevent login
+    const { error: banError } = await supabase.auth.admin.updateUserById(userId, {
+      ban_duration: '876000h', // ~100 years
+      user_metadata: { deleted_at: new Date().toISOString(), deleted_by: user.user.id }
+    })
 
-    if (authDeleteError) {
-      console.error('Error deleting auth user:', authDeleteError)
-      return new Response(
-        JSON.stringify({ error: `Failed to delete auth user: ${authDeleteError.message}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (banError) {
+      console.error('Error banning auth user:', banError)
+      // Don't fail the whole operation - profile is already deactivated
+      console.log('Profile was deactivated but auth ban failed - user still cannot access system')
+    } else {
+      console.log(`Auth user banned: ${userId}`)
     }
-
-    console.log(`Auth user deleted: ${userId}`)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'User completely deleted from system',
+        message: 'User account deactivated and banned from system',
         deleted_user_id: userId
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

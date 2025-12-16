@@ -102,8 +102,8 @@ const MarksSubmission = () => {
     queryFn: async () => {
       if (!selectedClass || !selectedSubject || !currentYear?.id) return [];
 
-      // Fetch enrolled students
-      const { data: enrollments, error: enrollError } = await supabase
+      // Fetch students enrolled in the class
+      const { data: classEnrollments, error: enrollError } = await supabase
         .from('student_enrollments')
         .select(`
           student_id,
@@ -114,8 +114,24 @@ const MarksSubmission = () => {
 
       if (enrollError) throw enrollError;
 
+      const classStudentIds = classEnrollments?.map(e => e.student_id) || [];
+
+      // Fetch students enrolled in the selected subject
+      const { data: subjectEnrollments, error: subjectEnrollError } = await supabase
+        .from('student_subject_enrollments')
+        .select('student_id')
+        .eq('subject_id', selectedSubject)
+        .eq('status', 'active')
+        .in('student_id', classStudentIds);
+
+      if (subjectEnrollError) throw subjectEnrollError;
+
+      // Filter to only students who have both class AND subject enrollment
+      const subjectStudentIds = new Set(subjectEnrollments?.map(e => e.student_id) || []);
+      const enrollments = classEnrollments?.filter(e => subjectStudentIds.has(e.student_id)) || [];
+
       // Fetch existing submissions
-      const studentIds = enrollments?.map(e => e.student_id) || [];
+      const studentIds = enrollments.map(e => e.student_id);
       const { data: submissions, error: subError } = await supabase
         .from('subject_submissions')
         .select('*')

@@ -108,7 +108,7 @@ serve(async (req) => {
       }
       profileId = insertedProfile.id
     } else {
-      // Update existing profile with latest details
+      // Update existing profile with latest details (excluding role to avoid trigger restriction)
       const { error: updateProfileError } = await supabase
         .from('profiles')
         .update({
@@ -116,7 +116,6 @@ serve(async (req) => {
           last_name: lastName,
           email,
           phone: phone || null,
-          role,
         })
         .eq('id', existingProfile.id)
 

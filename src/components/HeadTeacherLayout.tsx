@@ -10,7 +10,8 @@ import {
   User,
   GraduationCap,
   ClipboardCheck,
-  CalendarCheck
+  CalendarCheck,
+  UserCheck
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Marks Approval', href: '/head-teacher/marks', icon: FileCheck },
   { name: 'Discipline Records', href: '/head-teacher/discipline', icon: AlertTriangle },
   { name: 'Timetable Management', href: '/head-teacher/timetable', icon: Calendar },
+  { name: 'Attendance', href: '/head-teacher/attendance', icon: UserCheck },
   { name: 'Academic Reports', href: '/head-teacher/reports', icon: ClipboardCheck },
   { name: 'Appointments', href: '/head-teacher/appointments', icon: CalendarCheck },
   { name: 'Profile', href: '/head-teacher/profile', icon: User },

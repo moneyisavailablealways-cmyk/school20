@@ -60,6 +60,7 @@ import TimetableManagement from "./pages/head-teacher/TimetableManagement";
 import AcademicReports from "./pages/head-teacher/AcademicReports";
 import HeadTeacherProfile from "./pages/head-teacher/HeadTeacherProfile";
 import HeadTeacherAppointments from "./pages/head-teacher/Appointments";
+import HeadTeacherAttendance from "./pages/head-teacher/Attendance";
 import BursarDashboard from "./pages/bursar/BursarDashboard";
 import FeeStructures from "./pages/bursar/FeeStructures";
 import Invoices from "./pages/bursar/Invoices";
@@ -167,6 +168,7 @@ const App = () => (
               <Route path="marks" element={<MarksApproval />} />
               <Route path="discipline" element={<DisciplineRecords />} />
               <Route path="timetable" element={<TimetableManagement />} />
+              <Route path="attendance" element={<HeadTeacherAttendance />} />
               <Route path="reports" element={<AcademicReports />} />
               <Route path="appointments" element={<HeadTeacherAppointments />} />
               <Route path="profile" element={<HeadTeacherProfile />} />

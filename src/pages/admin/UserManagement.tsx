@@ -79,7 +79,16 @@ const createUserSchema = z.object({
   path: ["confirmPassword"],
 });
 
+const editUserSchema = z.object({
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  phone: z.string().optional(),
+  role: z.enum(['admin', 'principal', 'head_teacher', 'teacher', 'bursar', 'librarian', 'student', 'parent']),
+  is_active: z.boolean(),
+});
+
 type CreateUserForm = z.infer<typeof createUserSchema>;
+type EditUserForm = z.infer<typeof editUserSchema>;
 
 const UserManagement = () => {
   const [users, setUsers] = useState<Profile[]>([]);
@@ -87,6 +96,8 @@ const UserManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const { toast } = useToast();
 
   const form = useForm<CreateUserForm>({
@@ -99,6 +110,17 @@ const UserManagement = () => {
       password: '',
       confirmPassword: '',
       role: 'student',
+    },
+  });
+
+  const editForm = useForm<EditUserForm>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      phone: '',
+      role: 'student',
+      is_active: true,
     },
   });
 
@@ -201,6 +223,54 @@ const UserManagement = () => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to delete user',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openEditDialog = (user: Profile) => {
+    setEditingUser(user);
+    editForm.reset({
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phone: user.phone || '',
+      role: user.role,
+      is_active: user.is_active,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const updateUser = async (data: EditUserForm) => {
+    if (!editingUser) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: data.firstName,
+          last_name: data.lastName,
+          phone: data.phone || null,
+          role: data.role,
+          is_active: data.is_active,
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'User updated successfully',
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingUser(null);
+      editForm.reset();
+      loadUsers();
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update user',
         variant: 'destructive',
       });
     }
@@ -379,6 +449,135 @@ const UserManagement = () => {
             </Form>
           </DialogContent>
         </Dialog>
+
+        {/* Edit User Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription>
+                Update user details and permissions. Email cannot be changed.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...editForm}>
+              <form onSubmit={editForm.handleSubmit(updateUser)} className="space-y-4">
+                {editingUser && (
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium">{editingUser.email}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editForm.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={editForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+1234567890" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select user role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="parent">Parent</SelectItem>
+                          <SelectItem value="teacher">Teacher</SelectItem>
+                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                          <SelectItem value="librarian">Librarian</SelectItem>
+                          <SelectItem value="bursar">Bursar</SelectItem>
+                          <SelectItem value="principal">Principal</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="is_active"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Active Status</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Inactive users cannot log in
+                        </p>
+                      </div>
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="h-4 w-4"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditDialogOpen(false);
+                      setEditingUser(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">Save Changes</Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters */}
@@ -485,7 +684,11 @@ const UserManagement = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => openEditDialog(user)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button

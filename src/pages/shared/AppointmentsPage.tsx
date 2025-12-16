@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import CreateAppointmentDialog from '@/components/CreateAppointmentDialog';
 import AppointmentsList from '@/components/AppointmentsList';
@@ -6,6 +6,11 @@ import AppointmentsList from '@/components/AppointmentsList';
 const AppointmentsPage: React.FC = () => {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
+  const appointmentsListRef = useRef<{ refetch: () => void }>(null);
+
+  const handleAppointmentCreated = () => {
+    appointmentsListRef.current?.refetch();
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -19,11 +24,11 @@ const AppointmentsPage: React.FC = () => {
                 : 'Manage your meeting requests with staff and other users'}
             </p>
           </div>
-          {!isAdmin && <CreateAppointmentDialog />}
+          {!isAdmin && <CreateAppointmentDialog onSuccess={handleAppointmentCreated} />}
         </div>
       </div>
 
-      <AppointmentsList />
+      <AppointmentsList ref={appointmentsListRef} />
     </div>
   );
 };

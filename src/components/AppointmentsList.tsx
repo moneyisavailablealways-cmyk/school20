@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,13 +57,21 @@ const roleLabels: Record<string, string> = {
   admin: 'Admin',
 };
 
-const AppointmentsList: React.FC = () => {
+export interface AppointmentsListHandle {
+  refetch: () => void;
+}
+
+const AppointmentsList = forwardRef<AppointmentsListHandle>((_, ref) => {
   const { profile } = useAuth();
   const [sentAppointments, setSentAppointments] = useState<AppointmentRequest[]>([]);
   const [receivedAppointments, setReceivedAppointments] = useState<ReceivedAppointment[]>([]);
   const [sentRecipients, setSentRecipients] = useState<Record<string, AppointmentRecipient[]>>({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('received');
+
+  useImperativeHandle(ref, () => ({
+    refetch: fetchAppointments
+  }));
 
   useEffect(() => {
     if (profile?.id) {
@@ -459,6 +467,8 @@ const AppointmentsList: React.FC = () => {
       </TabsContent>
     </Tabs>
   );
-};
+});
+
+AppointmentsList.displayName = 'AppointmentsList';
 
 export default AppointmentsList;

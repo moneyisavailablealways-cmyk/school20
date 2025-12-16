@@ -2032,6 +2032,10 @@ export type Database = {
       is_admin_or_principal: { Args: never; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_bursar_user: { Args: never; Returns: boolean }
+      is_parent_of_student_profile: {
+        Args: { target_profile_id: string }
+        Returns: boolean
+      }
       is_recipient_of_appointment: {
         Args: { p_appointment_id: string }
         Returns: boolean

@@ -291,6 +291,13 @@ const ChildrenLibrary = () => {
                                   <span>Due: {new Date(transaction.due_date).toLocaleDateString()}</span>
                                 </div>
                               </div>
+                              {transaction.fine_amount > 0 && (
+                                <div className="mt-2">
+                                  <Badge variant="destructive">
+                                    Fine: ${Number(transaction.fine_amount).toFixed(2)}
+                                  </Badge>
+                                </div>
+                              )}
                             </div>
                             <div className="text-right">
                               {getStatusBadge(status)}
@@ -335,6 +342,13 @@ const ChildrenLibrary = () => {
                               <span>Borrowed: {new Date(transaction.issue_date).toLocaleDateString()}</span>
                               <span>Returned: {new Date(transaction.return_date).toLocaleDateString()}</span>
                             </div>
+                            {transaction.fine_amount > 0 && (
+                              <div className="mt-2">
+                                <Badge variant="destructive">
+                                  Fine Paid: ${Number(transaction.fine_amount).toFixed(2)}
+                                </Badge>
+                              </div>
+                            )}
                           </div>
                           <Badge variant="secondary">
                             <CheckCircle className="h-3 w-3 mr-1" /> Returned

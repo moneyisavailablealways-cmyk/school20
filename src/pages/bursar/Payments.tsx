@@ -7,108 +7,172 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { CreditCard, Plus, Search, DollarSign } from 'lucide-react';
 
-interface Payment {
-  id: string;
-  amount: number;
-  payment_method: string;
-  payment_date: string;
-  payment_reference: string;
-  status: string;
-  notes?: string;
-  students?: {
-    student_id: string;
-    profiles: {
-      first_name: string;
-      last_name: string;
-    };
-  };
-  invoices?: {
-    invoice_number: string;
-    total_amount: number;
-  };
-}
-
 const Payments = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMethod, setSelectedMethod] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const queryClient = useQueryClient();
-  const form = useForm();
+  const form = useForm({
+    defaultValues: {
+      invoice_id: '',
+      amount: '',
+      payment_method: '',
+      payment_reference: '',
+      notes: ''
+    }
+  });
 
+  // Fetch payments with sequential pattern
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ['payments', searchTerm, selectedMethod],
     queryFn: async () => {
       let query = supabase
         .from('payments')
-        .select(`
-          *,
-          students(
-            student_id,
-            profiles!inner(first_name, last_name)
-          ),
-          invoices(
-            invoice_number,
-            total_amount
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
-
-      if (searchTerm) {
-        query = query.or(`payment_reference.ilike.%${searchTerm}%,students.student_id.ilike.%${searchTerm}%`);
-      }
 
       if (selectedMethod !== 'all') {
         query = query.eq('payment_method', selectedMethod);
       }
 
-      const { data, error } = await query;
+      const { data: paymentsData, error } = await query;
       if (error) throw error;
-      return data;
+      if (!paymentsData || paymentsData.length === 0) return [];
+
+      // Get unique student IDs
+      const studentIds = [...new Set(paymentsData.map(p => p.student_id).filter(Boolean))];
+      const invoiceIds = [...new Set(paymentsData.map(p => p.invoice_id).filter(Boolean))];
+      
+      // Fetch students
+      const { data: students } = await supabase
+        .from('students')
+        .select('id, student_id, profile_id')
+        .in('id', studentIds);
+
+      // Fetch profiles
+      const profileIds = [...new Set((students || []).map(s => s.profile_id).filter(Boolean))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', profileIds);
+
+      // Fetch invoices
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, total_amount')
+        .in('id', invoiceIds);
+
+      // Create lookup maps
+      const studentMap = new Map((students || []).map(s => [s.id, s]));
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+      const invoiceMap = new Map((invoices || []).map(i => [i.id, i]));
+
+      // Combine data
+      const combinedData = paymentsData.map(payment => {
+        const student = studentMap.get(payment.student_id);
+        const profile = student ? profileMap.get(student.profile_id) : null;
+        const invoice = invoiceMap.get(payment.invoice_id);
+        return {
+          ...payment,
+          studentName: profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown Student',
+          studentIdNumber: student?.student_id || '',
+          invoiceNumber: invoice?.invoice_number || 'N/A'
+        };
+      });
+
+      // Filter by search term
+      if (searchTerm) {
+        return combinedData.filter((payment: any) => 
+          payment.payment_reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          payment.studentIdNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          payment.studentName?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      return combinedData;
     }
   });
 
+  // Fetch pending invoices for the payment form
   const { data: pendingInvoices = [] } = useQuery({
     queryKey: ['pending-invoices'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: invoicesData, error } = await supabase
         .from('invoices')
-        .select(`
-          id,
-          invoice_number,
-          student_id,
-          total_amount,
-          balance_amount,
-          students!inner(
-            student_id,
-            profiles!inner(first_name, last_name)
-          )
-        `)
+        .select('id, invoice_number, student_id, total_amount, balance_amount')
         .neq('status', 'paid')
-        .gt('balance_amount', '0');
+        .gt('balance_amount', 0);
       
       if (error) throw error;
-      return data;
+      if (!invoicesData || invoicesData.length === 0) return [];
+
+      // Get unique student IDs
+      const studentIds = [...new Set(invoicesData.map(i => i.student_id).filter(Boolean))];
+      
+      // Fetch students
+      const { data: students } = await supabase
+        .from('students')
+        .select('id, student_id, profile_id')
+        .in('id', studentIds);
+
+      // Fetch profiles
+      const profileIds = [...new Set((students || []).map(s => s.profile_id).filter(Boolean))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', profileIds);
+
+      // Create lookup maps
+      const studentMap = new Map((students || []).map(s => [s.id, s]));
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+
+      return invoicesData.map(invoice => {
+        const student = studentMap.get(invoice.student_id);
+        const profile = student ? profileMap.get(student.profile_id) : null;
+        return {
+          ...invoice,
+          studentName: profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown Student'
+        };
+      });
     }
   });
 
   const createPaymentMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Get student_id from the selected invoice
+      const selectedInvoice = pendingInvoices.find((inv: any) => inv.id === data.invoice_id);
+      if (!selectedInvoice) {
+        throw new Error('Invoice not found. Please select a valid invoice.');
+      }
+
+      const paymentAmount = parseFloat(data.amount);
+      const invoiceBalance = Number(selectedInvoice.balance_amount);
+      
+      // Validate payment amount
+      if (isNaN(paymentAmount) || paymentAmount <= 0) {
+        throw new Error('Please enter a valid payment amount.');
+      }
+
+      if (paymentAmount > invoiceBalance) {
+        throw new Error(`Payment amount ($${paymentAmount.toFixed(2)}) exceeds invoice balance ($${invoiceBalance.toFixed(2)})`);
+      }
+
       const { error } = await supabase
         .from('payments')
         .insert({
-          student_id: data.student_id,
+          student_id: selectedInvoice.student_id,
           invoice_id: data.invoice_id,
-          amount: parseFloat(data.amount),
+          amount: paymentAmount,
           payment_method: data.payment_method,
           payment_reference: data.payment_reference,
-          notes: data.notes
+          notes: data.notes || null
         });
       
       if (error) throw error;
@@ -116,12 +180,14 @@ const Payments = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       queryClient.invalidateQueries({ queryKey: ['pending-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['bursar-metrics'] });
       setIsCreateOpen(false);
       form.reset();
       toast.success('Payment recorded successfully');
     },
-    onError: (error) => {
-      toast.error('Failed to record payment');
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to record payment');
       console.error('Error creating payment:', error);
     }
   });
@@ -139,9 +205,16 @@ const Payments = () => {
     createPaymentMutation.mutate(data);
   };
 
-  const totalPayments = payments.reduce((sum, payment) => sum + (parseFloat(payment.amount.toString()) || 0), 0);
-  const completedPayments = payments.filter(p => p.status === 'completed');
-  const totalCompleted = completedPayments.reduce((sum, payment) => sum + (parseFloat(payment.amount.toString()) || 0), 0);
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const totalPayments = payments.reduce((sum, payment: any) => sum + Number(payment.amount || 0), 0);
+  const completedPayments = payments.filter((p: any) => p.status === 'completed');
+  const totalCompleted = completedPayments.reduce((sum, payment: any) => sum + Number(payment.amount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -172,21 +245,26 @@ const Payments = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Invoice</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select invoice" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {pendingInvoices.map((invoice: any) => (
-                            <SelectItem key={invoice.id} value={invoice.id}>
-                              {invoice.invoice_number} - {invoice.students?.profiles?.first_name} {invoice.students?.profiles?.last_name} 
-                              (Balance: ${parseFloat(invoice.balance_amount).toFixed(2)})
-                            </SelectItem>
-                          ))}
+                          {pendingInvoices.length === 0 ? (
+                            <SelectItem value="none" disabled>No pending invoices</SelectItem>
+                          ) : (
+                            pendingInvoices.map((invoice: any) => (
+                              <SelectItem key={invoice.id} value={invoice.id}>
+                                {invoice.invoice_number} - {invoice.studentName} 
+                                (Balance: {formatCurrency(Number(invoice.balance_amount))})
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -194,13 +272,17 @@ const Payments = () => {
                 <FormField
                   control={form.control}
                   name="amount"
-                  rules={{ required: 'Amount is required', min: { value: 0.01, message: 'Amount must be positive' } }}
+                  rules={{ 
+                    required: 'Amount is required', 
+                    min: { value: 0.01, message: 'Amount must be positive' }
+                  }}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Payment Amount</FormLabel>
+                      <FormLabel>Payment Amount ($)</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" placeholder="0.00" {...field} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -212,7 +294,7 @@ const Payments = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Payment Method</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select payment method" />
@@ -226,6 +308,7 @@ const Payments = () => {
                           <SelectItem value="mobile_money">Mobile Money</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -240,6 +323,7 @@ const Payments = () => {
                       <FormControl>
                         <Input placeholder="Receipt number, transaction ID, etc." {...field} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -249,7 +333,7 @@ const Payments = () => {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Notes</FormLabel>
+                      <FormLabel>Notes (Optional)</FormLabel>
                       <FormControl>
                         <Textarea placeholder="Additional notes..." {...field} />
                       </FormControl>
@@ -261,7 +345,10 @@ const Payments = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setIsCreateOpen(false)}
+                    onClick={() => {
+                      setIsCreateOpen(false);
+                      form.reset();
+                    }}
                   >
                     Cancel
                   </Button>
@@ -283,7 +370,7 @@ const Payments = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalPayments.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalPayments)}</div>
             <p className="text-xs text-muted-foreground">All payments recorded</p>
           </CardContent>
         </Card>
@@ -293,7 +380,7 @@ const Payments = () => {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalCompleted.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalCompleted)}</div>
             <p className="text-xs text-muted-foreground">Successfully processed</p>
           </CardContent>
         </Card>
@@ -317,7 +404,7 @@ const Payments = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by reference or student ID..."
+                  placeholder="Search by reference, student ID, or name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -371,26 +458,22 @@ const Payments = () => {
                 {payments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No payments found
+                      No payments found. Click "Record Payment" to add a new payment.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  payments.map((payment: Payment) => (
+                  payments.map((payment: any) => (
                     <TableRow key={payment.id}>
                       <TableCell className="font-medium">{payment.payment_reference}</TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">
-                            {payment.students?.profiles?.first_name} {payment.students?.profiles?.last_name}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {payment.students?.student_id}
-                          </div>
+                          <div className="font-medium">{payment.studentName}</div>
+                          <div className="text-sm text-muted-foreground">{payment.studentIdNumber}</div>
                         </div>
                       </TableCell>
-                      <TableCell>{payment.invoices?.invoice_number || 'N/A'}</TableCell>
-                      <TableCell>${payment.amount.toString()}</TableCell>
-                      <TableCell className="capitalize">{payment.payment_method.replace('_', ' ')}</TableCell>
+                      <TableCell>{payment.invoiceNumber}</TableCell>
+                      <TableCell>{formatCurrency(Number(payment.amount))}</TableCell>
+                      <TableCell className="capitalize">{payment.payment_method?.replace('_', ' ')}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(payment.status)}>
                           {payment.status}

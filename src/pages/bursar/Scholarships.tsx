@@ -7,42 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { GraduationCap, Plus, Search, Award, Users } from 'lucide-react';
-
-interface Scholarship {
-  id: string;
-  name: string;
-  description?: string;
-  type: string;
-  value: number;
-  criteria?: string;
-  max_recipients?: number;
-  is_active: boolean;
-}
-
-interface StudentScholarship {
-  id: string;
-  amount: number;
-  awarded_date: string;
-  status: string;
-  students: {
-    student_id: string;
-    profiles: {
-      first_name: string;
-      last_name: string;
-    };
-  };
-  scholarships: {
-    name: string;
-    type: string;
-  };
-}
+import { GraduationCap, Plus, Search, Award, Users, Edit, Trash2 } from 'lucide-react';
 
 const Scholarships = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,9 +21,26 @@ const Scholarships = () => {
   const [isCreateScholarshipOpen, setIsCreateScholarshipOpen] = useState(false);
   const [isAwardScholarshipOpen, setIsAwardScholarshipOpen] = useState(false);
   const queryClient = useQueryClient();
-  const scholarshipForm = useForm();
-  const awardForm = useForm();
+  const scholarshipForm = useForm({
+    defaultValues: {
+      name: '',
+      type: '',
+      value: '',
+      max_recipients: '',
+      criteria: '',
+      description: ''
+    }
+  });
+  const awardForm = useForm({
+    defaultValues: {
+      student_id: '',
+      scholarship_id: '',
+      amount: '',
+      notes: ''
+    }
+  });
 
+  // Fetch scholarships
   const { data: scholarships = [], isLoading: isLoadingScholarships } = useQuery({
     queryKey: ['scholarships', searchTerm, selectedType],
     queryFn: async () => {
@@ -71,44 +59,93 @@ const Scholarships = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data || [];
     }
   });
 
+  // Fetch student scholarships with sequential pattern
   const { data: studentScholarships = [], isLoading: isLoadingStudentScholarships } = useQuery({
     queryKey: ['student-scholarships'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: awardsData, error } = await supabase
         .from('student_scholarships')
-        .select(`
-          *,
-          students!inner(
-            student_id,
-            profiles!inner(first_name, last_name)
-          ),
-          scholarships!inner(name, type)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      if (!awardsData || awardsData.length === 0) return [];
+
+      // Get unique IDs
+      const studentIds = [...new Set(awardsData.map(a => a.student_id).filter(Boolean))];
+      const scholarshipIds = [...new Set(awardsData.map(a => a.scholarship_id).filter(Boolean))];
+
+      // Fetch students
+      const { data: students } = await supabase
+        .from('students')
+        .select('id, student_id, profile_id')
+        .in('id', studentIds);
+
+      // Fetch profiles
+      const profileIds = [...new Set((students || []).map(s => s.profile_id).filter(Boolean))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', profileIds);
+
+      // Fetch scholarships
+      const { data: scholarshipsData } = await supabase
+        .from('scholarships')
+        .select('id, name, type')
+        .in('id', scholarshipIds);
+
+      // Create lookup maps
+      const studentMap = new Map((students || []).map(s => [s.id, s]));
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+      const scholarshipMap = new Map((scholarshipsData || []).map(s => [s.id, s]));
+
+      return awardsData.map(award => {
+        const student = studentMap.get(award.student_id);
+        const profile = student ? profileMap.get(student.profile_id) : null;
+        const scholarship = scholarshipMap.get(award.scholarship_id);
+        return {
+          ...award,
+          studentName: profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown Student',
+          studentIdNumber: student?.student_id || '',
+          scholarshipName: scholarship?.name || 'Unknown',
+          scholarshipType: scholarship?.type || ''
+        };
+      });
     }
   });
 
+  // Fetch active students for awarding scholarships
   const { data: students = [] } = useQuery({
     queryKey: ['students-for-scholarships'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: studentsData, error } = await supabase
         .from('students')
-        .select(`
-          id,
-          student_id,
-          profiles!inner(first_name, last_name)
-        `)
+        .select('id, student_id, profile_id')
         .eq('enrollment_status', 'active');
       
       if (error) throw error;
-      return data;
+      if (!studentsData || studentsData.length === 0) return [];
+
+      // Fetch profiles
+      const profileIds = [...new Set(studentsData.map(s => s.profile_id).filter(Boolean))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', profileIds);
+
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+
+      return studentsData.map(student => {
+        const profile = profileMap.get(student.profile_id);
+        return {
+          ...student,
+          studentName: profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown Student'
+        };
+      });
     }
   });
 
@@ -118,10 +155,10 @@ const Scholarships = () => {
         .from('scholarships')
         .insert({
           name: data.name,
-          description: data.description,
+          description: data.description || null,
           type: data.type,
           value: parseFloat(data.value),
-          criteria: data.criteria,
+          criteria: data.criteria || null,
           max_recipients: data.max_recipients ? parseInt(data.max_recipients.toString()) : null
         });
       
@@ -133,8 +170,8 @@ const Scholarships = () => {
       scholarshipForm.reset();
       toast.success('Scholarship created successfully');
     },
-    onError: (error) => {
-      toast.error('Failed to create scholarship');
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to create scholarship');
       console.error('Error creating scholarship:', error);
     }
   });
@@ -147,22 +184,54 @@ const Scholarships = () => {
           student_id: data.student_id,
           scholarship_id: data.scholarship_id,
           amount: parseFloat(data.amount),
-          notes: data.notes
+          notes: data.notes || null
         });
       
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-scholarships'] });
+      queryClient.invalidateQueries({ queryKey: ['bursar-metrics'] });
       setIsAwardScholarshipOpen(false);
       awardForm.reset();
       toast.success('Scholarship awarded successfully');
     },
-    onError: (error) => {
-      toast.error('Failed to award scholarship');
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to award scholarship');
       console.error('Error awarding scholarship:', error);
     }
   });
+
+  const deleteScholarshipMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('scholarships')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scholarships'] });
+      toast.success('Scholarship deleted');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to delete scholarship');
+    }
+  });
+
+  const toggleScholarshipStatus = async (id: string, currentStatus: boolean) => {
+    const { error } = await supabase
+      .from('scholarships')
+      .update({ is_active: !currentStatus })
+      .eq('id', id);
+    
+    if (error) {
+      toast.error('Failed to update scholarship status');
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['scholarships'] });
+      toast.success(`Scholarship ${!currentStatus ? 'activated' : 'deactivated'}`);
+    }
+  };
 
   const onCreateScholarship = (data: any) => {
     createScholarshipMutation.mutate(data);
@@ -172,12 +241,19 @@ const Scholarships = () => {
     awardScholarshipMutation.mutate(data);
   };
 
-  const totalScholarshipValue = studentScholarships
-    .filter((s: StudentScholarship) => s.status === 'active')
-    .reduce((sum, s) => sum + (parseFloat(s.amount.toString()) || 0), 0);
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
 
-  const activeScholarships = scholarships.filter((s: Scholarship) => s.is_active);
-  const totalRecipients = studentScholarships.filter((s: StudentScholarship) => s.status === 'active').length;
+  const totalScholarshipValue = studentScholarships
+    .filter((s: any) => s.status === 'active')
+    .reduce((sum, s: any) => sum + Number(s.amount || 0), 0);
+
+  const activeScholarships = scholarships.filter((s: any) => s.is_active);
+  const totalRecipients = studentScholarships.filter((s: any) => s.status === 'active').length;
 
   return (
     <div className="space-y-6">
@@ -212,6 +288,7 @@ const Scholarships = () => {
                         <FormControl>
                           <Input placeholder="Merit Scholarship" {...field} />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -223,7 +300,7 @@ const Scholarships = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select type" />
@@ -234,6 +311,7 @@ const Scholarships = () => {
                             <SelectItem value="fixed_amount">Fixed Amount</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -248,6 +326,7 @@ const Scholarships = () => {
                         <FormControl>
                           <Input type="number" step="0.01" placeholder="0.00" {...field} />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -257,7 +336,7 @@ const Scholarships = () => {
                     name="max_recipients"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Maximum Recipients</FormLabel>
+                        <FormLabel>Maximum Recipients (Optional)</FormLabel>
                         <FormControl>
                           <Input type="number" placeholder="Leave empty for unlimited" {...field} />
                         </FormControl>
@@ -270,7 +349,7 @@ const Scholarships = () => {
                     name="criteria"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Eligibility Criteria</FormLabel>
+                        <FormLabel>Eligibility Criteria (Optional)</FormLabel>
                         <FormControl>
                           <Textarea placeholder="Describe the eligibility criteria..." {...field} />
                         </FormControl>
@@ -283,7 +362,7 @@ const Scholarships = () => {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel>Description (Optional)</FormLabel>
                         <FormControl>
                           <Textarea placeholder="Scholarship description..." {...field} />
                         </FormControl>
@@ -295,7 +374,10 @@ const Scholarships = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setIsCreateScholarshipOpen(false)}
+                      onClick={() => {
+                        setIsCreateScholarshipOpen(false);
+                        scholarshipForm.reset();
+                      }}
                     >
                       Cancel
                     </Button>
@@ -328,20 +410,25 @@ const Scholarships = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Student</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select student" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {students.map((student: any) => (
-                              <SelectItem key={student.id} value={student.id}>
-                                {student.student_id} - {student.profiles.first_name} {student.profiles.last_name}
-                              </SelectItem>
-                            ))}
+                            {students.length === 0 ? (
+                              <SelectItem value="none" disabled>No students found</SelectItem>
+                            ) : (
+                              students.map((student: any) => (
+                                <SelectItem key={student.id} value={student.id}>
+                                  {student.student_id} - {student.studentName}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -353,20 +440,25 @@ const Scholarships = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Scholarship</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select scholarship" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {activeScholarships.map((scholarship: Scholarship) => (
-                              <SelectItem key={scholarship.id} value={scholarship.id}>
-                                {scholarship.name} - ${scholarship.value}
-                              </SelectItem>
-                            ))}
+                            {activeScholarships.length === 0 ? (
+                              <SelectItem value="none" disabled>No active scholarships</SelectItem>
+                            ) : (
+                              activeScholarships.map((scholarship: any) => (
+                                <SelectItem key={scholarship.id} value={scholarship.id}>
+                                  {scholarship.name} - {formatCurrency(Number(scholarship.value))}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -381,6 +473,7 @@ const Scholarships = () => {
                         <FormControl>
                           <Input type="number" step="0.01" placeholder="0.00" {...field} />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -390,7 +483,7 @@ const Scholarships = () => {
                     name="notes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Notes</FormLabel>
+                        <FormLabel>Notes (Optional)</FormLabel>
                         <FormControl>
                           <Textarea placeholder="Award notes..." {...field} />
                         </FormControl>
@@ -402,7 +495,10 @@ const Scholarships = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setIsAwardScholarshipOpen(false)}
+                      onClick={() => {
+                        setIsAwardScholarshipOpen(false);
+                        awardForm.reset();
+                      }}
                     >
                       Cancel
                     </Button>
@@ -445,7 +541,7 @@ const Scholarships = () => {
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalScholarshipValue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalScholarshipValue)}</div>
             <p className="text-xs text-muted-foreground">Awarded amount</p>
           </CardContent>
         </Card>
@@ -472,29 +568,26 @@ const Scholarships = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="academic">Academic</SelectItem>
-                <SelectItem value="need_based">Need Based</SelectItem>
-                <SelectItem value="sports">Sports</SelectItem>
-                <SelectItem value="arts">Arts</SelectItem>
-                <SelectItem value="community_service">Community Service</SelectItem>
+                <SelectItem value="percentage">Percentage</SelectItem>
+                <SelectItem value="fixed_amount">Fixed Amount</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="scholarships" className="space-y-6">
+      <Tabs defaultValue="scholarships" className="space-y-4">
         <TabsList>
           <TabsTrigger value="scholarships">Scholarships</TabsTrigger>
           <TabsTrigger value="awards">Awards</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="scholarships">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Award className="h-5 w-5" />
-                Available Scholarships
+                Scholarship Programs
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -502,6 +595,10 @@ const Scholarships = () => {
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
+              ) : scholarships.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">
+                  No scholarships found. Click "Create Scholarship" to add one.
+                </p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -515,53 +612,62 @@ const Scholarships = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {scholarships.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          No scholarships found
+                    {scholarships.map((scholarship: any) => (
+                      <TableRow key={scholarship.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{scholarship.name}</div>
+                            {scholarship.description && (
+                              <div className="text-sm text-muted-foreground line-clamp-1">
+                                {scholarship.description}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="capitalize">{scholarship.type?.replace('_', ' ')}</TableCell>
+                        <TableCell>{formatCurrency(Number(scholarship.value))}</TableCell>
+                        <TableCell>{scholarship.max_recipients || 'Unlimited'}</TableCell>
+                        <TableCell>
+                          <Badge variant={scholarship.is_active ? 'default' : 'secondary'}>
+                            {scholarship.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleScholarshipStatus(scholarship.id, scholarship.is_active)}
+                            >
+                              {scholarship.is_active ? 'Deactivate' : 'Activate'}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm('Are you sure you want to delete this scholarship?')) {
+                                  deleteScholarshipMutation.mutate(scholarship.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      scholarships.map((scholarship: Scholarship) => (
-                        <TableRow key={scholarship.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{scholarship.name}</div>
-                              {scholarship.description && (
-                                <div className="text-sm text-muted-foreground">
-                                  {scholarship.description}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="capitalize">{scholarship.type.replace('_', ' ')}</TableCell>
-                          <TableCell>${parseFloat(scholarship.value.toString()).toFixed(2)}</TableCell>
-                          <TableCell>{scholarship.max_recipients || 'Unlimited'}</TableCell>
-                          <TableCell>
-                            <Badge variant={scholarship.is_active ? 'default' : 'secondary'}>
-                              {scholarship.is_active ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm">
-                              Edit
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
               )}
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="awards">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
+                <GraduationCap className="h-5 w-5" />
                 Scholarship Awards
               </CardTitle>
             </CardHeader>
@@ -570,50 +676,52 @@ const Scholarships = () => {
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
+              ) : studentScholarships.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">
+                  No awards found. Click "Award Scholarship" to assign one to a student.
+                </p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Student</TableHead>
                       <TableHead>Scholarship</TableHead>
-                      <TableHead>Type</TableHead>
                       <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead>Awarded Date</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {studentScholarships.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          No awards found
+                    {studentScholarships.map((award: any) => (
+                      <TableRow key={award.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{award.studentName}</div>
+                            <div className="text-sm text-muted-foreground">{award.studentIdNumber}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{award.scholarshipName}</div>
+                            <div className="text-sm text-muted-foreground capitalize">
+                              {award.scholarshipType?.replace('_', ' ')}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{formatCurrency(Number(award.amount))}</TableCell>
+                        <TableCell>
+                          {award.awarded_date 
+                            ? new Date(award.awarded_date).toLocaleDateString() 
+                            : new Date(award.created_at).toLocaleDateString()
+                          }
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={award.status === 'active' ? 'default' : 'secondary'}>
+                            {award.status}
+                          </Badge>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      studentScholarships.map((award: StudentScholarship) => (
-                        <TableRow key={award.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">
-                                {award.students.profiles.first_name} {award.students.profiles.last_name}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {award.students.student_id}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{award.scholarships.name}</TableCell>
-                          <TableCell className="capitalize">{award.scholarships.type.replace('_', ' ')}</TableCell>
-                          <TableCell>${parseFloat(award.amount.toString()).toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Badge variant={award.status === 'active' ? 'default' : 'secondary'}>
-                              {award.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(award.awarded_date).toLocaleDateString()}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
               )}

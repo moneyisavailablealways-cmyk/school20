@@ -611,6 +611,161 @@ export type Database = {
           },
         ]
       }
+      generated_reports: {
+        Row: {
+          academic_year_id: string | null
+          attendance_percentage: number | null
+          best_eight_total: number | null
+          class_position: number | null
+          created_at: string | null
+          file_path: string | null
+          file_url: string | null
+          finalized_at: string | null
+          generated_at: string | null
+          generated_by: string | null
+          grade_points_average: number | null
+          id: string
+          o_level_division: string | null
+          overall_average: number | null
+          overall_grade: string | null
+          promotion_status: string | null
+          status: string | null
+          stream_position: number | null
+          student_id: string
+          template_id: string | null
+          term: string
+          total_students: number | null
+          updated_at: string | null
+          verification_code: string | null
+          version: number | null
+        }
+        Insert: {
+          academic_year_id?: string | null
+          attendance_percentage?: number | null
+          best_eight_total?: number | null
+          class_position?: number | null
+          created_at?: string | null
+          file_path?: string | null
+          file_url?: string | null
+          finalized_at?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          grade_points_average?: number | null
+          id?: string
+          o_level_division?: string | null
+          overall_average?: number | null
+          overall_grade?: string | null
+          promotion_status?: string | null
+          status?: string | null
+          stream_position?: number | null
+          student_id: string
+          template_id?: string | null
+          term: string
+          total_students?: number | null
+          updated_at?: string | null
+          verification_code?: string | null
+          version?: number | null
+        }
+        Update: {
+          academic_year_id?: string | null
+          attendance_percentage?: number | null
+          best_eight_total?: number | null
+          class_position?: number | null
+          created_at?: string | null
+          file_path?: string | null
+          file_url?: string | null
+          finalized_at?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          grade_points_average?: number | null
+          id?: string
+          o_level_division?: string | null
+          overall_average?: number | null
+          overall_grade?: string | null
+          promotion_status?: string | null
+          status?: string | null
+          stream_position?: number | null
+          student_id?: string
+          template_id?: string | null
+          term?: string
+          total_students?: number | null
+          updated_at?: string | null
+          verification_code?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_reports_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grading_config: {
+        Row: {
+          created_at: string | null
+          division_contribution: number | null
+          grade: string
+          grade_points: number
+          id: string
+          is_active: boolean | null
+          max_marks: number
+          min_marks: number
+          name: string
+          remark: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          division_contribution?: number | null
+          grade: string
+          grade_points: number
+          id?: string
+          is_active?: boolean | null
+          max_marks: number
+          min_marks: number
+          name: string
+          remark?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          division_contribution?: number | null
+          grade?: string
+          grade_points?: number
+          id?: string
+          is_active?: boolean | null
+          max_marks?: number
+          min_marks?: number
+          name?: string
+          remark?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           amount: number
@@ -1266,6 +1421,50 @@ export type Database = {
         }
         Relationships: []
       }
+      report_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_role: string | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_audit_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_cards: {
         Row: {
           academic_year_id: string | null
@@ -1322,6 +1521,175 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_comments: {
+        Row: {
+          academic_year_id: string | null
+          comment: string
+          comment_type: string
+          commenter_id: string | null
+          created_at: string | null
+          id: string
+          student_id: string
+          term: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year_id?: string | null
+          comment: string
+          comment_type: string
+          commenter_id?: string | null
+          created_at?: string | null
+          id?: string
+          student_id: string
+          term: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year_id?: string | null
+          comment?: string
+          comment_type?: string
+          commenter_id?: string | null
+          created_at?: string | null
+          id?: string
+          student_id?: string
+          term?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_comments_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_comments_commenter_id_fkey"
+            columns: ["commenter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_comments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_signatures: {
+        Row: {
+          academic_year_id: string | null
+          id: string
+          signature_hash: string | null
+          signed_at: string | null
+          signer_id: string | null
+          signer_name: string
+          signer_role: string
+          signer_title: string | null
+          student_id: string
+          term: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          id?: string
+          signature_hash?: string | null
+          signed_at?: string | null
+          signer_id?: string | null
+          signer_name: string
+          signer_role: string
+          signer_title?: string | null
+          student_id: string
+          term: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          id?: string
+          signature_hash?: string | null
+          signed_at?: string | null
+          signer_id?: string | null
+          signer_name?: string
+          signer_role?: string
+          signer_title?: string | null
+          student_id?: string
+          term?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_signatures_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_signatures_signer_id_fkey"
+            columns: ["signer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_signatures_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          template_config: Json | null
+          template_type: string
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          template_config?: Json | null
+          template_type?: string
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          template_config?: Json | null
+          template_type?: string
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1867,6 +2235,105 @@ export type Database = {
           },
         ]
       }
+      subject_submissions: {
+        Row: {
+          academic_year_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          grade: string | null
+          grade_points: number | null
+          id: string
+          marks: number | null
+          rejection_reason: string | null
+          remark: string | null
+          status: string
+          student_id: string
+          subject_id: string
+          submitted_at: string | null
+          submitted_by: string | null
+          teacher_initials: string | null
+          term: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          grade?: string | null
+          grade_points?: number | null
+          id?: string
+          marks?: number | null
+          rejection_reason?: string | null
+          remark?: string | null
+          status?: string
+          student_id: string
+          subject_id: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          teacher_initials?: string | null
+          term?: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          grade?: string | null
+          grade_points?: number | null
+          id?: string
+          marks?: number | null
+          rejection_reason?: string | null
+          remark?: string | null
+          status?: string
+          student_id?: string
+          subject_id?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          teacher_initials?: string | null
+          term?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_submissions_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_submissions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_submissions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_submissions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           code: string | null
@@ -2372,6 +2839,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_grade: {
+        Args: { p_marks: number }
+        Returns: {
+          grade: string
+          grade_points: number
+          remark: string
+        }[]
+      }
+      calculate_o_level_division: {
+        Args: { p_best_eight_total: number }
+        Returns: string
+      }
       delete_academic_year: { Args: { year_id: string }; Returns: boolean }
       delete_class: { Args: { class_id: string }; Returns: boolean }
       delete_level: { Args: { level_id: string }; Returns: boolean }
@@ -2401,6 +2880,15 @@ export type Database = {
           p_description: string
           p_metadata?: Json
           p_user_id?: string
+        }
+        Returns: string
+      }
+      log_report_action: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_target_id: string
+          p_target_type: string
         }
         Returns: string
       }

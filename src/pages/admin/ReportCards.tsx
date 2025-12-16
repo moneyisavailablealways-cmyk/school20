@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, CheckCircle, Settings, BarChart3, Layout, Building2 } from 'lucide-react';
+import { FileText, CheckCircle, Settings, BarChart3, Layout, Building2, Calendar } from 'lucide-react';
 import SubmissionsApproval from '@/components/report-cards/SubmissionsApproval';
 import ReportGeneration from '@/components/report-cards/ReportGeneration';
 import GradingConfig from '@/components/report-cards/GradingConfig';
 import ReportTemplates from '@/components/report-cards/ReportTemplates';
 import ReportAnalytics from '@/components/report-cards/ReportAnalytics';
 import SchoolSettings from '@/components/report-cards/SchoolSettings';
+import TermConfiguration from '@/components/report-cards/TermConfiguration';
 
 const ReportCards = () => {
   const [activeTab, setActiveTab] = useState('approvals');
@@ -21,7 +22,7 @@ const ReportCards = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
           <TabsTrigger value="approvals" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
             <span className="hidden sm:inline">Approvals</span>
@@ -37,6 +38,10 @@ const ReportCards = () => {
           <TabsTrigger value="grading" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Grading</span>
+          </TabsTrigger>
+          <TabsTrigger value="terms" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline">Terms</span>
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <Layout className="h-4 w-4" />
@@ -62,6 +67,10 @@ const ReportCards = () => {
 
         <TabsContent value="grading">
           <GradingConfig />
+        </TabsContent>
+
+        <TabsContent value="terms">
+          <TermConfiguration />
         </TabsContent>
 
         <TabsContent value="templates">

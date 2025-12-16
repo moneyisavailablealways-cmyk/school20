@@ -1792,11 +1792,14 @@ export type Database = {
           description: string | null
           email: string | null
           established_year: string | null
+          exam_label: string | null
+          footer_motto: string | null
           id: string
           logo_url: string | null
           motto: string | null
           phone: string | null
           school_name: string
+          term_assessment_label: string | null
           updated_at: string | null
           website: string | null
         }
@@ -1806,11 +1809,14 @@ export type Database = {
           description?: string | null
           email?: string | null
           established_year?: string | null
+          exam_label?: string | null
+          footer_motto?: string | null
           id?: string
           logo_url?: string | null
           motto?: string | null
           phone?: string | null
           school_name?: string
+          term_assessment_label?: string | null
           updated_at?: string | null
           website?: string | null
         }
@@ -1820,11 +1826,14 @@ export type Database = {
           description?: string | null
           email?: string | null
           established_year?: string | null
+          exam_label?: string | null
+          footer_motto?: string | null
           id?: string
           logo_url?: string | null
           motto?: string | null
           phone?: string | null
           school_name?: string
+          term_assessment_label?: string | null
           updated_at?: string | null
           website?: string | null
         }
@@ -2194,8 +2203,11 @@ export type Database = {
           date_of_birth: string
           enrollment_status: string | null
           gender: string | null
+          house: string | null
           id: string
+          photo_url: string | null
           profile_id: string | null
+          section: string | null
           student_id: string
           updated_at: string | null
         }
@@ -2207,8 +2219,11 @@ export type Database = {
           date_of_birth: string
           enrollment_status?: string | null
           gender?: string | null
+          house?: string | null
           id?: string
+          photo_url?: string | null
           profile_id?: string | null
+          section?: string | null
           student_id: string
           updated_at?: string | null
         }
@@ -2220,8 +2235,11 @@ export type Database = {
           date_of_birth?: string
           enrollment_status?: string | null
           gender?: string | null
+          house?: string | null
           id?: string
+          photo_url?: string | null
           profile_id?: string | null
+          section?: string | null
           student_id?: string
           updated_at?: string | null
         }
@@ -2237,13 +2255,18 @@ export type Database = {
       }
       subject_submissions: {
         Row: {
+          a1_score: number | null
+          a2_score: number | null
+          a3_score: number | null
           academic_year_id: string | null
           approved_at: string | null
           approved_by: string | null
           created_at: string | null
+          exam_score: number | null
           grade: string | null
           grade_points: number | null
           id: string
+          identifier: number | null
           marks: number | null
           rejection_reason: string | null
           remark: string | null
@@ -2257,13 +2280,18 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          a1_score?: number | null
+          a2_score?: number | null
+          a3_score?: number | null
           academic_year_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string | null
+          exam_score?: number | null
           grade?: string | null
           grade_points?: number | null
           id?: string
+          identifier?: number | null
           marks?: number | null
           rejection_reason?: string | null
           remark?: string | null
@@ -2277,13 +2305,18 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          a1_score?: number | null
+          a2_score?: number | null
+          a3_score?: number | null
           academic_year_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string | null
+          exam_score?: number | null
           grade?: string | null
           grade_points?: number | null
           id?: string
+          identifier?: number | null
           marks?: number | null
           rejection_reason?: string | null
           remark?: string | null
@@ -2759,6 +2792,62 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      term_configurations: {
+        Row: {
+          academic_year_id: string | null
+          created_at: string | null
+          end_date: string
+          fees_balance_note: string | null
+          fees_next_term: string | null
+          id: string
+          is_current: boolean | null
+          next_term_start_date: string | null
+          other_requirements: string | null
+          start_date: string
+          term_name: string
+          term_number: number
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year_id?: string | null
+          created_at?: string | null
+          end_date: string
+          fees_balance_note?: string | null
+          fees_next_term?: string | null
+          id?: string
+          is_current?: boolean | null
+          next_term_start_date?: string | null
+          other_requirements?: string | null
+          start_date: string
+          term_name: string
+          term_number?: number
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year_id?: string | null
+          created_at?: string | null
+          end_date?: string
+          fees_balance_note?: string | null
+          fees_next_term?: string | null
+          id?: string
+          is_current?: boolean | null
+          next_term_start_date?: string | null
+          other_requirements?: string | null
+          start_date?: string
+          term_name?: string
+          term_number?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "term_configurations_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
             referencedColumns: ["id"]
           },
         ]

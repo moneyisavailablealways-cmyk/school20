@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { Save, Send, AlertCircle, CheckCircle, ChevronRight, ChevronLeft, Users } from 'lucide-react';
+import { Save, Send, AlertCircle, CheckCircle, ChevronRight, ChevronLeft, Users, Calculator } from 'lucide-react';
 
 interface StudentData {
   id: string;
@@ -24,6 +24,11 @@ interface StudentData {
     grade_points: number | null;
     remark: string | null;
     status: string;
+    a1_score: number | null;
+    a2_score: number | null;
+    a3_score: number | null;
+    exam_score: number | null;
+    identifier: number | null;
   };
 }
 
@@ -35,8 +40,18 @@ const MarksSubmission = () => {
   const [selectedTerm, setSelectedTerm] = useState<string>('Term 1');
   const [selectedStudent, setSelectedStudent] = useState<string>('');
   
-  // Current student form state
-  const [marks, setMarks] = useState<string>('');
+  // Assessment scores (A1, A2, A3 are out of 3.0)
+  const [a1Score, setA1Score] = useState<string>('');
+  const [a2Score, setA2Score] = useState<string>('');
+  const [a3Score, setA3Score] = useState<string>('');
+  const [examScore, setExamScore] = useState<string>(''); // Out of 100
+  const [identifier, setIdentifier] = useState<string>('2');
+  
+  // Calculated values
+  const [avgScore, setAvgScore] = useState<number | null>(null);
+  const [ca20, setCa20] = useState<number | null>(null);
+  const [exam80, setExam80] = useState<number | null>(null);
+  const [total100, setTotal100] = useState<number | null>(null);
   const [grade, setGrade] = useState<string>('');
   const [gradePoints, setGradePoints] = useState<string>('');
   const [remark, setRemark] = useState<string>('');
@@ -160,6 +175,11 @@ const MarksSubmission = () => {
             grade_points: submission.grade_points,
             remark: submission.remark,
             status: submission.status,
+            a1_score: submission.a1_score,
+            a2_score: submission.a2_score,
+            a3_score: submission.a3_score,
+            exam_score: submission.exam_score,
+            identifier: submission.identifier,
           } : undefined,
         };
       }) || [];
@@ -175,42 +195,61 @@ const MarksSubmission = () => {
   // Load student data when selected
   useEffect(() => {
     if (currentStudent?.existingSubmission) {
-      setMarks(currentStudent.existingSubmission.marks?.toString() || '');
-      setGrade(currentStudent.existingSubmission.grade || '');
-      setGradePoints(currentStudent.existingSubmission.grade_points?.toString() || '');
-      setRemark(currentStudent.existingSubmission.remark || '');
+      const sub = currentStudent.existingSubmission;
+      setA1Score(sub.a1_score?.toString() || '');
+      setA2Score(sub.a2_score?.toString() || '');
+      setA3Score(sub.a3_score?.toString() || '');
+      setExamScore(sub.exam_score?.toString() || '');
+      setIdentifier(sub.identifier?.toString() || '2');
+      setGrade(sub.grade || '');
+      setGradePoints(sub.grade_points?.toString() || '');
+      setRemark(sub.remark || '');
     } else {
-      setMarks('');
+      setA1Score('');
+      setA2Score('');
+      setA3Score('');
+      setExamScore('');
+      setIdentifier('2');
       setGrade('');
       setGradePoints('');
       setRemark('');
     }
   }, [selectedStudent, currentStudent]);
 
-  // Calculate grade from marks
-  const calculateGrade = (marksValue: number) => {
-    if (!gradingConfig || isNaN(marksValue)) return { grade: '', gradePoints: '', remark: '' };
-    
-    const config = gradingConfig.find(
-      g => marksValue >= g.min_marks && marksValue <= g.max_marks
-    );
-    
-    return config 
-      ? { grade: config.grade, gradePoints: config.grade_points.toString(), remark: config.remark || '' }
-      : { grade: '', gradePoints: '', remark: '' };
-  };
+  // Calculate derived values when scores change
+  useEffect(() => {
+    const a1 = parseFloat(a1Score) || null;
+    const a2 = parseFloat(a2Score) || null;
+    const a3 = parseFloat(a3Score) || null;
+    const exam = parseFloat(examScore) || null;
 
-  // Handle marks change with auto grade calculation
-  const handleMarksChange = (value: string) => {
-    setMarks(value);
-    const marksNum = parseFloat(value);
-    if (!isNaN(marksNum) && marksNum >= 0 && marksNum <= 100) {
-      const result = calculateGrade(marksNum);
-      setGrade(result.grade);
-      setGradePoints(result.gradePoints);
-      if (!remark) setRemark(result.remark);
+    // Calculate average of available assessment scores
+    const validScores = [a1, a2, a3].filter(s => s !== null) as number[];
+    const avg = validScores.length > 0 ? validScores.reduce((a, b) => a + b, 0) / validScores.length : null;
+    setAvgScore(avg !== null ? Math.round(avg * 10) / 10 : null);
+
+    // Calculate 20% from CA (avg is out of 3, so avg/3 * 20)
+    const caScore = avg !== null ? (avg / 3) * 20 : null;
+    setCa20(caScore !== null ? Math.round(caScore * 10) / 10 : null);
+
+    // Calculate 80% from exam
+    const examContribution = exam !== null ? (exam / 100) * 80 : null;
+    setExam80(examContribution !== null ? Math.round(examContribution * 10) / 10 : null);
+
+    // Calculate total
+    const total = (caScore !== null && examContribution !== null) ? caScore + examContribution : null;
+    setTotal100(total !== null ? Math.round(total * 10) / 10 : null);
+
+    // Determine grade
+    if (total !== null && gradingConfig) {
+      const config = gradingConfig.find(g => total >= g.min_marks && total <= g.max_marks);
+      if (config) {
+        setGrade(config.grade);
+        setGradePoints(config.grade_points.toString());
+        if (!remark) setRemark(config.remark || '');
+      }
     }
-  };
+  }, [a1Score, a2Score, a3Score, examScore, gradingConfig, remark]);
 
   // Save submission mutation
   const saveSubmission = useMutation({
@@ -225,11 +264,16 @@ const MarksSubmission = () => {
         subject_id: selectedSubject,
         academic_year_id: currentYear.id,
         term: selectedTerm,
-        marks: parseFloat(marks),
+        a1_score: a1Score ? parseFloat(a1Score) : null,
+        a2_score: a2Score ? parseFloat(a2Score) : null,
+        a3_score: a3Score ? parseFloat(a3Score) : null,
+        exam_score: examScore ? parseFloat(examScore) : null,
+        marks: total100,
         grade,
         grade_points: gradePoints ? parseFloat(gradePoints) : null,
         remark,
-        teacher_initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`,
+        identifier: parseInt(identifier) || 2,
+        teacher_initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase(),
         submitted_by: profile.id,
         submitted_at: new Date().toISOString(),
         status: submitForApproval ? 'pending' : 'draft',
@@ -245,6 +289,11 @@ const MarksSubmission = () => {
     onSuccess: (submitForApproval) => {
       toast.success(submitForApproval ? 'Marks submitted for approval' : 'Marks saved as draft');
       queryClient.invalidateQueries({ queryKey: ['class-students-marks'] });
+      
+      // Auto-navigate to next student after submit
+      if (submitForApproval) {
+        setTimeout(() => navigateStudent('next'), 500);
+      }
     },
     onError: (error) => {
       toast.error(`Failed to save: ${error.message}`);
@@ -282,7 +331,7 @@ const MarksSubmission = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Submit Marks</h1>
-        <p className="text-muted-foreground">Enter student marks for approval</p>
+        <p className="text-muted-foreground">Enter student assessment and exam scores</p>
       </div>
 
       {/* Filters */}
@@ -399,40 +448,115 @@ const MarksSubmission = () => {
                 </div>
               </div>
 
-              {/* Marks Entry Form */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label>Marks (0-100)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={marks}
-                    onChange={(e) => handleMarksChange(e.target.value)}
-                    disabled={!canEdit}
-                    placeholder="Enter marks"
-                    className="text-lg"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Grade</Label>
-                  <div className="h-10 px-3 py-2 border rounded-md bg-muted flex items-center">
-                    <Badge variant="outline" className="text-lg">{grade || '-'}</Badge>
+              {/* Assessment Scores */}
+              <div className="space-y-4">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Calculator className="h-4 w-4" />
+                  Assessment Scores (A1, A2, A3 out of 3.0)
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                  <div className="space-y-2">
+                    <Label>A1</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="3"
+                      step="0.1"
+                      value={a1Score}
+                      onChange={(e) => setA1Score(e.target.value)}
+                      disabled={!canEdit}
+                      placeholder="0-3"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>A2</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="3"
+                      step="0.1"
+                      value={a2Score}
+                      onChange={(e) => setA2Score(e.target.value)}
+                      disabled={!canEdit}
+                      placeholder="0-3"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>A3</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="3"
+                      step="0.1"
+                      value={a3Score}
+                      onChange={(e) => setA3Score(e.target.value)}
+                      disabled={!canEdit}
+                      placeholder="0-3"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>AVG</Label>
+                    <div className="h-10 px-3 py-2 border rounded-md bg-muted flex items-center font-medium">
+                      {avgScore !== null ? avgScore.toFixed(1) : '-'}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>20% (CA)</Label>
+                    <div className="h-10 px-3 py-2 border rounded-md bg-muted flex items-center font-medium">
+                      {ca20 !== null ? ca20.toFixed(1) : '-'}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Exam (0-100)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={examScore}
+                      onChange={(e) => setExamScore(e.target.value)}
+                      disabled={!canEdit}
+                      placeholder="0-100"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>80% (Exam)</Label>
+                    <div className="h-10 px-3 py-2 border rounded-md bg-muted flex items-center font-medium">
+                      {exam80 !== null ? exam80.toFixed(1) : '-'}
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Grade Points</Label>
-                  <div className="h-10 px-3 py-2 border rounded-md bg-muted flex items-center">
-                    {gradePoints || '-'}
-                  </div>
+              </div>
+
+              {/* Calculated Results */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Total (100%)</Label>
+                  <p className="text-2xl font-bold">{total100 !== null ? total100.toFixed(1) : '-'}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Remark</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Grade</Label>
+                  <Badge variant="outline" className="text-xl px-3 py-1">{grade || '-'}</Badge>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Identifier</Label>
+                  <Select value={identifier} onValueChange={setIdentifier} disabled={!canEdit}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="2">2</SelectItem>
+                      <SelectItem value="3">3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <Label className="text-xs text-muted-foreground">Remark</Label>
                   <Input
                     value={remark}
                     onChange={(e) => setRemark(e.target.value)}
                     disabled={!canEdit}
-                    placeholder="Optional remark"
+                    placeholder="e.g., Satisfactory, Outstanding..."
                   />
                 </div>
               </div>
@@ -461,14 +585,14 @@ const MarksSubmission = () => {
                   <Button
                     variant="outline"
                     onClick={() => saveSubmission.mutate(false)}
-                    disabled={!marks || !canEdit || saveSubmission.isPending}
+                    disabled={!canEdit || saveSubmission.isPending}
                   >
                     <Save className="mr-2 h-4 w-4" />
                     Save Draft
                   </Button>
                   <Button
                     onClick={() => saveSubmission.mutate(true)}
-                    disabled={!marks || !canEdit || saveSubmission.isPending}
+                    disabled={total100 === null || !canEdit || saveSubmission.isPending}
                   >
                     <Send className="mr-2 h-4 w-4" />
                     Submit & Next
@@ -479,6 +603,35 @@ const MarksSubmission = () => {
           )}
         </Card>
       )}
+
+      {/* Grading Key */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Grading Key & Identifier Legend</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Grade Boundaries</p>
+              <div className="flex flex-wrap gap-2">
+                {gradingConfig?.map(gc => (
+                  <Badge key={gc.id} variant="outline" className="text-xs">
+                    {gc.grade}: {gc.min_marks}-{gc.max_marks}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Identifier Legend</p>
+              <div className="space-y-1 text-xs">
+                <p><strong>1 - Basic:</strong> 0.9-1.49 - Few LOs achieved</p>
+                <p><strong>2 - Moderate:</strong> 1.5-2.49 - Many LOs achieved</p>
+                <p><strong>3 - Outstanding:</strong> 2.5-3.0 - Most/all LOs achieved</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

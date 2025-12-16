@@ -4,3 +4,5 @@ export { default as GradingConfig } from './GradingConfig';
 export { default as ReportTemplates } from './ReportTemplates';
 export { default as ReportAnalytics } from './ReportAnalytics';
 export { default as SchoolSettings } from './SchoolSettings';
+export { default as TermConfiguration } from './TermConfiguration';
+export { default as ReportCardPreview } from './ReportCardPreview';

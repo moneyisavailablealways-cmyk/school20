@@ -8,7 +8,8 @@ import {
   User,
   GraduationCap,
   CalendarCheck,
-  ClipboardCheck
+  ClipboardCheck,
+  FileText
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';

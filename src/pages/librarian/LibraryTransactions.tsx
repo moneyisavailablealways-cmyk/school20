@@ -117,6 +117,7 @@ const LibraryTransactions = () => {
   const [transactionType, setTransactionType] = useState('borrow');
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
+  const [fineAmount, setFineAmount] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => {
@@ -448,6 +449,7 @@ const LibraryTransactions = () => {
           borrower_id: selectedBorrower.id,
           transaction_type: transactionType,
           due_date: new Date(dueDate).toISOString(),
+          fine_amount: fineAmount ? parseFloat(fineAmount) : 0,
           notes: notes || null
         }]);
 
@@ -473,6 +475,7 @@ const LibraryTransactions = () => {
       setFormClassFilter('all');
       setTransactionType('borrow');
       setDueDate('');
+      setFineAmount('');
       setNotes('');
       
       fetchTransactions();
@@ -1036,14 +1039,31 @@ const LibraryTransactions = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes (Optional)</Label>
-                  <Input
-                    id="notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Additional notes"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fine_amount">Fine Amount (Optional)</Label>
+                    <Input
+                      id="fine_amount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={fineAmount}
+                      onChange={(e) => setFineAmount(e.target.value)}
+                      placeholder="Enter fine if overdue"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Add a fine if the student exceeded the due date before returning
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Notes (Optional)</Label>
+                    <Input
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Additional notes"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

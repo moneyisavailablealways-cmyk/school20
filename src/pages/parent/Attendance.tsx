@@ -12,7 +12,7 @@ interface AttendanceRecord {
   id: string;
   date: string;
   status: string;
-  notes: string;
+  remarks: string | null;
   student_id: string;
   students: {
     profiles: {
@@ -143,7 +143,7 @@ const Attendance = () => {
           id,
           date,
           status,
-          notes,
+          remarks,
           student_id,
           students!inner (
             profiles!inner (
@@ -317,8 +317,8 @@ const Attendance = () => {
                               day: 'numeric'
                             })}
                           </p>
-                          {record.notes && (
-                            <p className="text-sm text-muted-foreground">{record.notes}</p>
+                          {record.remarks && (
+                            <p className="text-sm text-muted-foreground">{record.remarks}</p>
                           )}
                         </div>
                       </div>

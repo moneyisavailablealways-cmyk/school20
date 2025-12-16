@@ -7,7 +7,8 @@ import {
   Calendar, 
   User,
   GraduationCap,
-  CalendarCheck
+  CalendarCheck,
+  ClipboardCheck
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -17,6 +18,7 @@ const navigation = [
   { name: 'My Classes', href: '/teacher/classes', icon: Users },
   { name: 'Students', href: '/teacher/students', icon: GraduationCap },
   { name: 'Schedule', href: '/teacher/schedule', icon: Calendar },
+  { name: 'Attendance', href: '/teacher/attendance', icon: ClipboardCheck },
   { name: 'Appointments', href: '/teacher/appointments', icon: CalendarCheck },
   { name: 'Profile', href: '/teacher/profile', icon: User },
 ];

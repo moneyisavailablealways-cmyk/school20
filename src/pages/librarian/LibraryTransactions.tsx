@@ -82,21 +82,29 @@ const LibraryTransactions = () => {
   const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
   const [streams, setStreams] = useState<{ id: string; name: string; class_id: string }[]>([]);
 
+  // Dropdown options for form
+  const [allTitles, setAllTitles] = useState<{ id: string; title: string; author: string; item_type: string; subject: string; available_copies: number }[]>([]);
+  const [allAuthors, setAllAuthors] = useState<string[]>([]);
+  const [allSubjects, setAllSubjects] = useState<string[]>([]);
+
   // New transaction form state
   const [barcode, setBarcode] = useState('');
   const [bookInfo, setBookInfo] = useState<BookInfo | null>(null);
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState('');
   
-  // Book search filters for form
+  // Book search filters for form - using popovers
   const [formTitleFilter, setFormTitleFilter] = useState('');
   const [formAuthorFilter, setFormAuthorFilter] = useState('');
-  const [formItemTypeFilter, setFormItemTypeFilter] = useState('all');
+  const [formItemTypeFilter, setFormItemTypeFilter] = useState('');
   const [formSubjectFilter, setFormSubjectFilter] = useState('');
-  const [bookSearchResults, setBookSearchResults] = useState<BookInfo[]>([]);
-  const [bookSearchLoading, setBookSearchLoading] = useState(false);
   const [selectedBook, setSelectedBook] = useState<BookInfo | null>(null);
-  const [bookPopoverOpen, setBookPopoverOpen] = useState(false);
+  
+  // Popover open states
+  const [titlePopoverOpen, setTitlePopoverOpen] = useState(false);
+  const [authorPopoverOpen, setAuthorPopoverOpen] = useState(false);
+  const [itemTypePopoverOpen, setItemTypePopoverOpen] = useState(false);
+  const [subjectPopoverOpen, setSubjectPopoverOpen] = useState(false);
   
   const [borrowerSearch, setBorrowerSearch] = useState('');
   const [borrowerResults, setBorrowerResults] = useState<BorrowerInfo[]>([]);
@@ -120,15 +128,21 @@ const LibraryTransactions = () => {
   }, [transactions, searchQuery, statusFilter, authorFilter, titleFilter, itemTypeFilter, subjectFilter, borrowerNameFilter, classFilter, streamFilter]);
 
   const fetchFilterOptions = async () => {
-    // Fetch unique item types
+    // Fetch all library items for dropdowns
     const { data: items } = await supabase
       .from('library_items')
-      .select('item_type')
-      .eq('is_active', true);
+      .select('id, title, author, item_type, subject, available_copies')
+      .eq('is_active', true)
+      .order('title');
     
     if (items) {
+      setAllTitles(items);
       const uniqueTypes = [...new Set(items.map(i => i.item_type).filter(Boolean))];
       setItemTypes(uniqueTypes);
+      const uniqueAuthors = [...new Set(items.map(i => i.author).filter(Boolean))] as string[];
+      setAllAuthors(uniqueAuthors.sort());
+      const uniqueSubjects = [...new Set(items.map(i => i.subject).filter(Boolean))] as string[];
+      setAllSubjects(uniqueSubjects.sort());
     }
 
     // Fetch classes
@@ -291,55 +305,27 @@ const LibraryTransactions = () => {
     return () => clearTimeout(timer);
   }, [barcode, fetchBookByBarcode]);
 
-  // Search books with filters
-  const searchBooks = useCallback(async () => {
-    const hasFilter = formTitleFilter || formAuthorFilter || formItemTypeFilter !== 'all' || formSubjectFilter;
-    if (!hasFilter) {
-      setBookSearchResults([]);
-      return;
-    }
+  // Filter functions for dropdowns
+  const filteredTitles = allTitles.filter(book => 
+    book.available_copies > 0 &&
+    (!formTitleFilter || book.title.toLowerCase().includes(formTitleFilter.toLowerCase())) &&
+    (!formAuthorFilter || book.author?.toLowerCase().includes(formAuthorFilter.toLowerCase())) &&
+    (!formItemTypeFilter || book.item_type === formItemTypeFilter) &&
+    (!formSubjectFilter || book.subject?.toLowerCase().includes(formSubjectFilter.toLowerCase()))
+  );
 
-    setBookSearchLoading(true);
+  const filteredAuthors = allAuthors.filter(author =>
+    author.toLowerCase().includes(formAuthorFilter.toLowerCase())
+  );
 
-    try {
-      let query = supabase
-        .from('library_items')
-        .select('id, title, author, item_type, subject, available_copies')
-        .eq('is_active', true)
-        .gt('available_copies', 0);
+  const filteredSubjects = allSubjects.filter(subject =>
+    subject.toLowerCase().includes(formSubjectFilter.toLowerCase())
+  );
 
-      if (formTitleFilter) {
-        query = query.ilike('title', `%${formTitleFilter}%`);
-      }
-      if (formAuthorFilter) {
-        query = query.ilike('author', `%${formAuthorFilter}%`);
-      }
-      if (formItemTypeFilter !== 'all') {
-        query = query.eq('item_type', formItemTypeFilter);
-      }
-      if (formSubjectFilter) {
-        query = query.ilike('subject', `%${formSubjectFilter}%`);
-      }
+  const filteredItemTypes = itemTypes.filter(type =>
+    type.toLowerCase().includes(formItemTypeFilter.toLowerCase())
+  );
 
-      const { data, error } = await query.limit(20);
-
-      if (error) throw error;
-      setBookSearchResults(data || []);
-    } catch (err) {
-      console.error('Error searching books:', err);
-      setBookSearchResults([]);
-    } finally {
-      setBookSearchLoading(false);
-    }
-  }, [formTitleFilter, formAuthorFilter, formItemTypeFilter, formSubjectFilter]);
-
-  // Debounced book search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      searchBooks();
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchBooks]);
 
   // Search borrowers with class filter
   const searchBorrowers = useCallback(async (query: string, classId?: string) => {
@@ -476,9 +462,8 @@ const LibraryTransactions = () => {
       setBookError('');
       setFormTitleFilter('');
       setFormAuthorFilter('');
-      setFormItemTypeFilter('all');
+      setFormItemTypeFilter('');
       setFormSubjectFilter('');
-      setBookSearchResults([]);
       setSelectedBook(null);
       setBorrowerSearch('');
       setSelectedBorrower(null);
@@ -576,47 +561,214 @@ const LibraryTransactions = () => {
                 
                 {/* Book search filters in grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Book Title Dropdown */}
                   <div className="space-y-2">
                     <Label>Book Title</Label>
-                    <Input
-                      value={formTitleFilter}
-                      onChange={(e) => setFormTitleFilter(e.target.value)}
-                      placeholder="Filter by title..."
-                    />
+                    <Popover open={titlePopoverOpen} onOpenChange={setTitlePopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          <span className={cn("truncate", !formTitleFilter && "text-muted-foreground")}>
+                            {formTitleFilter || "Select title..."}
+                          </span>
+                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[300px] p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput 
+                            placeholder="Type to filter titles..." 
+                            value={formTitleFilter}
+                            onValueChange={setFormTitleFilter}
+                          />
+                          <CommandList>
+                            {filteredTitles.length === 0 && (
+                              <CommandEmpty>No books found.</CommandEmpty>
+                            )}
+                            <CommandGroup className="max-h-64 overflow-y-auto">
+                              {filteredTitles.slice(0, 50).map((book) => (
+                                <CommandItem
+                                  key={book.id}
+                                  value={book.id}
+                                  onSelect={() => {
+                                    setSelectedBook(book);
+                                    setFormTitleFilter(book.title);
+                                    setFormAuthorFilter(book.author || '');
+                                    setFormItemTypeFilter(book.item_type || '');
+                                    setFormSubjectFilter(book.subject || '');
+                                    setTitlePopoverOpen(false);
+                                    setBarcode('');
+                                    setBookInfo(null);
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{book.title}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {book.author || 'Unknown'} • {book.available_copies} available
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
+
+                  {/* Author Dropdown */}
                   <div className="space-y-2">
                     <Label>Author</Label>
-                    <Input
-                      value={formAuthorFilter}
-                      onChange={(e) => setFormAuthorFilter(e.target.value)}
-                      placeholder="Filter by author..."
-                    />
+                    <Popover open={authorPopoverOpen} onOpenChange={setAuthorPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          <span className={cn("truncate", !formAuthorFilter && "text-muted-foreground")}>
+                            {formAuthorFilter || "Select author..."}
+                          </span>
+                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[300px] p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput 
+                            placeholder="Type to filter authors..." 
+                            value={formAuthorFilter}
+                            onValueChange={setFormAuthorFilter}
+                          />
+                          <CommandList>
+                            {filteredAuthors.length === 0 && (
+                              <CommandEmpty>No authors found.</CommandEmpty>
+                            )}
+                            <CommandGroup className="max-h-64 overflow-y-auto">
+                              {filteredAuthors.slice(0, 50).map((author) => (
+                                <CommandItem
+                                  key={author}
+                                  value={author}
+                                  onSelect={() => {
+                                    setFormAuthorFilter(author);
+                                    setAuthorPopoverOpen(false);
+                                  }}
+                                >
+                                  {author}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
+
+                  {/* Item Type Dropdown */}
                   <div className="space-y-2">
                     <Label>Item Type</Label>
-                    <Select value={formItemTypeFilter} onValueChange={setFormItemTypeFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Types" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Types</SelectItem>
-                        {itemTypes.map((type) => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={itemTypePopoverOpen} onOpenChange={setItemTypePopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          <span className={cn("truncate", !formItemTypeFilter && "text-muted-foreground")}>
+                            {formItemTypeFilter || "All Types"}
+                          </span>
+                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput 
+                            placeholder="Type to filter..." 
+                            value={formItemTypeFilter}
+                            onValueChange={setFormItemTypeFilter}
+                          />
+                          <CommandList>
+                            <CommandGroup>
+                              <CommandItem
+                                value=""
+                                onSelect={() => {
+                                  setFormItemTypeFilter('');
+                                  setItemTypePopoverOpen(false);
+                                }}
+                              >
+                                All Types
+                              </CommandItem>
+                              {filteredItemTypes.map((type) => (
+                                <CommandItem
+                                  key={type}
+                                  value={type}
+                                  onSelect={() => {
+                                    setFormItemTypeFilter(type);
+                                    setItemTypePopoverOpen(false);
+                                  }}
+                                >
+                                  {type}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Subject Dropdown */}
                   <div className="space-y-2">
                     <Label>Subject</Label>
-                    <Input
-                      value={formSubjectFilter}
-                      onChange={(e) => setFormSubjectFilter(e.target.value)}
-                      placeholder="Filter by subject..."
-                    />
+                    <Popover open={subjectPopoverOpen} onOpenChange={setSubjectPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          <span className={cn("truncate", !formSubjectFilter && "text-muted-foreground")}>
+                            {formSubjectFilter || "Select subject..."}
+                          </span>
+                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[250px] p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput 
+                            placeholder="Type to filter subjects..." 
+                            value={formSubjectFilter}
+                            onValueChange={setFormSubjectFilter}
+                          />
+                          <CommandList>
+                            {filteredSubjects.length === 0 && (
+                              <CommandEmpty>No subjects found.</CommandEmpty>
+                            )}
+                            <CommandGroup className="max-h-64 overflow-y-auto">
+                              {filteredSubjects.slice(0, 50).map((subject) => (
+                                <CommandItem
+                                  key={subject}
+                                  value={subject}
+                                  onSelect={() => {
+                                    setFormSubjectFilter(subject);
+                                    setSubjectPopoverOpen(false);
+                                  }}
+                                >
+                                  {subject}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
+
+                  {/* Barcode Scanner */}
                   <div className="space-y-2">
                     <Label>Or Scan Barcode</Label>
                     <div className="relative">
@@ -641,25 +793,22 @@ const LibraryTransactions = () => {
                   </div>
                 </div>
 
-                {/* Book Search Results */}
-                {bookSearchLoading && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Searching books...
-                  </div>
-                )}
-                
-                {bookSearchResults.length > 0 && !selectedBook && !bookInfo && (
-                  <div className="border rounded-md max-h-40 overflow-y-auto">
-                    {bookSearchResults.map((book) => (
+                {/* Filtered Books Results (when filters applied but no book selected) */}
+                {!selectedBook && !bookInfo && (formTitleFilter || formAuthorFilter || formItemTypeFilter || formSubjectFilter) && filteredTitles.length > 0 && (
+                  <div className="border rounded-md max-h-48 overflow-y-auto bg-background">
+                    <div className="p-2 border-b bg-muted/50">
+                      <span className="text-sm text-muted-foreground">{filteredTitles.length} book(s) match your filters</span>
+                    </div>
+                    {filteredTitles.slice(0, 10).map((book) => (
                       <div
                         key={book.id}
-                        className={cn(
-                          "p-3 cursor-pointer hover:bg-muted border-b last:border-b-0",
-                          selectedBook?.id === book.id && "bg-primary/10"
-                        )}
+                        className="p-3 cursor-pointer hover:bg-muted border-b last:border-b-0"
                         onClick={() => {
                           setSelectedBook(book);
+                          setFormTitleFilter(book.title);
+                          setFormAuthorFilter(book.author || '');
+                          setFormItemTypeFilter(book.item_type || '');
+                          setFormSubjectFilter(book.subject || '');
                           setBarcode('');
                           setBookInfo(null);
                         }}
@@ -690,6 +839,10 @@ const LibraryTransactions = () => {
                             setSelectedBook(null);
                             setBookInfo(null);
                             setBarcode('');
+                            setFormTitleFilter('');
+                            setFormAuthorFilter('');
+                            setFormItemTypeFilter('');
+                            setFormSubjectFilter('');
                           }}
                         >
                           <X className="h-4 w-4" />

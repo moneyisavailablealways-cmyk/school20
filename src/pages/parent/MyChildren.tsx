@@ -232,7 +232,7 @@ const MyChildren = () => {
 
           return {
             ...studentData,
-            profiles: profileData || { first_name: '', last_name: '', email: '', phone: '' },
+            profiles: profileData || { first_name: 'Name', last_name: 'Not Available', email: '', phone: '' },
             student_enrollments: enrollmentData?.map(enrollment => ({
               class: enrollment.classes?.name || 'N/A',
               status: enrollment.status

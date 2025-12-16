@@ -56,33 +56,89 @@ const MarksSubmission = () => {
   const [gradePoints, setGradePoints] = useState<string>('');
   const [remark, setRemark] = useState<string>('');
 
-  // Fetch classes where teacher teaches
-  const { data: classes } = useQuery({
-    queryKey: ['teacher-classes', profile?.id],
+  // Fetch teacher record (used for specializations)
+  const { data: teacherRecord } = useQuery({
+    queryKey: ['teacher-record', profile?.id],
     queryFn: async () => {
+      if (!profile?.id) return null;
       const { data, error } = await supabase
-        .from('classes')
-        .select('id, name')
-        .order('name');
+        .from('teachers')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
+    enabled: !!profile?.id,
   });
 
-  // Fetch subjects teacher teaches
-  const { data: subjects } = useQuery({
-    queryKey: ['teacher-subjects', profile?.id],
+  // Fetch classes assigned to this teacher (class teacher, section teacher, or specialization)
+  const { data: classes } = useQuery({
+    queryKey: ['teacher-classes', profile?.id, teacherRecord?.id],
     queryFn: async () => {
+      if (!profile?.id) return [];
+
+      const classIds = new Set<string>();
+
+      const [{ data: classTeacherClasses }, { data: sectionTeacherStreams }, { data: specializations }] = await Promise.all([
+        supabase.from('classes').select('id, name').eq('class_teacher_id', profile.id),
+        supabase.from('streams').select('class_id').eq('section_teacher_id', profile.id),
+        teacherRecord?.id
+          ? supabase
+              .from('teacher_specializations')
+              .select('class_id')
+              .eq('teacher_id', teacherRecord.id)
+              .not('class_id', 'is', null)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+      (classTeacherClasses || []).forEach((c: any) => classIds.add(c.id));
+      (sectionTeacherStreams || []).forEach((s: any) => s.class_id && classIds.add(s.class_id));
+      (specializations || []).forEach((sp: any) => sp.class_id && classIds.add(sp.class_id));
+
+      if (classIds.size === 0) return [];
+
+      const { data: classDetails, error } = await supabase
+        .from('classes')
+        .select('id, name')
+        .in('id', Array.from(classIds))
+        .order('name');
+
+      if (error) throw error;
+      return classDetails || [];
+    },
+    enabled: !!profile?.id,
+  });
+
+  // Fetch subjects assigned to this teacher (from specializations)
+  const { data: subjects } = useQuery({
+    queryKey: ['teacher-subjects', teacherRecord?.id],
+    queryFn: async () => {
+      if (!teacherRecord?.id) return [];
+
+      const { data: specializations, error: specError } = await supabase
+        .from('teacher_specializations')
+        .select('subject_id')
+        .eq('teacher_id', teacherRecord.id)
+        .not('subject_id', 'is', null);
+
+      if (specError) throw specError;
+
+      const subjectIds = Array.from(new Set((specializations || []).map((s: any) => s.subject_id).filter(Boolean)));
+      if (subjectIds.length === 0) return [];
+
       const { data, error } = await supabase
         .from('subjects')
         .select('id, name, code')
         .eq('is_active', true)
+        .in('id', subjectIds)
         .order('name');
-      if (error) throw error;
-      return data;
-    },
-  });
 
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!teacherRecord?.id,
+  });
   // Fetch current academic year
   const { data: currentYear } = useQuery({
     queryKey: ['current-academic-year'],
@@ -122,6 +178,7 @@ const MarksSubmission = () => {
         .from('student_enrollments')
         .select('student_id')
         .eq('class_id', selectedClass)
+        .eq('academic_year_id', currentYear.id)
         .eq('status', 'active');
 
       if (enrollError) throw enrollError;
@@ -134,6 +191,7 @@ const MarksSubmission = () => {
         .from('student_subject_enrollments')
         .select('student_id')
         .eq('subject_id', selectedSubject)
+        .eq('academic_year_id', currentYear.id)
         .eq('status', 'active')
         .in('student_id', classStudentIds);
 

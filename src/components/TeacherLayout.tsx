@@ -20,6 +20,7 @@ const navigation = [
   { name: 'Schedule', href: '/teacher/schedule', icon: Calendar },
   { name: 'Student Attendance', href: '/teacher/attendance', icon: ClipboardCheck },
   { name: 'My Attendance', href: '/teacher/my-attendance', icon: User },
+  { name: 'Submit Marks', href: '/teacher/marks', icon: FileText },
   { name: 'Appointments', href: '/teacher/appointments', icon: CalendarCheck },
   { name: 'Profile', href: '/teacher/profile', icon: User },
 ];

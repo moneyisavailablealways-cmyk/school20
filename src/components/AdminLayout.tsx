@@ -16,6 +16,7 @@ import {
   Building,
   Heart,
   ClipboardCheck,
+  FileText,
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -32,6 +33,7 @@ const navigation = [
   { name: 'Timetable', href: '/admin/timetable', icon: Calendar },
   { name: 'Student Attendance', href: '/admin/attendance', icon: ClipboardCheck },
   { name: 'Teacher Attendance', href: '/admin/teacher-attendance', icon: Users },
+  { name: 'Report Cards', href: '/admin/report-cards', icon: FileText },
   { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   { name: 'Communications', href: '/admin/communications', icon: MessageCircle },
   { name: 'Settings', href: '/admin/settings', icon: Settings },

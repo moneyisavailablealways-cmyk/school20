@@ -42,6 +42,8 @@ import TeacherAttendance from "./pages/teacher/Attendance";
 import TeacherMyAttendance from "./pages/teacher/MyAttendance";
 import TeacherAppointments from "./pages/teacher/Appointments";
 import AdminTeacherAttendance from "./pages/admin/TeacherAttendance";
+import AdminReportCards from "./pages/admin/ReportCards";
+import TeacherMarksSubmission from "./pages/teacher/MarksSubmission";
 import HeadTeacherTeacherAttendance from "./pages/head-teacher/TeacherAttendance";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentSubjects from "./pages/student/StudentSubjects";
@@ -134,6 +136,7 @@ const App = () => (
               <Route path="timetable" element={<Timetable />} />
               <Route path="attendance" element={<AdminAttendance />} />
               <Route path="teacher-attendance" element={<AdminTeacherAttendance />} />
+              <Route path="report-cards" element={<AdminReportCards />} />
               <Route path="reports" element={<Reports />} />
               <Route path="communications" element={<Communications />} />
               <Route path="settings" element={<Settings />} />
@@ -156,6 +159,7 @@ const App = () => (
               <Route path="attendance" element={<TeacherAttendance />} />
               <Route path="my-attendance" element={<TeacherMyAttendance />} />
               <Route path="appointments" element={<TeacherAppointments />} />
+              <Route path="marks" element={<TeacherMarksSubmission />} />
               <Route path="profile" element={<TeacherProfile />} />
             </Route>
             

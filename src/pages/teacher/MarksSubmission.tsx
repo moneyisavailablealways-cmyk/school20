@@ -111,27 +111,25 @@ const MarksSubmission = () => {
     },
   });
 
-  // Fetch students and existing submissions
+  // Fetch students and existing submissions using sequential pattern to avoid RLS join issues
   const { data: students, isLoading: loadingStudents } = useQuery({
     queryKey: ['class-students-marks', selectedClass, selectedSubject, selectedTerm, currentYear?.id],
     queryFn: async () => {
       if (!selectedClass || !selectedSubject || !currentYear?.id) return [];
 
-      // Fetch students enrolled in the class
+      // Step 1: Fetch student IDs enrolled in the class
       const { data: classEnrollments, error: enrollError } = await supabase
         .from('student_enrollments')
-        .select(`
-          student_id,
-          students!inner(id, student_id, profile_id, profiles:profile_id(first_name, last_name))
-        `)
+        .select('student_id')
         .eq('class_id', selectedClass)
         .eq('status', 'active');
 
       if (enrollError) throw enrollError;
+      if (!classEnrollments || classEnrollments.length === 0) return [];
 
-      const classStudentIds = classEnrollments?.map(e => e.student_id) || [];
+      const classStudentIds = classEnrollments.map(e => e.student_id);
 
-      // Fetch students enrolled in the selected subject
+      // Step 2: Fetch students enrolled in the selected subject (filter by class students)
       const { data: subjectEnrollments, error: subjectEnrollError } = await supabase
         .from('student_subject_enrollments')
         .select('student_id')
@@ -140,34 +138,53 @@ const MarksSubmission = () => {
         .in('student_id', classStudentIds);
 
       if (subjectEnrollError) throw subjectEnrollError;
+      if (!subjectEnrollments || subjectEnrollments.length === 0) return [];
 
-      // Filter to only students who have both class AND subject enrollment
-      const subjectStudentIds = new Set(subjectEnrollments?.map(e => e.student_id) || []);
-      const enrollments = classEnrollments?.filter(e => subjectStudentIds.has(e.student_id)) || [];
+      // Get student IDs that have BOTH class AND subject enrollment
+      const validStudentIds = subjectEnrollments.map(e => e.student_id);
 
-      // Fetch existing submissions
-      const studentIds = enrollments.map(e => e.student_id);
+      // Step 3: Fetch student details separately
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('id, student_id, profile_id')
+        .in('id', validStudentIds);
+
+      if (studentsError) throw studentsError;
+      if (!studentsData || studentsData.length === 0) return [];
+
+      // Step 4: Fetch profiles separately
+      const profileIds = studentsData.map(s => s.profile_id).filter(Boolean);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', profileIds);
+
+      if (profilesError) throw profilesError;
+
+      // Create profile lookup map
+      const profileMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+
+      // Step 5: Fetch existing submissions
       const { data: submissions, error: subError } = await supabase
         .from('subject_submissions')
         .select('*')
         .eq('subject_id', selectedSubject)
         .eq('academic_year_id', currentYear.id)
         .eq('term', selectedTerm)
-        .in('student_id', studentIds);
+        .in('student_id', validStudentIds);
 
       if (subError) throw subError;
 
       // Build students array
-      const studentList: StudentData[] = enrollments?.map(enrollment => {
-        const student = enrollment.students as any;
-        const studentProfile = student?.profiles;
-        const submission = submissions?.find(s => s.student_id === enrollment.student_id);
+      const studentList: StudentData[] = studentsData.map(student => {
+        const profile = profileMap.get(student.profile_id);
+        const submission = submissions?.find(s => s.student_id === student.id);
         
         return {
-          id: enrollment.student_id,
-          studentId: enrollment.student_id,
-          name: `${studentProfile?.first_name || ''} ${studentProfile?.last_name || ''}`.trim() || 'Unknown',
-          admissionNo: student?.student_id || '',
+          id: student.id,
+          studentId: student.id,
+          name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unknown',
+          admissionNo: student.student_id || '',
           existingSubmission: submission ? {
             id: submission.id,
             marks: submission.marks,
@@ -182,7 +199,7 @@ const MarksSubmission = () => {
             identifier: submission.identifier,
           } : undefined,
         };
-      }) || [];
+      });
 
       return studentList;
     },

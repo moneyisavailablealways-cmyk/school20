@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { 
   BookOpen, 
@@ -15,8 +16,8 @@ import {
   Clock, 
   AlertCircle, 
   CheckCircle,
-  Eye,
-  Heart
+  Heart,
+  Bell
 } from 'lucide-react';
 
 const StudentLibrary = () => {
@@ -24,7 +25,7 @@ const StudentLibrary = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Get borrowed books
+  // Get borrowed books with full details
   const { data: borrowedBooks, isLoading: borrowedLoading } = useQuery({
     queryKey: ['student-borrowed-books', profile?.id],
     queryFn: async () => {
@@ -36,12 +37,13 @@ const StudentLibrary = () => {
             title,
             author,
             isbn,
-            category
+            category,
+            item_type,
+            subject
           )
         `)
         .eq('borrower_id', profile?.id)
         .eq('transaction_type', 'borrow')
-        .is('return_date', null)
         .order('issue_date', { ascending: false });
 
       if (error) throw error;
@@ -79,12 +81,32 @@ const StudentLibrary = () => {
             title,
             author,
             isbn,
-            category
+            category,
+            item_type,
+            subject
           )
         `)
         .eq('reserver_id', profile?.id)
         .eq('status', 'active')
         .order('reservation_date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id
+  });
+
+  // Get notifications
+  const { data: notifications } = useQuery({
+    queryKey: ['student-library-notifications', profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', profile?.id)
+        .eq('category', 'library')
+        .order('created_at', { ascending: false })
+        .limit(10);
 
       if (error) throw error;
       return data || [];
@@ -102,7 +124,7 @@ const StudentLibrary = () => {
         .from('library_items')
         .select('*')
         .eq('is_active', true)
-        .or(`title.ilike.%${searchQuery}%,author.ilike.%${searchQuery}%,isbn.ilike.%${searchQuery}%`)
+        .or(`title.ilike.%${searchQuery}%,author.ilike.%${searchQuery}%,isbn.ilike.%${searchQuery}%,subject.ilike.%${searchQuery}%`)
         .order('title')
         .limit(20);
 
@@ -136,6 +158,15 @@ const StudentLibrary = () => {
     }
   });
 
+  // Mark notification as read
+  const markAsRead = async (notificationId: string) => {
+    await supabase
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('id', notificationId);
+    queryClient.invalidateQueries({ queryKey: ['student-library-notifications'] });
+  };
+
   const isOverdue = (dueDate: string) => {
     return new Date(dueDate) < new Date();
   };
@@ -143,6 +174,26 @@ const StudentLibrary = () => {
   const getDaysUntilDue = (dueDate: string) => {
     const days = Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     return days;
+  };
+
+  const getStatus = (transaction: any) => {
+    if (transaction.return_date) return 'returned';
+    if (isOverdue(transaction.due_date)) return 'overdue';
+    if (getDaysUntilDue(transaction.due_date) <= 3) return 'due_soon';
+    return 'active';
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'returned':
+        return <Badge variant="secondary"><CheckCircle className="h-3 w-3 mr-1" /> Returned</Badge>;
+      case 'overdue':
+        return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" /> Overdue</Badge>;
+      case 'due_soon':
+        return <Badge variant="outline" className="text-yellow-600 border-yellow-600">Due Soon</Badge>;
+      default:
+        return <Badge variant="default">Active</Badge>;
+    }
   };
 
   if (borrowedLoading || finesLoading || reservationsLoading) {
@@ -171,6 +222,9 @@ const StudentLibrary = () => {
   }
 
   const totalFines = fines?.reduce((sum, fine) => sum + Number(fine.amount), 0) || 0;
+  const activeBooks = borrowedBooks?.filter(b => !b.return_date) || [];
+  const returnedBooks = borrowedBooks?.filter(b => b.return_date) || [];
+  const unreadNotifications = notifications?.filter(n => !n.is_read) || [];
 
   return (
     <div className="space-y-6">
@@ -182,7 +236,7 @@ const StudentLibrary = () => {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
@@ -190,7 +244,7 @@ const StudentLibrary = () => {
               <span className="text-sm font-medium">Books Borrowed</span>
             </div>
             <div className="mt-2">
-              <div className="text-2xl font-bold">{borrowedBooks?.length || 0}</div>
+              <div className="text-2xl font-bold">{activeBooks.length}</div>
             </div>
           </CardContent>
         </Card>
@@ -220,178 +274,316 @@ const StudentLibrary = () => {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <Bell className={`h-5 w-5 ${unreadNotifications.length > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
+              <span className="text-sm font-medium">Notifications</span>
+            </div>
+            <div className="mt-2">
+              <div className="text-2xl font-bold">{unreadNotifications.length}</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Search Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Search Library Catalog
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Search by title, author, or ISBN..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1"
-            />
-            <Button variant="outline" disabled={searchLoading}>
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {searchResults && searchResults.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {searchResults.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{item.title}</h4>
-                    <p className="text-sm text-muted-foreground">{item.author}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline">{item.category}</Badge>
-                      <span className="text-xs text-muted-foreground">
-                        Available: {item.available_copies}/{item.total_copies}
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => reserveMutation.mutate(item.id)}
-                    disabled={item.available_copies === 0 || reserveMutation.isPending}
-                  >
-                    Reserve
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="borrowed" className="w-full">
+        <TabsList>
+          <TabsTrigger value="borrowed">Currently Borrowed</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="search">Search Catalog</TabsTrigger>
+          <TabsTrigger value="notifications">
+            Notifications
+            {unreadNotifications.length > 0 && (
+              <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 text-xs">
+                {unreadNotifications.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Borrowed Books */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Currently Borrowed Books
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {borrowedBooks && borrowedBooks.length > 0 ? (
-            <div className="space-y-4">
-              {borrowedBooks.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{transaction.library_items?.title}</h4>
-                    <p className="text-sm text-muted-foreground">{transaction.library_items?.author}</p>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>Borrowed: {new Date(transaction.issue_date).toLocaleDateString()}</span>
+        {/* Currently Borrowed */}
+        <TabsContent value="borrowed" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Currently Borrowed Books
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {activeBooks.length > 0 ? (
+                <div className="space-y-4">
+                  {activeBooks.map((transaction) => {
+                    const status = getStatus(transaction);
+                    return (
+                      <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{transaction.library_items?.title}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            by {transaction.library_items?.author || 'Unknown Author'}
+                          </p>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {transaction.library_items?.item_type && (
+                              <Badge variant="outline">{transaction.library_items.item_type}</Badge>
+                            )}
+                            {transaction.library_items?.subject && (
+                              <Badge variant="outline">{transaction.library_items.subject}</Badge>
+                            )}
+                            {transaction.library_items?.category && (
+                              <Badge variant="outline">{transaction.library_items.category}</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              <span>Borrowed: {new Date(transaction.issue_date).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4" />
+                              <span>Due: {new Date(transaction.due_date).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {getStatusBadge(status)}
+                          <div className="text-xs text-muted-foreground mt-2">
+                            {getDaysUntilDue(transaction.due_date)} days {getDaysUntilDue(transaction.due_date) < 0 ? 'overdue' : 'left'}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        <span>Due: {new Date(transaction.due_date).toLocaleDateString()}</span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No books currently borrowed</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Reservations */}
+          {reservations && reservations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="h-5 w-5" />
+                  My Reservations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {reservations.map((reservation) => (
+                    <div key={reservation.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{reservation.library_items?.title}</h4>
+                        <p className="text-sm text-muted-foreground">{reservation.library_items?.author}</p>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                          <span>Reserved: {new Date(reservation.reservation_date).toLocaleDateString()}</span>
+                          <span>Expires: {new Date(reservation.expiry_date).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">Reserved</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Outstanding Fines */}
+          {fines && fines.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                  Outstanding Fines
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {fines.map((fine) => (
+                    <div key={fine.id} className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{fine.fine_type}</h4>
+                        <p className="text-sm text-muted-foreground">{fine.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Date: {new Date(fine.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-red-600">${Number(fine.amount).toFixed(2)}</div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    {isOverdue(transaction.due_date) ? (
-                      <Badge variant="destructive" className="mb-2">
-                        Overdue
-                      </Badge>
-                    ) : getDaysUntilDue(transaction.due_date) <= 3 ? (
-                      <Badge variant="outline" className="mb-2">
-                        Due Soon
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="mb-2">
-                        Active
-                      </Badge>
-                    )}
-                    <div className="text-xs text-muted-foreground">
-                      {getDaysUntilDue(transaction.due_date)} days left
+                  ))}
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">Total Outstanding:</span>
+                      <span className="text-xl font-bold text-red-600">${totalFines.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No books currently borrowed</p>
-            </div>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      {/* Reservations */}
-      {reservations && reservations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5" />
-              My Reservations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {reservations.map((reservation) => (
-                <div key={reservation.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{reservation.library_items?.title}</h4>
-                    <p className="text-sm text-muted-foreground">{reservation.library_items?.author}</p>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                      <span>Reserved: {new Date(reservation.reservation_date).toLocaleDateString()}</span>
-                      <span>Expires: {new Date(reservation.expiry_date).toLocaleDateString()}</span>
+        {/* History */}
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Borrowing History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {returnedBooks.length > 0 ? (
+                <div className="space-y-4">
+                  {returnedBooks.map((transaction) => (
+                    <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{transaction.library_items?.title}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          by {transaction.library_items?.author || 'Unknown Author'}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {transaction.library_items?.item_type && (
+                            <Badge variant="outline">{transaction.library_items.item_type}</Badge>
+                          )}
+                          {transaction.library_items?.subject && (
+                            <Badge variant="outline">{transaction.library_items.subject}</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                          <span>Borrowed: {new Date(transaction.issue_date).toLocaleDateString()}</span>
+                          <span>Returned: {new Date(transaction.return_date).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">
+                        <CheckCircle className="h-3 w-3 mr-1" /> Returned
+                      </Badge>
                     </div>
-                  </div>
-                  <Badge variant="secondary">Reserved</Badge>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No borrowing history</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Outstanding Fines */}
-      {fines && fines.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-              Outstanding Fines
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {fines.map((fine) => (
-                <div key={fine.id} className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{fine.fine_type}</h4>
-                    <p className="text-sm text-muted-foreground">{fine.description}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Date: {new Date(fine.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-red-600">${Number(fine.amount).toFixed(2)}</div>
-                  </div>
-                </div>
-              ))}
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold">Total Outstanding:</span>
-                  <span className="text-xl font-bold text-red-600">${totalFines.toFixed(2)}</span>
-                </div>
+        {/* Search Catalog */}
+        <TabsContent value="search">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Search Library Catalog
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Search by title, author, ISBN, or subject..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1"
+                />
+                <Button variant="outline" disabled={searchLoading}>
+                  <Search className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              
+              {searchResults && searchResults.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {searchResults.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.title}</h4>
+                        <p className="text-sm text-muted-foreground">{item.author}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          {item.item_type && <Badge variant="outline">{item.item_type}</Badge>}
+                          {item.subject && <Badge variant="outline">{item.subject}</Badge>}
+                          {item.category && <Badge variant="outline">{item.category}</Badge>}
+                          <span className="text-xs text-muted-foreground">
+                            Available: {item.available_copies}/{item.total_copies}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => reserveMutation.mutate(item.id)}
+                        disabled={item.available_copies === 0 || reserveMutation.isPending}
+                      >
+                        Reserve
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {searchQuery.length > 2 && !searchLoading && searchResults?.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No books found matching your search</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notifications */}
+        <TabsContent value="notifications">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Library Notifications
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {notifications && notifications.length > 0 ? (
+                <div className="space-y-4">
+                  {notifications.map((notification) => (
+                    <div 
+                      key={notification.id} 
+                      className={`flex items-start justify-between p-4 border rounded-lg cursor-pointer transition-colors ${
+                        notification.is_read ? 'bg-muted/30' : 'bg-primary/5 border-primary/20'
+                      }`}
+                      onClick={() => !notification.is_read && markAsRead(notification.id)}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{notification.title}</h4>
+                          {!notification.is_read && (
+                            <Badge variant="default" className="h-5 text-xs">New</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {new Date(notification.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No notifications</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

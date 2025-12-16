@@ -8,7 +8,8 @@ import {
   CreditCard, 
   Bell, 
   Home,
-  User
+  User,
+  BookOpen
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Attendance', href: '/parent/attendance', icon: Calendar },
   { name: 'Reports & Grades', href: '/parent/reports', icon: FileText },
   { name: 'Fees & Payments', href: '/parent/payments', icon: CreditCard },
+  { name: 'Library', href: '/parent/library', icon: BookOpen },
   { name: 'Appointments', href: '/parent/appointments', icon: Calendar },
   { name: 'Announcements', href: '/parent/announcements', icon: Bell },
   { name: 'Profile', href: '/parent/profile', icon: User },

@@ -88,11 +88,22 @@ const LibraryTransactions = () => {
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState('');
   
+  // Book search filters for form
+  const [formTitleFilter, setFormTitleFilter] = useState('');
+  const [formAuthorFilter, setFormAuthorFilter] = useState('');
+  const [formItemTypeFilter, setFormItemTypeFilter] = useState('all');
+  const [formSubjectFilter, setFormSubjectFilter] = useState('');
+  const [bookSearchResults, setBookSearchResults] = useState<BookInfo[]>([]);
+  const [bookSearchLoading, setBookSearchLoading] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<BookInfo | null>(null);
+  const [bookPopoverOpen, setBookPopoverOpen] = useState(false);
+  
   const [borrowerSearch, setBorrowerSearch] = useState('');
   const [borrowerResults, setBorrowerResults] = useState<BorrowerInfo[]>([]);
   const [selectedBorrower, setSelectedBorrower] = useState<BorrowerInfo | null>(null);
   const [borrowerLoading, setBorrowerLoading] = useState(false);
   const [borrowerPopoverOpen, setBorrowerPopoverOpen] = useState(false);
+  const [formClassFilter, setFormClassFilter] = useState('all');
   
   const [transactionType, setTransactionType] = useState('borrow');
   const [dueDate, setDueDate] = useState('');
@@ -280,8 +291,58 @@ const LibraryTransactions = () => {
     return () => clearTimeout(timer);
   }, [barcode, fetchBookByBarcode]);
 
-  // Search borrowers
-  const searchBorrowers = useCallback(async (query: string) => {
+  // Search books with filters
+  const searchBooks = useCallback(async () => {
+    const hasFilter = formTitleFilter || formAuthorFilter || formItemTypeFilter !== 'all' || formSubjectFilter;
+    if (!hasFilter) {
+      setBookSearchResults([]);
+      return;
+    }
+
+    setBookSearchLoading(true);
+
+    try {
+      let query = supabase
+        .from('library_items')
+        .select('id, title, author, item_type, subject, available_copies')
+        .eq('is_active', true)
+        .gt('available_copies', 0);
+
+      if (formTitleFilter) {
+        query = query.ilike('title', `%${formTitleFilter}%`);
+      }
+      if (formAuthorFilter) {
+        query = query.ilike('author', `%${formAuthorFilter}%`);
+      }
+      if (formItemTypeFilter !== 'all') {
+        query = query.eq('item_type', formItemTypeFilter);
+      }
+      if (formSubjectFilter) {
+        query = query.ilike('subject', `%${formSubjectFilter}%`);
+      }
+
+      const { data, error } = await query.limit(20);
+
+      if (error) throw error;
+      setBookSearchResults(data || []);
+    } catch (err) {
+      console.error('Error searching books:', err);
+      setBookSearchResults([]);
+    } finally {
+      setBookSearchLoading(false);
+    }
+  }, [formTitleFilter, formAuthorFilter, formItemTypeFilter, formSubjectFilter]);
+
+  // Debounced book search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchBooks();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchBooks]);
+
+  // Search borrowers with class filter
+  const searchBorrowers = useCallback(async (query: string, classId?: string) => {
     if (!query.trim() || query.length < 2) {
       setBorrowerResults([]);
       return;
@@ -296,7 +357,7 @@ const LibraryTransactions = () => {
         .select('id, first_name, last_name, email')
         .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`)
         .eq('is_active', true)
-        .limit(20);
+        .limit(50);
 
       if (error) throw error;
 
@@ -308,23 +369,6 @@ const LibraryTransactions = () => {
       // Fetch student enrollment info for these profiles
       const profileIds = profiles.map(p => p.id);
       
-      const { data: students } = await supabase
-        .from('students')
-        .select('profile_id')
-        .in('profile_id', profileIds);
-
-      const studentProfileIds = students?.map(s => s.profile_id) || [];
-
-      // Fetch enrollments for students
-      const { data: enrollments } = await supabase
-        .from('student_enrollments')
-        .select(`
-          student_id,
-          classes (id, name),
-          streams (id, name)
-        `)
-        .eq('status', 'active');
-
       // Get student to profile mapping
       const { data: studentMappings } = await supabase
         .from('students')
@@ -332,22 +376,51 @@ const LibraryTransactions = () => {
         .in('profile_id', profileIds);
 
       const profileToStudent = new Map(studentMappings?.map(s => [s.profile_id, s.id]) || []);
-      const studentToEnrollment = new Map(enrollments?.map(e => [e.student_id, e]) || []);
+      const studentIds = studentMappings?.map(s => s.id) || [];
 
-      // Map results with class/stream info
-      const results: BorrowerInfo[] = profiles.map(p => {
-        const studentId = profileToStudent.get(p.id);
-        const enrollment = studentId ? studentToEnrollment.get(studentId) : null;
-        
-        return {
-          id: p.id,
-          first_name: p.first_name,
-          last_name: p.last_name,
-          email: p.email,
-          class_name: enrollment?.classes?.name,
-          stream_name: enrollment?.streams?.name
-        };
-      });
+      // Fetch enrollments for students, optionally filtered by class
+      let enrollmentQuery = supabase
+        .from('student_enrollments')
+        .select(`
+          student_id,
+          class_id,
+          classes (id, name),
+          streams (id, name)
+        `)
+        .in('student_id', studentIds)
+        .eq('status', 'active');
+
+      if (classId && classId !== 'all') {
+        enrollmentQuery = enrollmentQuery.eq('class_id', classId);
+      }
+
+      const { data: enrollments } = await enrollmentQuery;
+
+      const studentToEnrollment = new Map(enrollments?.map(e => [e.student_id, e]) || []);
+      const enrolledStudentIds = new Set(enrollments?.map(e => e.student_id) || []);
+
+      // Map results with class/stream info, filter by class if specified
+      let results: BorrowerInfo[] = profiles
+        .filter(p => {
+          if (classId && classId !== 'all') {
+            const studentId = profileToStudent.get(p.id);
+            return studentId && enrolledStudentIds.has(studentId);
+          }
+          return true;
+        })
+        .map(p => {
+          const studentId = profileToStudent.get(p.id);
+          const enrollment = studentId ? studentToEnrollment.get(studentId) : null;
+          
+          return {
+            id: p.id,
+            first_name: p.first_name,
+            last_name: p.last_name,
+            email: p.email,
+            class_name: enrollment?.classes?.name,
+            stream_name: enrollment?.streams?.name
+          };
+        });
 
       setBorrowerResults(results);
     } catch (err) {
@@ -361,13 +434,14 @@ const LibraryTransactions = () => {
   // Debounced borrower search
   useEffect(() => {
     const timer = setTimeout(() => {
-      searchBorrowers(borrowerSearch);
+      searchBorrowers(borrowerSearch, formClassFilter);
     }, 300);
     return () => clearTimeout(timer);
-  }, [borrowerSearch, searchBorrowers]);
+  }, [borrowerSearch, formClassFilter, searchBorrowers]);
 
   const handleNewTransaction = async () => {
-    if (!bookInfo || !selectedBorrower || !dueDate) {
+    const bookToUse = selectedBook || bookInfo;
+    if (!bookToUse || !selectedBorrower || !dueDate) {
       toast({
         title: "Validation Error",
         description: "Please fill all required fields",
@@ -382,7 +456,7 @@ const LibraryTransactions = () => {
       const { error } = await supabase
         .from('library_transactions')
         .insert([{
-          library_item_id: bookInfo.id,
+          library_item_id: bookToUse.id,
           borrower_id: selectedBorrower.id,
           transaction_type: transactionType,
           due_date: new Date(dueDate).toISOString(),
@@ -400,9 +474,16 @@ const LibraryTransactions = () => {
       setBarcode('');
       setBookInfo(null);
       setBookError('');
+      setFormTitleFilter('');
+      setFormAuthorFilter('');
+      setFormItemTypeFilter('all');
+      setFormSubjectFilter('');
+      setBookSearchResults([]);
+      setSelectedBook(null);
       setBorrowerSearch('');
       setSelectedBorrower(null);
       setBorrowerResults([]);
+      setFormClassFilter('all');
       setTransactionType('borrow');
       setDueDate('');
       setNotes('');
@@ -455,7 +536,7 @@ const LibraryTransactions = () => {
     return <Badge variant="default">Borrowed</Badge>;
   };
 
-  const isFormValid = bookInfo && selectedBorrower && dueDate && transactionType;
+  const isFormValid = (bookInfo || selectedBook) && selectedBorrower && dueDate && transactionType;
 
   if (loading) {
     return (
@@ -481,183 +562,329 @@ const LibraryTransactions = () => {
               New Transaction
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Transaction</DialogTitle>
               <DialogDescription>
-                Scan or enter book barcode and select borrower.
+                Search for a book and select a borrower to create a transaction.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {/* Book Barcode */}
-              <div className="grid gap-2">
-                <Label htmlFor="barcode">Book Barcode *</Label>
-                <div className="relative">
-                  <Input
-                    id="barcode"
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    placeholder="Enter or scan book barcode"
-                  />
-                  {bookLoading && (
-                    <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
-                  )}
-                </div>
-                {bookError && (
-                  <div className="flex items-center gap-2 text-sm text-destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    {bookError}
+            <div className="grid gap-6 py-4">
+              {/* Book Search Section */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-foreground">Book Information</h4>
+                
+                {/* Book search filters in grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Book Title</Label>
+                    <Input
+                      value={formTitleFilter}
+                      onChange={(e) => setFormTitleFilter(e.target.value)}
+                      placeholder="Filter by title..."
+                    />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Author</Label>
+                    <Input
+                      value={formAuthorFilter}
+                      onChange={(e) => setFormAuthorFilter(e.target.value)}
+                      placeholder="Filter by author..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Item Type</Label>
+                    <Select value={formItemTypeFilter} onValueChange={setFormItemTypeFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {itemTypes.map((type) => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Subject</Label>
+                    <Input
+                      value={formSubjectFilter}
+                      onChange={(e) => setFormSubjectFilter(e.target.value)}
+                      placeholder="Filter by subject..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Or Scan Barcode</Label>
+                    <div className="relative">
+                      <Input
+                        value={barcode}
+                        onChange={(e) => {
+                          setBarcode(e.target.value);
+                          setSelectedBook(null);
+                        }}
+                        placeholder="Enter or scan barcode"
+                      />
+                      {bookLoading && (
+                        <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                    {bookError && (
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        {bookError}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Book Search Results */}
+                {bookSearchLoading && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Searching books...
+                  </div>
+                )}
+                
+                {bookSearchResults.length > 0 && !selectedBook && !bookInfo && (
+                  <div className="border rounded-md max-h-40 overflow-y-auto">
+                    {bookSearchResults.map((book) => (
+                      <div
+                        key={book.id}
+                        className={cn(
+                          "p-3 cursor-pointer hover:bg-muted border-b last:border-b-0",
+                          selectedBook?.id === book.id && "bg-primary/10"
+                        )}
+                        onClick={() => {
+                          setSelectedBook(book);
+                          setBarcode('');
+                          setBookInfo(null);
+                        }}
+                      >
+                        <div className="font-medium">{book.title}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {book.author || 'Unknown Author'} • {book.item_type} • {book.subject || 'No subject'}
+                          <span className="ml-2 text-primary">({book.available_copies} available)</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Selected Book Display */}
+                {(selectedBook || bookInfo) && (
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-primary" />
+                          <span className="font-semibold">Selected Book</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedBook(null);
+                            setBookInfo(null);
+                            setBarcode('');
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Title:</span>
+                          <p className="font-medium">{(selectedBook || bookInfo)?.title}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Author:</span>
+                          <p className="font-medium">{(selectedBook || bookInfo)?.author || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Type:</span>
+                          <p className="font-medium">{(selectedBook || bookInfo)?.item_type || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Subject:</span>
+                          <p className="font-medium">{(selectedBook || bookInfo)?.subject || 'N/A'}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="mt-2">
+                        {(selectedBook || bookInfo)?.available_copies} copies available
+                      </Badge>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
 
-              {/* Auto-filled Book Info */}
-              {bookInfo && (
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-primary" />
-                      <span className="font-semibold">Book Information</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Title:</span>
-                        <p className="font-medium">{bookInfo.title}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Author:</span>
-                        <p className="font-medium">{bookInfo.author || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Type:</span>
-                        <p className="font-medium">{bookInfo.item_type || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Subject:</span>
-                        <p className="font-medium">{bookInfo.subject || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="mt-2">
-                      {bookInfo.available_copies} copies available
-                    </Badge>
-                  </CardContent>
-                </Card>
-              )}
+              {/* Borrower Search Section */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-foreground">Borrower Information</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Borrower Name *</Label>
+                    <Popover open={borrowerPopoverOpen} onOpenChange={setBorrowerPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={borrowerPopoverOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          {selectedBorrower ? (
+                            <span className="truncate">
+                              {selectedBorrower.first_name} {selectedBorrower.last_name}
+                              {selectedBorrower.class_name && (
+                                <span className="text-muted-foreground ml-1">
+                                  — {selectedBorrower.class_name}
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Filter by borrower name...</span>
+                          )}
+                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput 
+                            placeholder="Search by name..." 
+                            value={borrowerSearch}
+                            onValueChange={setBorrowerSearch}
+                          />
+                          <CommandList>
+                            {borrowerLoading && (
+                              <div className="flex items-center justify-center p-4">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              </div>
+                            )}
+                            {!borrowerLoading && borrowerSearch.length >= 2 && borrowerResults.length === 0 && (
+                              <CommandEmpty>No borrowers found.</CommandEmpty>
+                            )}
+                            {!borrowerLoading && borrowerResults.length > 0 && (
+                              <CommandGroup>
+                                {borrowerResults.map((borrower) => (
+                                  <CommandItem
+                                    key={borrower.id}
+                                    value={borrower.id}
+                                    onSelect={() => {
+                                      setSelectedBorrower(borrower);
+                                      setBorrowerPopoverOpen(false);
+                                    }}
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">
+                                        {borrower.first_name} {borrower.last_name}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {borrower.class_name ? (
+                                          <>
+                                            {borrower.class_name}
+                                            {borrower.stream_name && ` | ${borrower.stream_name}`}
+                                          </>
+                                        ) : (
+                                          borrower.email
+                                        )}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Class</Label>
+                    <Select value={formClassFilter} onValueChange={setFormClassFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Classes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Classes</SelectItem>
+                        {classes.map((cls) => (
+                          <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-              {/* Borrower Search */}
-              <div className="grid gap-2">
-                <Label>Borrower *</Label>
-                <Popover open={borrowerPopoverOpen} onOpenChange={setBorrowerPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={borrowerPopoverOpen}
-                      className="justify-between font-normal"
-                    >
-                      {selectedBorrower ? (
-                        <span>
-                          {selectedBorrower.first_name} {selectedBorrower.last_name}
+                {/* Selected Borrower Display */}
+                {selectedBorrower && (
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-medium">
+                            {selectedBorrower.first_name} {selectedBorrower.last_name}
+                          </span>
                           {selectedBorrower.class_name && (
-                            <span className="text-muted-foreground ml-2">
+                            <span className="text-sm text-muted-foreground ml-2">
                               — {selectedBorrower.class_name}
                               {selectedBorrower.stream_name && ` | ${selectedBorrower.stream_name}`}
                             </span>
                           )}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">Search borrower by name...</span>
-                      )}
-                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput 
-                        placeholder="Search by name..." 
-                        value={borrowerSearch}
-                        onValueChange={setBorrowerSearch}
-                      />
-                      <CommandList>
-                        {borrowerLoading && (
-                          <div className="flex items-center justify-center p-4">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          </div>
-                        )}
-                        {!borrowerLoading && borrowerSearch.length >= 2 && borrowerResults.length === 0 && (
-                          <CommandEmpty>No borrowers found.</CommandEmpty>
-                        )}
-                        {!borrowerLoading && borrowerResults.length > 0 && (
-                          <CommandGroup>
-                            {borrowerResults.map((borrower) => (
-                              <CommandItem
-                                key={borrower.id}
-                                value={borrower.id}
-                                onSelect={() => {
-                                  setSelectedBorrower(borrower);
-                                  setBorrowerPopoverOpen(false);
-                                }}
-                              >
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {borrower.first_name} {borrower.last_name}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {borrower.class_name ? (
-                                      <>
-                                        {borrower.class_name}
-                                        {borrower.stream_name && ` | ${borrower.stream_name}`}
-                                      </>
-                                    ) : (
-                                      borrower.email
-                                    )}
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        )}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedBorrower(null)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
-              {/* Transaction Type */}
-              <div className="grid gap-2">
-                <Label htmlFor="transaction_type">Transaction Type *</Label>
-                <Select value={transactionType} onValueChange={setTransactionType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="borrow">Borrow</SelectItem>
-                    <SelectItem value="return">Return</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Transaction Details Section */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-foreground">Transaction Details</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="transaction_type">Transaction Type *</Label>
+                    <Select value={transactionType} onValueChange={setTransactionType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="borrow">Borrow</SelectItem>
+                        <SelectItem value="return">Return</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="due_date">Due Date *</Label>
+                    <Input
+                      id="due_date"
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                </div>
 
-              {/* Due Date */}
-              <div className="grid gap-2">
-                <Label htmlFor="due_date">Due Date *</Label>
-                <Input
-                  id="due_date"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-
-              {/* Notes */}
-              <div className="grid gap-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Input
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Additional notes"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes (Optional)</Label>
+                  <Input
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Additional notes"
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>

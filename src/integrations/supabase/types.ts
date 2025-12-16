@@ -1157,6 +1157,59 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_email_sent: boolean | null
+          is_read: boolean | null
+          message: string
+          read_at: string | null
+          reference_id: string | null
+          reference_type: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_email_sent?: boolean | null
+          is_read?: boolean | null
+          message: string
+          read_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_email_sent?: boolean | null
+          is_read?: boolean | null
+          message?: string
+          read_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_enrollments: {
         Row: {
           academic_year_id: string | null
@@ -2938,6 +2991,16 @@ export type Database = {
       }
       calculate_o_level_division: {
         Args: { p_best_eight_total: number }
+        Returns: string
+      }
+      create_library_notification: {
+        Args: {
+          p_borrower_id: string
+          p_message: string
+          p_reference_id?: string
+          p_title: string
+          p_type?: string
+        }
         Returns: string
       }
       delete_academic_year: { Args: { year_id: string }; Returns: boolean }

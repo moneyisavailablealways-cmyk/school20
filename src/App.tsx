@@ -85,6 +85,7 @@ import FeesPayments from './pages/parent/FeesPayments';
 import Appointments from './pages/parent/Appointments';
 import Announcements from './pages/parent/Announcements';
 import ParentProfile from './pages/parent/ParentProfile';
+import ChildrenLibrary from './pages/parent/ChildrenLibrary';
 import LibrarianDashboard from "./pages/librarian/LibrarianDashboard";
 import LibraryCatalog from "./pages/librarian/LibraryCatalog";
 import LibraryTransactions from "./pages/librarian/LibraryTransactions";
@@ -241,6 +242,7 @@ const App = () => (
               <Route path="payments" element={<FeesPayments />} />
               <Route path="appointments" element={<Appointments />} />
               <Route path="announcements" element={<Announcements />} />
+              <Route path="library" element={<ChildrenLibrary />} />
               <Route path="profile" element={<ParentProfile />} />
             </Route>
 

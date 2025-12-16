@@ -174,26 +174,28 @@ const MarksSubmission = () => {
       if (!selectedClass || !selectedSubject || !currentYear?.id) return [];
 
       // Step 1: Fetch student IDs enrolled in the class
+      // NOTE: Some existing data may have academic_year_id = NULL; include both to avoid empty dropdowns.
       const { data: classEnrollments, error: enrollError } = await supabase
         .from('student_enrollments')
         .select('student_id')
         .eq('class_id', selectedClass)
-        .eq('academic_year_id', currentYear.id)
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .or(`academic_year_id.eq.${currentYear.id},academic_year_id.is.null`);
 
       if (enrollError) throw enrollError;
       if (!classEnrollments || classEnrollments.length === 0) return [];
 
-      const classStudentIds = classEnrollments.map(e => e.student_id);
+      const classStudentIds = classEnrollments.map((e) => e.student_id);
 
       // Step 2: Fetch students enrolled in the selected subject (filter by class students)
+      // NOTE: Include academic_year_id NULL rows as well for legacy/older data.
       const { data: subjectEnrollments, error: subjectEnrollError } = await supabase
         .from('student_subject_enrollments')
         .select('student_id')
         .eq('subject_id', selectedSubject)
-        .eq('academic_year_id', currentYear.id)
         .eq('status', 'active')
-        .in('student_id', classStudentIds);
+        .in('student_id', classStudentIds)
+        .or(`academic_year_id.eq.${currentYear.id},academic_year_id.is.null`);
 
       if (subjectEnrollError) throw subjectEnrollError;
       if (!subjectEnrollments || subjectEnrollments.length === 0) return [];

@@ -47,31 +47,44 @@ serve(async (req) => {
 
     const { email, password, firstName, lastName, phone, role, teacherDetails, parentDetails } = await req.json()
 
-    // Create the user with admin privileges
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName,
-        role: role,
-      }
-    })
+    // First check if user already exists by email
+    const { data: existingUsers } = await supabase.auth.admin.listUsers()
+    const existingAuthUser = existingUsers?.users?.find(u => u.email === email)
+    
+    let authUserId: string
+    
+    if (existingAuthUser) {
+      // User already exists in auth - use their ID
+      console.log('User already exists in auth, using existing user:', existingAuthUser.id)
+      authUserId = existingAuthUser.id
+    } else {
+      // Create the user with admin privileges
+      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName,
+          role: role,
+        }
+      })
 
-    if (createError) {
-      console.error('Error creating user:', createError)
-      return new Response(
-        JSON.stringify({ error: createError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      if (createError) {
+        console.error('Error creating user:', createError)
+        return new Response(
+          JSON.stringify({ error: createError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      authUserId = newUser.user.id
     }
 
     // Ensure a profile exists and get profile ID (insert if missing)
     const { data: existingProfile, error: fetchProfileError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('user_id', newUser.user.id)
+      .eq('user_id', authUserId)
       .maybeSingle()
 
     if (fetchProfileError) {
@@ -88,9 +101,9 @@ serve(async (req) => {
       const { data: insertedProfile, error: insertProfileError } = await supabase
         .from('profiles')
         .insert({
-          user_id: newUser.user.id,
-          first_name: firstName || newUser.user.user_metadata?.first_name || 'User',
-          last_name: lastName || newUser.user.user_metadata?.last_name || '',
+          user_id: authUserId,
+          first_name: firstName || 'User',
+          last_name: lastName || '',
           email,
           phone: phone || null,
           role,
@@ -185,7 +198,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        user: newUser.user, 
+        user_id: authUserId,
+        email: email,
         profile_id: profileId,
         teacher_id: teacherId 
       }),

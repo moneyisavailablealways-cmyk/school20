@@ -6,11 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, GraduationCap } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 interface GradeConfig {
   id?: string;
@@ -57,16 +55,27 @@ const GradingConfig = () => {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (data: GradeConfig) => {
+      const payload = {
+        name: data.grade, // Use grade as name for simplicity
+        grade: data.grade,
+        min_marks: data.min_marks,
+        max_marks: data.max_marks,
+        grade_points: data.grade_points,
+        remark: data.remark || '',
+        division_contribution: data.division_contribution,
+        is_active: true,
+      };
+      
       if (data.id) {
         const { error } = await supabase
           .from('grading_config')
-          .update(data)
+          .update(payload)
           .eq('id', data.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('grading_config')
-          .insert(data);
+          .insert(payload);
         if (error) throw error;
       }
     },
@@ -100,20 +109,6 @@ const GradingConfig = () => {
     },
   });
 
-  // Toggle active mutation
-  const toggleActiveMutation = useMutation({
-    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
-        .from('grading_config')
-        .update({ is_active })
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['grading-config-admin'] });
-    },
-  });
-
   const openEditDialog = (grade: GradeConfig) => {
     setEditingGrade(grade);
     setFormData(grade);
@@ -127,8 +122,12 @@ const GradingConfig = () => {
   };
 
   const handleSubmit = () => {
-    if (!formData.name || !formData.grade) {
-      toast.error('Please fill all required fields');
+    if (!formData.grade) {
+      toast.error('Please enter a grade');
+      return;
+    }
+    if (formData.min_marks > formData.max_marks) {
+      toast.error('Minimum score cannot be greater than maximum score');
       return;
     }
     saveMutation.mutate({ ...formData, id: editingGrade?.id });
@@ -136,208 +135,132 @@ const GradingConfig = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5" />
-                Grading Configuration
-              </CardTitle>
+              <CardTitle>Grade Boundaries</CardTitle>
               <CardDescription>
-                Configure grade boundaries for O-Level report cards
+                Define the score ranges for each grade
               </CardDescription>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={openAddDialog}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Grade
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingGrade ? 'Edit Grade' : 'Add Grade'}</DialogTitle>
-                  <DialogDescription>
-                    Configure grade boundaries and points
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Name</Label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., Distinction 1"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Grade</Label>
-                      <Input
-                        value={formData.grade}
-                        onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
-                        placeholder="e.g., D1"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Min Marks</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={formData.min_marks}
-                        onChange={(e) => setFormData(prev => ({ ...prev, min_marks: parseInt(e.target.value) || 0 }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Max Marks</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={formData.max_marks}
-                        onChange={(e) => setFormData(prev => ({ ...prev, max_marks: parseInt(e.target.value) || 100 }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Grade Points</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        min="1"
-                        max="9"
-                        value={formData.grade_points}
-                        onChange={(e) => setFormData(prev => ({ ...prev, grade_points: parseFloat(e.target.value) || 1 }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Division Points</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="9"
-                        value={formData.division_contribution}
-                        onChange={(e) => setFormData(prev => ({ ...prev, division_contribution: parseInt(e.target.value) || 1 }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Remark</Label>
-                    <Input
-                      value={formData.remark}
-                      onChange={(e) => setFormData(prev => ({ ...prev, remark: e.target.value }))}
-                      placeholder="e.g., Excellent"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSubmit} disabled={saveMutation.isPending}>
-                    {saveMutation.isPending ? 'Saving...' : 'Save'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={openAddDialog} variant="outline">
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Grade
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Grade</TableHead>
-                  <TableHead>Marks Range</TableHead>
-                  <TableHead>Points</TableHead>
-                  <TableHead>Remark</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead>Actions</TableHead>
+                <TableRow className="border-border">
+                  <TableHead className="text-muted-foreground">Grade</TableHead>
+                  <TableHead className="text-muted-foreground">Minimum Score</TableHead>
+                  <TableHead className="text-muted-foreground">Maximum Score</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {gradingConfig?.map(grade => (
-                  <TableRow key={grade.id}>
-                    <TableCell className="font-medium">{grade.name}</TableCell>
-                    <TableCell>
-                      <Badge>{grade.grade}</Badge>
-                    </TableCell>
-                    <TableCell>{grade.min_marks} - {grade.max_marks}</TableCell>
-                    <TableCell>{grade.grade_points}</TableCell>
-                    <TableCell>{grade.remark}</TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={grade.is_active}
-                        onCheckedChange={(checked) => 
-                          toggleActiveMutation.mutate({ id: grade.id, is_active: checked })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => openEditDialog(grade)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => deleteMutation.mutate(grade.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      Loading grades...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : gradingConfig?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      No grades configured. Click "Add New Grade" to get started.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  gradingConfig?.map(grade => (
+                    <TableRow key={grade.id} className="border-border">
+                      <TableCell className="font-bold text-foreground">{grade.grade}</TableCell>
+                      <TableCell className="text-foreground">{grade.min_marks}</TableCell>
+                      <TableCell className="text-foreground">{grade.max_marks}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={() => openEditDialog(grade)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => deleteMutation.mutate(grade.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Division Calculation Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>O-Level Division Calculation</CardTitle>
-          <CardDescription>How divisions are calculated from best 8 subjects</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="p-4 border rounded-lg text-center">
-              <p className="text-2xl font-bold text-green-600">Division I</p>
-              <p className="text-sm text-muted-foreground">8 - 32 points</p>
+      {/* Add/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingGrade ? 'Edit Grade' : 'Add New Grade'}</DialogTitle>
+            <DialogDescription>
+              Define the score range for this grade
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Grade</Label>
+              <Input
+                value={formData.grade}
+                onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value.toUpperCase() }))}
+                placeholder="e.g., A, B, C"
+                maxLength={2}
+              />
             </div>
-            <div className="p-4 border rounded-lg text-center">
-              <p className="text-2xl font-bold text-blue-600">Division II</p>
-              <p className="text-sm text-muted-foreground">33 - 45 points</p>
-            </div>
-            <div className="p-4 border rounded-lg text-center">
-              <p className="text-2xl font-bold text-yellow-600">Division III</p>
-              <p className="text-sm text-muted-foreground">46 - 58 points</p>
-            </div>
-            <div className="p-4 border rounded-lg text-center">
-              <p className="text-2xl font-bold text-orange-600">Division IV</p>
-              <p className="text-sm text-muted-foreground">59 - 72 points</p>
-            </div>
-            <div className="p-4 border rounded-lg text-center">
-              <p className="text-2xl font-bold text-red-600">Ungraded</p>
-              <p className="text-sm text-muted-foreground">Above 72 points</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Minimum Score</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.min_marks}
+                  onChange={(e) => setFormData(prev => ({ ...prev, min_marks: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Maximum Score</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.max_marks}
+                  onChange={(e) => setFormData(prev => ({ ...prev, max_marks: parseInt(e.target.value) || 100 }))}
+                />
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

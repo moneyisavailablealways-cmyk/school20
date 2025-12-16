@@ -1914,6 +1914,149 @@ export type Database = {
           },
         ]
       }
+      teacher_attendance: {
+        Row: {
+          academic_year_id: string | null
+          approved_by: string | null
+          check_in_time: string | null
+          check_out_time: string | null
+          created_at: string | null
+          date: string
+          id: string
+          is_approved: boolean | null
+          is_self_marked: boolean | null
+          late_reason: string | null
+          marked_by: string | null
+          remarks: string | null
+          status: Database["public"]["Enums"]["teacher_attendance_status"]
+          teacher_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year_id?: string | null
+          approved_by?: string | null
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string | null
+          date: string
+          id?: string
+          is_approved?: boolean | null
+          is_self_marked?: boolean | null
+          late_reason?: string | null
+          marked_by?: string | null
+          remarks?: string | null
+          status?: Database["public"]["Enums"]["teacher_attendance_status"]
+          teacher_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year_id?: string | null
+          approved_by?: string | null
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          is_approved?: boolean | null
+          is_self_marked?: boolean | null
+          late_reason?: string | null
+          marked_by?: string | null
+          remarks?: string | null
+          status?: Database["public"]["Enums"]["teacher_attendance_status"]
+          teacher_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_attendance_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_attendance_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_attendance_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_attendance_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_attendance_audit: {
+        Row: {
+          action: string
+          attendance_record_id: string
+          changed_at: string | null
+          changed_by: string
+          id: string
+          new_status:
+            | Database["public"]["Enums"]["teacher_attendance_status"]
+            | null
+          old_status:
+            | Database["public"]["Enums"]["teacher_attendance_status"]
+            | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          attendance_record_id: string
+          changed_at?: string | null
+          changed_by: string
+          id?: string
+          new_status?:
+            | Database["public"]["Enums"]["teacher_attendance_status"]
+            | null
+          old_status?:
+            | Database["public"]["Enums"]["teacher_attendance_status"]
+            | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          attendance_record_id?: string
+          changed_at?: string | null
+          changed_by?: string
+          id?: string
+          new_status?:
+            | Database["public"]["Enums"]["teacher_attendance_status"]
+            | null
+          old_status?:
+            | Database["public"]["Enums"]["teacher_attendance_status"]
+            | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_attendance_audit_attendance_record_id_fkey"
+            columns: ["attendance_record_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_attendance_audit_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_enrollments: {
         Row: {
           academic_year_id: string | null
@@ -1984,6 +2127,66 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_teacher_enrollments_teacher_id"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_leave_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          end_date: string
+          id: string
+          leave_type: string
+          reason: string
+          rejection_reason: string | null
+          start_date: string
+          status: string
+          teacher_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          end_date: string
+          id?: string
+          leave_type: string
+          reason: string
+          rejection_reason?: string | null
+          start_date: string
+          status?: string
+          teacher_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          leave_type?: string
+          reason?: string
+          rejection_reason?: string | null
+          start_date?: string
+          status?: string
+          teacher_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_leave_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_leave_requests_teacher_id_fkey"
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2218,6 +2421,14 @@ export type Database = {
         | "late"
         | "excused"
         | "left_early"
+      teacher_attendance_status:
+        | "present"
+        | "absent"
+        | "late"
+        | "sick_leave"
+        | "vacation_leave"
+        | "half_day"
+        | "pending_approval"
       user_role:
         | "admin"
         | "principal"
@@ -2356,6 +2567,15 @@ export const Constants = {
     Enums: {
       attendance_session: ["morning", "afternoon", "full_day"],
       attendance_status: ["present", "absent", "late", "excused", "left_early"],
+      teacher_attendance_status: [
+        "present",
+        "absent",
+        "late",
+        "sick_leave",
+        "vacation_leave",
+        "half_day",
+        "pending_approval",
+      ],
       user_role: [
         "admin",
         "principal",

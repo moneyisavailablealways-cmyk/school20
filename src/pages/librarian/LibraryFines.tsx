@@ -37,6 +37,12 @@ interface LibraryFine {
   };
 }
 
+interface Borrower {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 const LibraryFines = () => {
   const [fines, setFines] = useState<LibraryFine[]>([]);
   const [filteredFines, setFilteredFines] = useState<LibraryFine[]>([]);
@@ -44,10 +50,11 @@ const LibraryFines = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [isNewFineOpen, setIsNewFineOpen] = useState(false);
+  const [borrowers, setBorrowers] = useState<Borrower[]>([]);
   const { toast } = useToast();
 
   const [newFine, setNewFine] = useState({
-    borrower_email: '',
+    borrower_id: '',
     fine_type: 'overdue',
     amount: '',
     description: ''
@@ -62,11 +69,38 @@ const LibraryFines = () => {
 
   useEffect(() => {
     fetchFines();
+    fetchBorrowers();
   }, []);
 
   useEffect(() => {
     filterFines();
   }, [fines, searchQuery, statusFilter]);
+
+  const fetchBorrowers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('library_transactions')
+        .select('borrower_id, profiles!library_transactions_borrower_id_fkey (id, first_name, last_name)')
+        .not('borrower_id', 'is', null);
+
+      if (error) throw error;
+
+      // Get unique borrowers
+      const uniqueBorrowers = new Map<string, Borrower>();
+      data?.forEach((t: any) => {
+        if (t.profiles && !uniqueBorrowers.has(t.profiles.id)) {
+          uniqueBorrowers.set(t.profiles.id, {
+            id: t.profiles.id,
+            first_name: t.profiles.first_name,
+            last_name: t.profiles.last_name
+          });
+        }
+      });
+      setBorrowers(Array.from(uniqueBorrowers.values()));
+    } catch (error) {
+      console.error('Failed to fetch borrowers:', error);
+    }
+  };
 
   const fetchFines = async () => {
     try {
@@ -126,19 +160,14 @@ const LibraryFines = () => {
 
   const handleNewFine = async () => {
     try {
-      // Find borrower by email
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', newFine.borrower_email)
-        .single();
-
-      if (profileError) throw new Error('User not found');
+      if (!newFine.borrower_id) {
+        throw new Error('Please select a borrower');
+      }
 
       const { error } = await supabase
         .from('library_fines')
         .insert([{
-          borrower_id: profile.id,
+          borrower_id: newFine.borrower_id,
           fine_type: newFine.fine_type,
           amount: parseFloat(newFine.amount),
           description: newFine.description
@@ -152,7 +181,7 @@ const LibraryFines = () => {
 
       setIsNewFineOpen(false);
       setNewFine({
-        borrower_email: '',
+        borrower_id: '',
         fine_type: 'overdue',
         amount: '',
         description: ''
@@ -279,13 +308,19 @@ const LibraryFines = () => {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="borrower_email">Member Email</Label>
-                <Input
-                  id="borrower_email"
-                  value={newFine.borrower_email}
-                  onChange={(e) => setNewFine({...newFine, borrower_email: e.target.value})}
-                  placeholder="Enter member email"
-                />
+                <Label htmlFor="borrower_id">Select Borrower</Label>
+                <Select value={newFine.borrower_id} onValueChange={(value) => setNewFine({...newFine, borrower_id: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a borrower" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {borrowers.map((borrower) => (
+                      <SelectItem key={borrower.id} value={borrower.id}>
+                        {borrower.first_name} {borrower.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="fine_type">Fine Type</Label>

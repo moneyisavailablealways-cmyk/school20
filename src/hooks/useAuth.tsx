@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, retryCount = 0) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -47,14 +47,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
+        // Handle "no rows" case gracefully
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found for user, may be new user');
+          setProfile(null);
+          return;
+        }
+        // Handle RLS recursion error - don't retry infinitely
+        if (error.code === '42P17' && retryCount < 1) {
+          console.warn('RLS recursion detected, retrying once...');
+          setTimeout(() => fetchProfile(userId, retryCount + 1), 500);
+          return;
+        }
         console.error('Error fetching profile:', error);
+        setProfile(null);
         return;
       }
 
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
+      setProfile(null);
     }
   };
 

@@ -61,44 +61,15 @@ export interface AppointmentsListHandle {
   refetch: () => void;
 }
 
-const AppointmentsList = forwardRef<AppointmentsListHandle>((_, ref) => {
+interface AppointmentsListProps {}
+
+const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProps>((props, ref) => {
   const { profile } = useAuth();
   const [sentAppointments, setSentAppointments] = useState<AppointmentRequest[]>([]);
   const [receivedAppointments, setReceivedAppointments] = useState<ReceivedAppointment[]>([]);
   const [sentRecipients, setSentRecipients] = useState<Record<string, AppointmentRecipient[]>>({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('received');
-
-  useImperativeHandle(ref, () => ({
-    refetch: fetchAppointments
-  }));
-
-  useEffect(() => {
-    if (profile?.id) {
-      fetchAppointments();
-      setupRealtime();
-    }
-  }, [profile?.id]);
-
-  const setupRealtime = () => {
-    const channel = supabase
-      .channel('appointments-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'appointment_requests' },
-        () => fetchAppointments()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'appointment_recipients' },
-        () => fetchAppointments()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
 
   const fetchAppointments = async () => {
     if (!profile?.id) return;
@@ -199,6 +170,38 @@ const AppointmentsList = forwardRef<AppointmentsListHandle>((_, ref) => {
       setLoading(false);
     }
   };
+
+  useImperativeHandle(ref, () => ({
+    refetch: fetchAppointments
+  }));
+
+  useEffect(() => {
+    if (profile?.id) {
+      fetchAppointments();
+      setupRealtime();
+    }
+  }, [profile?.id]);
+
+  const setupRealtime = () => {
+    const channel = supabase
+      .channel('appointments-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'appointment_requests' },
+        () => fetchAppointments()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'appointment_recipients' },
+        () => fetchAppointments()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
 
   const handleUpdateStatus = async (recipientRecordId: string, newStatus: 'approved' | 'rejected') => {
     try {

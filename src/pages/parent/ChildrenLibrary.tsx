@@ -366,26 +366,29 @@ const ChildrenLibrary = () => {
               </Card>
 
               {/* Outstanding Fines */}
-              {child.fines.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-red-500" />
-                      Outstanding Fines
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+              <Card className={totalFines > 0 ? 'border-red-200' : ''}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className={`h-5 w-5 ${totalFines > 0 ? 'text-red-500' : 'text-green-500'}`} />
+                    Outstanding Fines
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {child.fines.length > 0 ? (
                     <div className="space-y-4">
                       {child.fines.map((fine) => (
-                        <div key={fine.id} className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
+                        <div key={fine.id} className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50/50">
                           <div className="flex-1">
-                            <h4 className="font-medium">{fine.fine_type}</h4>
-                            <p className="text-sm text-muted-foreground">{fine.description}</p>
+                            <h4 className="font-medium capitalize">{fine.fine_type.replace('_', ' ')}</h4>
+                            <p className="text-sm text-muted-foreground">{fine.description || 'No description'}</p>
                             <p className="text-xs text-muted-foreground mt-1">
                               Date: {new Date(fine.created_at).toLocaleDateString()}
                             </p>
                           </div>
-                          <div className="text-lg font-bold text-red-600">${Number(fine.amount).toFixed(2)}</div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-red-600">${Number(fine.amount).toFixed(2)}</div>
+                            <Badge variant="destructive">Unpaid</Badge>
+                          </div>
                         </div>
                       ))}
                       <div className="border-t pt-4">
@@ -395,9 +398,15 @@ const ChildrenLibrary = () => {
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                      <p className="font-medium text-green-600">No Outstanding Fines</p>
+                      <p className="text-sm">{child.childName} has no unpaid fines.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           );
         })}

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { FileText, Check, Eye, Layout } from 'lucide-react';
+import { FileText, Check, Eye, Layout, Building2 } from 'lucide-react';
 
 const templatePreviews = {
   classic: {
@@ -56,6 +56,19 @@ const ReportTemplates = () => {
         setSelectedTemplate(defaultTemplate.id);
       }
       
+      return data;
+    },
+  });
+
+  // Fetch school settings for preview
+  const { data: schoolSettings } = useQuery({
+    queryKey: ['school-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('school_settings')
+        .select('*')
+        .maybeSingle();
+      if (error) throw error;
       return data;
     },
   });
@@ -184,12 +197,31 @@ const ReportTemplates = () => {
               <div className="space-y-6">
                 {/* Header */}
                 <div className="text-center border-b pb-4">
-                  <div className="w-16 h-16 bg-muted rounded-full mx-auto mb-2 flex items-center justify-center">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
+                  {schoolSettings?.logo_url ? (
+                    <img 
+                      src={schoolSettings.logo_url} 
+                      alt="School logo" 
+                      className="h-16 w-16 mx-auto mb-2 object-contain"
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-muted rounded-full mx-auto mb-2 flex items-center justify-center">
+                      <Building2 className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <h2 className="text-xl font-bold">{schoolSettings?.school_name || 'School Name'}</h2>
+                  {schoolSettings?.motto && (
+                    <p className="text-sm text-muted-foreground italic">"{schoolSettings.motto}"</p>
+                  )}
+                  <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                    {schoolSettings?.address && <p>{schoolSettings.address}</p>}
+                    <div className="flex justify-center gap-3">
+                      {schoolSettings?.phone && <span>Tel: {schoolSettings.phone}</span>}
+                      {schoolSettings?.email && <span>Email: {schoolSettings.email}</span>}
+                    </div>
+                    {schoolSettings?.website && <p>Website: {schoolSettings.website}</p>}
                   </div>
-                  <h2 className="text-xl font-bold">School Name</h2>
-                  <p className="text-sm text-muted-foreground">School Motto</p>
-                  <p className="text-lg font-semibold mt-2">STUDENT REPORT CARD</p>
+                  <p className="text-lg font-semibold mt-3">STUDENT REPORT CARD</p>
                 </div>
 
                 {/* Student Info */}

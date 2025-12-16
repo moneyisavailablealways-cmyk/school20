@@ -23,15 +23,33 @@ const ReportGeneration = () => {
   const [generatingProgress, setGeneratingProgress] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Fetch classes
+  // Fetch classes with streams
   const { data: classes } = useQuery({
     queryKey: ['classes-for-generation'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('classes').select('id, name').order('name');
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, name, level_id, levels(name)')
+        .order('name');
       if (error) throw error;
       return data;
     },
   });
+
+  // Fetch streams
+  const { data: streams } = useQuery({
+    queryKey: ['streams-for-generation'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('streams')
+        .select('id, name, class_id')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const [selectedStream, setSelectedStream] = useState<string>('all');
 
   // Fetch current academic year
   const { data: currentYear } = useQuery({
@@ -49,17 +67,19 @@ const ReportGeneration = () => {
 
   // Fetch students with their submission readiness
   const { data: studentsData, isLoading } = useQuery({
-    queryKey: ['students-for-generation', selectedClass, selectedTerm, currentYear?.id],
+    queryKey: ['students-for-generation', selectedClass, selectedStream, selectedTerm, currentYear?.id],
     queryFn: async () => {
       if (!currentYear?.id) return [];
 
-      // Get enrollments
+      // Get enrollments with stream info
       let query = supabase
         .from('student_enrollments')
         .select(`
           student_id,
           class_id,
-          classes(name),
+          stream_id,
+          classes(name, level_id, levels(name)),
+          streams(name),
           students!inner(
             id,
             student_id,
@@ -67,10 +87,15 @@ const ReportGeneration = () => {
             profiles:profile_id(first_name, last_name)
           )
         `)
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .eq('academic_year_id', currentYear.id);
 
       if (selectedClass !== 'all') {
         query = query.eq('class_id', selectedClass);
+      }
+
+      if (selectedStream !== 'all') {
+        query = query.eq('stream_id', selectedStream);
       }
 
       const { data: enrollments, error: enrollError } = await query;
@@ -104,6 +129,8 @@ const ReportGeneration = () => {
       // Build student readiness data
       return enrollments?.map(enrollment => {
         const student = enrollment.students as any;
+        const classInfo = enrollment.classes as any;
+        const streamInfo = enrollment.streams as any;
         const studentSubmissions = submissions?.filter(s => s.student_id === enrollment.student_id) || [];
         const approvedCount = studentSubmissions.filter(s => s.status === 'approved').length;
         const pendingCount = studentSubmissions.filter(s => s.status === 'pending').length;
@@ -113,7 +140,9 @@ const ReportGeneration = () => {
           studentId: enrollment.student_id,
           admissionNo: student?.student_id || '',
           name: `${student?.profiles?.first_name || ''} ${student?.profiles?.last_name || ''}`.trim(),
-          className: (enrollment.classes as any)?.name || '',
+          className: classInfo?.name || '',
+          streamName: streamInfo?.name || '',
+          levelName: classInfo?.levels?.name || '',
           approvedSubjects: approvedCount,
           pendingSubjects: pendingCount,
           totalSubjects,
@@ -243,6 +272,23 @@ const ReportGeneration = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Select 
+                value={selectedStream} 
+                onValueChange={setSelectedStream}
+                disabled={selectedClass === 'all'}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="All Streams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Streams</SelectItem>
+                  {streams
+                    ?.filter(s => selectedClass === 'all' || s.class_id === selectedClass)
+                    .map(stream => (
+                      <SelectItem key={stream.id} value={stream.id}>{stream.name}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
               <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue />
@@ -313,6 +359,7 @@ const ReportGeneration = () => {
                     <TableHead>Admission No</TableHead>
                     <TableHead>Student Name</TableHead>
                     <TableHead>Class</TableHead>
+                    <TableHead>Stream</TableHead>
                     <TableHead>Subjects Approved</TableHead>
                     <TableHead>Readiness</TableHead>
                     <TableHead>Report Status</TableHead>
@@ -332,6 +379,7 @@ const ReportGeneration = () => {
                       <TableCell className="font-mono">{student.admissionNo}</TableCell>
                       <TableCell className="font-medium">{student.name}</TableCell>
                       <TableCell>{student.className}</TableCell>
+                      <TableCell>{student.streamName || '-'}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="text-green-600 font-medium">{student.approvedSubjects}</span>

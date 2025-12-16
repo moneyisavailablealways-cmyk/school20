@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, CheckCircle, Settings, BarChart3, Users } from 'lucide-react';
+import { FileText, CheckCircle, Settings, BarChart3, Layout, Building2 } from 'lucide-react';
 import SubmissionsApproval from '@/components/report-cards/SubmissionsApproval';
 import ReportGeneration from '@/components/report-cards/ReportGeneration';
 import GradingConfig from '@/components/report-cards/GradingConfig';
 import ReportTemplates from '@/components/report-cards/ReportTemplates';
 import ReportAnalytics from '@/components/report-cards/ReportAnalytics';
+import SchoolSettings from '@/components/report-cards/SchoolSettings';
 
 const ReportCards = () => {
   const [activeTab, setActiveTab] = useState('approvals');
@@ -20,7 +21,7 @@ const ReportCards = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
           <TabsTrigger value="approvals" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
             <span className="hidden sm:inline">Approvals</span>
@@ -38,8 +39,12 @@ const ReportCards = () => {
             <span className="hidden sm:inline">Grading</span>
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
+            <Layout className="h-4 w-4" />
             <span className="hidden sm:inline">Templates</span>
+          </TabsTrigger>
+          <TabsTrigger value="school" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            <span className="hidden sm:inline">School</span>
           </TabsTrigger>
         </TabsList>
 
@@ -61,6 +66,10 @@ const ReportCards = () => {
 
         <TabsContent value="templates">
           <ReportTemplates />
+        </TabsContent>
+
+        <TabsContent value="school">
+          <SchoolSettings />
         </TabsContent>
       </Tabs>
     </div>

@@ -110,32 +110,64 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('[Appointments] Starting appointment creation...');
+    console.log('[Appointments] Sender ID:', profile?.id);
+    console.log('[Appointments] Sender Role:', profile?.role);
+    console.log('[Appointments] Selected Recipients:', selectedRecipients);
+    
+    // Validation with specific error messages
     if (!profile?.id || !profile?.role) {
-      toast.error('User profile not found');
+      const errorMsg = 'User profile not found. Please log in again.';
+      console.error('[Appointments] Error:', errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     if (selectedRecipients.length === 0) {
-      toast.error('Please select at least one recipient');
+      const errorMsg = 'Missing required field: Please select at least one recipient.';
+      console.error('[Appointments] Error:', errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     if (!formData.title.trim()) {
-      toast.error('Please enter a title');
+      const errorMsg = 'Missing required field: Title is required.';
+      console.error('[Appointments] Error:', errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     if (!formData.appointment_date || !formData.appointment_time) {
-      toast.error('Please select date and time');
+      const errorMsg = 'Missing required field: Date and time are required.';
+      console.error('[Appointments] Error:', errorMsg);
+      toast.error(errorMsg);
+      return;
+    }
+
+    // Validate date is not in the past
+    const appointmentDateTime = new Date(`${formData.appointment_date}T${formData.appointment_time}`);
+    if (appointmentDateTime < new Date()) {
+      const errorMsg = 'Appointment date and time cannot be in the past.';
+      console.error('[Appointments] Error:', errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     setLoading(true);
 
     try {
-      const appointmentDate = new Date(
-        `${formData.appointment_date}T${formData.appointment_time}`
-      ).toISOString();
+      const appointmentDate = appointmentDateTime.toISOString();
+      
+      console.log('[Appointments] Inserting appointment request...');
+      console.log('[Appointments] Appointment data:', {
+        title: formData.title.trim(),
+        appointment_date: appointmentDate,
+        duration_minutes: parseInt(formData.duration_minutes),
+        meeting_type: formData.meeting_type,
+        sender_id: profile.id,
+        sender_role: profile.role,
+        status: 'pending',
+      });
 
       // Create the appointment request
       const { data: appointment, error: appointmentError } = await supabase
@@ -153,7 +185,27 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
         .select()
         .single();
 
-      if (appointmentError) throw appointmentError;
+      if (appointmentError) {
+        console.error('[Appointments] Database error creating appointment:', appointmentError);
+        
+        // Provide specific error messages based on error code
+        let userMessage = 'Failed to create appointment: ';
+        if (appointmentError.code === '42501') {
+          userMessage += 'Permission denied. RLS policy may be blocking the insert.';
+        } else if (appointmentError.code === '23502') {
+          userMessage += 'Missing required field in database.';
+        } else if (appointmentError.code === '42P17') {
+          userMessage += 'Database policy configuration error. Please contact support.';
+        } else {
+          userMessage += appointmentError.message || 'Unknown database error.';
+        }
+        
+        toast.error(userMessage);
+        return;
+      }
+
+      console.log('[Appointments] Appointment created successfully:', appointment.id);
+      console.log('[Appointments] Adding recipients...');
 
       // Add recipients
       const recipientRecords = selectedRecipients.map(recipientId => {
@@ -166,19 +218,40 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
         };
       });
 
+      console.log('[Appointments] Recipient records to insert:', recipientRecords);
+
       const { error: recipientsError } = await supabase
         .from('appointment_recipients')
         .insert(recipientRecords);
 
-      if (recipientsError) throw recipientsError;
+      if (recipientsError) {
+        console.error('[Appointments] Database error adding recipients:', recipientsError);
+        
+        let userMessage = 'Appointment created but failed to add recipients: ';
+        if (recipientsError.code === '42501') {
+          userMessage += 'Permission denied for adding recipients.';
+        } else if (recipientsError.code === '23503') {
+          userMessage += 'Invalid recipient reference.';
+        } else {
+          userMessage += recipientsError.message || 'Unknown error.';
+        }
+        
+        toast.error(userMessage);
+        return;
+      }
 
-      toast.success('Appointment request sent successfully');
+      console.log('[Appointments] Recipients added successfully');
+      console.log('[Appointments] Appointment creation completed successfully');
+      
+      toast.success(`Appointment request sent to ${selectedRecipients.length} recipient(s)`);
       setOpen(false);
       resetForm();
       onSuccess?.();
-    } catch (error) {
-      console.error('Error creating appointment:', error);
-      toast.error('Failed to create appointment');
+    } catch (error: any) {
+      console.error('[Appointments] Unexpected error:', error);
+      
+      const errorMessage = error?.message || 'An unexpected error occurred';
+      toast.error(`Failed to create appointment: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

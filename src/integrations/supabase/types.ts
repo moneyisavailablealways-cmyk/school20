@@ -2031,6 +2031,10 @@ export type Database = {
       get_current_profile_id: { Args: never; Returns: string }
       is_admin_or_principal: { Args: never; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
+      is_recipient_of_appointment: {
+        Args: { p_appointment_id: string }
+        Returns: boolean
+      }
       is_staff_admin: { Args: never; Returns: boolean }
       is_teacher: { Args: never; Returns: boolean }
       is_teacher_of_student: {

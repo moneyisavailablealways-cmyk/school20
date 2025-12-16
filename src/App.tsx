@@ -26,6 +26,7 @@ import Reports from "./pages/admin/Reports";
 import Communications from "./pages/admin/Communications";
 import Settings from "./pages/admin/Settings";
 import SubjectManagement from "./pages/admin/SubjectManagement";
+import AdminAttendance from "./pages/admin/Attendance";
 import StudentForm from "./pages/admin/StudentForm";
 import AddTeacher from "./pages/admin/AddTeacher";
 import AddParent from "./pages/admin/AddParent";
@@ -37,6 +38,7 @@ import ClassStudents from "./pages/teacher/ClassStudents";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
 import Schedule from "./pages/teacher/Schedule";
+import TeacherAttendance from "./pages/teacher/Attendance";
 import TeacherAppointments from "./pages/teacher/Appointments";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentSubjects from "./pages/student/StudentSubjects";
@@ -44,6 +46,7 @@ import StudentSchedule from "./pages/student/StudentSchedule";
 import StudentGrades from "./pages/student/StudentGrades";
 import StudentLibrary from "./pages/student/StudentLibrary";
 import StudentProfile from "./pages/student/StudentProfile";
+import StudentAttendance from "./pages/student/Attendance";
 import StudentAppointments from "./pages/student/Appointments";
 import PrincipalDashboard from "./pages/principal/PrincipalDashboard";
 import PerformanceAnalytics from "./pages/principal/PerformanceAnalytics";
@@ -125,6 +128,7 @@ const App = () => (
               <Route path="academic" element={<AcademicStructure />} />
               <Route path="admissions" element={<Admissions />} />
               <Route path="timetable" element={<Timetable />} />
+              <Route path="attendance" element={<AdminAttendance />} />
               <Route path="reports" element={<Reports />} />
               <Route path="communications" element={<Communications />} />
               <Route path="settings" element={<Settings />} />
@@ -144,6 +148,7 @@ const App = () => (
               <Route path="classes/:classId/students" element={<ClassStudents />} />
               <Route path="students" element={<TeacherStudents />} />
               <Route path="schedule" element={<Schedule />} />
+              <Route path="attendance" element={<TeacherAttendance />} />
               <Route path="appointments" element={<TeacherAppointments />} />
               <Route path="profile" element={<TeacherProfile />} />
             </Route>
@@ -181,6 +186,7 @@ const App = () => (
               <Route path="schedule" element={<StudentSchedule />} />
               <Route path="grades" element={<StudentGrades />} />
               <Route path="library" element={<StudentLibrary />} />
+              <Route path="attendance" element={<StudentAttendance />} />
               <Route path="appointments" element={<StudentAppointments />} />
               <Route path="profile" element={<StudentProfile />} />
             </Route>

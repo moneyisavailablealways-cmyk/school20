@@ -8,7 +8,8 @@ import {
   GraduationCap,
   Library,
   BarChart3,
-  CalendarCheck
+  CalendarCheck,
+  ClipboardCheck
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -17,6 +18,7 @@ const navigation = [
   { name: 'Dashboard', href: '/student', icon: BookOpen },
   { name: 'My Subjects', href: '/student/subjects', icon: GraduationCap },
   { name: 'Schedule', href: '/student/schedule', icon: Calendar },
+  { name: 'Attendance', href: '/student/attendance', icon: ClipboardCheck },
   { name: 'Grades', href: '/student/grades', icon: BarChart3 },
   { name: 'Library', href: '/student/library', icon: Library },
   { name: 'Appointments', href: '/student/appointments', icon: CalendarCheck },

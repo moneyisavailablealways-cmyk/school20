@@ -403,39 +403,6 @@ export type Database = {
           },
         ]
       }
-      attendance_records_backup: {
-        Row: {
-          created_at: string | null
-          date: string | null
-          id: string | null
-          notes: string | null
-          recorded_by: string | null
-          status: string | null
-          student_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          date?: string | null
-          id?: string | null
-          notes?: string | null
-          recorded_by?: string | null
-          status?: string | null
-          student_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          date?: string | null
-          id?: string | null
-          notes?: string | null
-          recorded_by?: string | null
-          status?: string | null
-          student_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       attendance_settings: {
         Row: {
           allow_future_attendance: boolean | null

@@ -108,9 +108,11 @@ const UserManagement = () => {
 
   const loadUsers = async () => {
     try {
+      // Only load active users by default - deleted/inactive users are excluded
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -169,21 +171,28 @@ const UserManagement = () => {
   };
 
   const deleteUser = async (userId: string, userEmail: string) => {
-    if (!confirm(`Are you sure you want to delete user "${userEmail}"? This action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete user "${userEmail}"? This action cannot be undone. The user will be permanently removed from the system and will not be able to log in.`)) {
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', userId);
+      const { data: result, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error((error as any)?.message || 'Failed to delete user');
+      }
+
+      if (result?.error) {
+        console.error('Function returned error:', result.error);
+        throw new Error(result.error);
+      }
 
       toast({
         title: 'Success',
-        description: 'User deleted successfully',
+        description: 'User permanently deleted from the system',
       });
 
       loadUsers();
@@ -191,7 +200,7 @@ const UserManagement = () => {
       console.error('Error deleting user:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete user',
+        description: error.message || 'Failed to delete user',
         variant: 'destructive',
       });
     }

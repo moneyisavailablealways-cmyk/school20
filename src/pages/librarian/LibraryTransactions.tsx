@@ -57,6 +57,7 @@ interface BorrowerInfo {
   email: string;
   class_name?: string;
   stream_name?: string;
+  student_id?: string;
 }
 
 const LibraryTransactions = () => {
@@ -355,13 +356,13 @@ const LibraryTransactions = () => {
       // Fetch student enrollment info for these profiles
       const profileIds = profiles.map(p => p.id);
       
-      // Get student to profile mapping
+      // Get student to profile mapping with student_id
       const { data: studentMappings } = await supabase
         .from('students')
-        .select('id, profile_id')
+        .select('id, profile_id, student_id')
         .in('profile_id', profileIds);
 
-      const profileToStudent = new Map(studentMappings?.map(s => [s.profile_id, s.id]) || []);
+      const profileToStudent = new Map(studentMappings?.map(s => [s.profile_id, { id: s.id, student_id: s.student_id }]) || []);
       const studentIds = studentMappings?.map(s => s.id) || [];
 
       // Fetch enrollments for students, optionally filtered by class
@@ -389,14 +390,14 @@ const LibraryTransactions = () => {
       let results: BorrowerInfo[] = profiles
         .filter(p => {
           if (classId && classId !== 'all') {
-            const studentId = profileToStudent.get(p.id);
-            return studentId && enrolledStudentIds.has(studentId);
+            const studentData = profileToStudent.get(p.id);
+            return studentData && enrolledStudentIds.has(studentData.id);
           }
           return true;
         })
         .map(p => {
-          const studentId = profileToStudent.get(p.id);
-          const enrollment = studentId ? studentToEnrollment.get(studentId) : null;
+          const studentData = profileToStudent.get(p.id);
+          const enrollment = studentData ? studentToEnrollment.get(studentData.id) : null;
           
           return {
             id: p.id,
@@ -404,7 +405,8 @@ const LibraryTransactions = () => {
             last_name: p.last_name,
             email: p.email,
             class_name: enrollment?.classes?.name,
-            stream_name: enrollment?.streams?.name
+            stream_name: enrollment?.streams?.name,
+            student_id: studentData?.student_id
           };
         });
 
@@ -892,9 +894,9 @@ const LibraryTransactions = () => {
                           {selectedBorrower ? (
                             <span className="truncate">
                               {selectedBorrower.first_name} {selectedBorrower.last_name}
-                              {selectedBorrower.class_name && (
+                              {selectedBorrower.student_id && (
                                 <span className="text-muted-foreground ml-1">
-                                  — {selectedBorrower.class_name}
+                                  ({selectedBorrower.student_id})
                                 </span>
                               )}
                             </span>
@@ -934,6 +936,11 @@ const LibraryTransactions = () => {
                                     <div className="flex flex-col">
                                       <span className="font-medium">
                                         {borrower.first_name} {borrower.last_name}
+                                        {borrower.student_id && (
+                                          <span className="text-muted-foreground font-normal ml-1">
+                                            ({borrower.student_id})
+                                          </span>
+                                        )}
                                       </span>
                                       <span className="text-xs text-muted-foreground">
                                         {borrower.class_name ? (

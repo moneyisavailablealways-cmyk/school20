@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchProfile = async (userId: string, retryCount = 0) => {
+  const fetchProfile = async (userId: string, retryCount = 0): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -52,23 +52,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error.code === 'PGRST116') {
           console.log('Profile not found for user, may be new user');
           setProfile(null);
-          return;
+          return null;
         }
         // Handle RLS recursion error - don't retry infinitely
         if (error.code === '42P17' && retryCount < 1) {
           console.warn('RLS recursion detected, retrying once...');
           setTimeout(() => fetchProfile(userId, retryCount + 1), 500);
-          return;
+          return null;
         }
         console.error('Error fetching profile:', error);
         setProfile(null);
-        return;
+        return null;
+      }
+
+      // Check if user is active - if not, sign them out
+      if (!data.is_active) {
+        console.warn('User account is inactive, signing out');
+        await supabase.auth.signOut();
+        setProfile(null);
+        return null;
       }
 
       setProfile(data);
+      return data;
     } catch (error) {
       console.error('Error fetching profile:', error);
       setProfile(null);
+      return null;
     }
   };
 
@@ -111,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -122,9 +132,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: error.message,
           variant: "destructive",
         });
+        return { error };
       }
 
-      return { error };
+      // Check if user profile is active
+      if (authData.user) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_active')
+          .eq('user_id', authData.user.id)
+          .single();
+
+        if (profileError || !profileData) {
+          await supabase.auth.signOut();
+          toast({
+            title: "Sign In Failed",
+            description: "User profile not found. Please contact an administrator.",
+            variant: "destructive",
+          });
+          return { error: new Error('Profile not found') };
+        }
+
+        if (!profileData.is_active) {
+          await supabase.auth.signOut();
+          toast({
+            title: "Account Inactive",
+            description: "Your account has been deactivated. Please contact an administrator.",
+            variant: "destructive",
+          });
+          return { error: new Error('Account inactive') };
+        }
+      }
+
+      return { error: null };
     } catch (error: any) {
       toast({
         title: "Sign In Failed",

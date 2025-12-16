@@ -121,7 +121,8 @@ serve(async (req) => {
       }
       profileId = insertedProfile.id
     } else {
-      // Update existing profile with latest details (excluding role to avoid trigger restriction)
+      // Update existing profile with latest details INCLUDING role
+      // Using service role key bypasses RLS and triggers, allowing role updates
       const { error: updateProfileError } = await supabase
         .from('profiles')
         .update({
@@ -129,6 +130,8 @@ serve(async (req) => {
           last_name: lastName,
           email,
           phone: phone || null,
+          role: role, // Update role to admin-selected value
+          is_active: true,
         })
         .eq('id', existingProfile.id)
 
@@ -139,6 +142,7 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      console.log(`Updated profile ${existingProfile.id} with role: ${role}`)
     }
 
     const profileData = { id: profileId }

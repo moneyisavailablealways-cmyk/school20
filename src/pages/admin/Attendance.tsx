@@ -219,12 +219,12 @@ const AdminAttendance = () => {
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Class Filter</label>
-                  <Select value={selectedClass} onValueChange={setSelectedClass}>
+                  <Select value={selectedClass || "all"} onValueChange={(val) => setSelectedClass(val === "all" ? "" : val)}>
                     <SelectTrigger>
                       <SelectValue placeholder="All Classes" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Classes</SelectItem>
+                      <SelectItem value="all">All Classes</SelectItem>
                       {classes?.map(cls => (
                         <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
                       ))}

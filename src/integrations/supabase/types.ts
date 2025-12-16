@@ -289,33 +289,99 @@ export type Database = {
           },
         ]
       }
+      attendance_audit_log: {
+        Row: {
+          action: string
+          attendance_record_id: string
+          changed_at: string | null
+          changed_by: string
+          id: string
+          ip_address: string | null
+          new_remarks: string | null
+          new_status: string | null
+          old_remarks: string | null
+          old_status: string | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          attendance_record_id: string
+          changed_at?: string | null
+          changed_by: string
+          id?: string
+          ip_address?: string | null
+          new_remarks?: string | null
+          new_status?: string | null
+          old_remarks?: string | null
+          old_status?: string | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          attendance_record_id?: string
+          changed_at?: string | null
+          changed_by?: string
+          id?: string
+          ip_address?: string | null
+          new_remarks?: string | null
+          new_status?: string | null
+          old_remarks?: string | null
+          old_status?: string | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
+          class_id: string | null
           created_at: string
           date: string
           id: string
-          notes: string | null
-          recorded_by: string | null
+          is_locked: boolean | null
+          last_modified_at: string | null
+          last_modified_by: string | null
+          locked_at: string | null
+          locked_by: string | null
+          marked_at: string | null
+          marked_by: string | null
+          remarks: string | null
+          session: string | null
           status: string
           student_id: string | null
           updated_at: string
         }
         Insert: {
+          class_id?: string | null
           created_at?: string
           date: string
           id?: string
-          notes?: string | null
-          recorded_by?: string | null
+          is_locked?: boolean | null
+          last_modified_at?: string | null
+          last_modified_by?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          marked_at?: string | null
+          marked_by?: string | null
+          remarks?: string | null
+          session?: string | null
           status: string
           student_id?: string | null
           updated_at?: string
         }
         Update: {
+          class_id?: string | null
           created_at?: string
           date?: string
           id?: string
-          notes?: string | null
-          recorded_by?: string | null
+          is_locked?: boolean | null
+          last_modified_at?: string | null
+          last_modified_by?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          marked_at?: string | null
+          marked_by?: string | null
+          remarks?: string | null
+          session?: string | null
           status?: string
           student_id?: string | null
           updated_at?: string
@@ -323,7 +389,7 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "attendance_records_recorded_by_fkey"
-            columns: ["recorded_by"]
+            columns: ["marked_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -336,6 +402,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      attendance_records_backup: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          id: string | null
+          notes: string | null
+          recorded_by: string | null
+          status: string | null
+          student_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          id?: string | null
+          notes?: string | null
+          recorded_by?: string | null
+          status?: string | null
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          id?: string | null
+          notes?: string | null
+          recorded_by?: string | null
+          status?: string | null
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      attendance_settings: {
+        Row: {
+          allow_future_attendance: boolean | null
+          auto_lock_enabled: boolean | null
+          created_at: string | null
+          default_session:
+            | Database["public"]["Enums"]["attendance_session"]
+            | null
+          enable_multiple_sessions: boolean | null
+          id: string
+          lock_time: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          allow_future_attendance?: boolean | null
+          auto_lock_enabled?: boolean | null
+          created_at?: string | null
+          default_session?:
+            | Database["public"]["Enums"]["attendance_session"]
+            | null
+          enable_multiple_sessions?: boolean | null
+          id?: string
+          lock_time?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          allow_future_attendance?: boolean | null
+          auto_lock_enabled?: boolean | null
+          created_at?: string | null
+          default_session?:
+            | Database["public"]["Enums"]["attendance_session"]
+            | null
+          enable_multiple_sessions?: boolean | null
+          id?: string
+          lock_time?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       behavior_notes: {
         Row: {
@@ -1271,6 +1409,47 @@ export type Database = {
           },
         ]
       }
+      school_calendar: {
+        Row: {
+          academic_year_id: string | null
+          created_at: string | null
+          created_by: string | null
+          date: string
+          description: string | null
+          event_type: string
+          id: string
+          name: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date: string
+          description?: string | null
+          event_type: string
+          id?: string
+          name: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_calendar_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_settings: {
         Row: {
           address: string | null
@@ -2055,12 +2234,23 @@ export type Database = {
         }
         Returns: string
       }
+      teacher_can_mark_attendance: {
+        Args: { p_class_id: string }
+        Returns: boolean
+      }
       teacher_can_view_enrollment: {
         Args: { enrollment_class_id: string; enrollment_stream_id: string }
         Returns: boolean
       }
     }
     Enums: {
+      attendance_session: "morning" | "afternoon" | "full_day"
+      attendance_status:
+        | "present"
+        | "absent"
+        | "late"
+        | "excused"
+        | "left_early"
       user_role:
         | "admin"
         | "principal"
@@ -2197,6 +2387,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      attendance_session: ["morning", "afternoon", "full_day"],
+      attendance_status: ["present", "absent", "late", "excused", "left_early"],
       user_role: [
         "admin",
         "principal",

@@ -21,7 +21,8 @@ interface Student {
     phone: string;
   };
   student_enrollments: {
-    class: string;
+    class_name: string;
+    stream_name: string | null;
     status: string;
   }[];
   medical_info?: {
@@ -207,14 +208,47 @@ const MyChildren = () => {
             .eq('id', studentData.profile_id)
             .maybeSingle();
 
-          // Fetch enrollments and class info
+          // Fetch enrollments with class and stream info
           const { data: enrollmentData } = await supabase
             .from('student_enrollments')
             .select(`
               status,
-              classes (name)
+              class_id,
+              stream_id
             `)
-            .eq('student_id', studentData.id);
+            .eq('student_id', studentData.id)
+            .eq('status', 'active');
+
+          // Fetch class names for enrollments
+          let classMap: Record<string, string> = {};
+          let streamMap: Record<string, string> = {};
+          
+          if (enrollmentData && enrollmentData.length > 0) {
+            const classIds = enrollmentData.map(e => e.class_id).filter(Boolean);
+            const streamIds = enrollmentData.map(e => e.stream_id).filter(Boolean);
+            
+            if (classIds.length > 0) {
+              const { data: classesData } = await supabase
+                .from('classes')
+                .select('id, name')
+                .in('id', classIds);
+              
+              if (classesData) {
+                classesData.forEach(c => { classMap[c.id] = c.name; });
+              }
+            }
+            
+            if (streamIds.length > 0) {
+              const { data: streamsData } = await supabase
+                .from('streams')
+                .select('id, name')
+                .in('id', streamIds);
+              
+              if (streamsData) {
+                streamsData.forEach(s => { streamMap[s.id] = s.name; });
+              }
+            }
+          }
 
           // Fetch medical info
           const { data: medicalData } = await supabase
@@ -234,7 +268,8 @@ const MyChildren = () => {
             ...studentData,
             profiles: profileData || { first_name: 'Name', last_name: 'Not Available', email: '', phone: '' },
             student_enrollments: enrollmentData?.map(enrollment => ({
-              class: enrollment.classes?.name || 'N/A',
+              class_name: enrollment.class_id ? classMap[enrollment.class_id] || 'Unknown Class' : 'Not Assigned',
+              stream_name: enrollment.stream_id ? streamMap[enrollment.stream_id] || null : null,
               status: enrollment.status
             })) || [],
             medical_info: medicalData || undefined,
@@ -258,15 +293,29 @@ const MyChildren = () => {
     }
   };
 
-  const calculateAge = (birthDate: string) => {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
+  const calculateAge = (birthDate: string | null | undefined): string => {
+    if (!birthDate) return 'Age not available';
+    try {
+      const today = new Date();
+      const birth = new Date(birthDate);
+      if (isNaN(birth.getTime())) return 'Age not available';
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      return `${age} years`;
+    } catch {
+      return 'Age not available';
     }
-    return age;
+  };
+
+  const getClassDisplay = (child: Student): string => {
+    const enrollment = child.student_enrollments?.[0];
+    if (!enrollment) return 'Not enrolled';
+    const className = enrollment.class_name || 'Unknown Class';
+    const streamName = enrollment.stream_name;
+    return streamName ? `${className} – ${streamName}` : className;
   };
 
   if (loading) {
@@ -321,8 +370,15 @@ const MyChildren = () => {
                       <User className="h-5 w-5" />
                       {child.profiles.first_name} {child.profiles.last_name}
                     </CardTitle>
-                    <CardDescription>
-                      Student ID: {child.student_id} • Age: {calculateAge(child.date_of_birth)}
+                    <CardDescription className="mt-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-3.5 w-3.5" />
+                        <span className="font-medium">Class: {getClassDisplay(child)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Age: {calculateAge(child.date_of_birth)}</span>
+                      </div>
                     </CardDescription>
                   </div>
                   <Badge variant={child.enrollment_status === 'active' ? 'default' : 'secondary'}>
@@ -333,23 +389,25 @@ const MyChildren = () => {
               <CardContent className="space-y-4">
                 <div className="grid gap-3">
                   <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>Born: {new Date(child.date_of_birth).toLocaleDateString()}</span>
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>Student ID: {child.student_id}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span>Gender: {child.gender}</span>
+                    <span>Gender: {child.gender || 'Not specified'}</span>
                   </div>
-                  {child.student_enrollments?.[0] && (
+                  {child.date_of_birth && (
                     <div className="flex items-center gap-2 text-sm">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span>Class: {child.student_enrollments[0].class}</span>
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span>Born: {new Date(child.date_of_birth).toLocaleDateString()}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{child.profiles.email}</span>
-                  </div>
+                  {child.profiles.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{child.profiles.email}</span>
+                    </div>
+                  )}
                   {child.profiles.phone && (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="h-4 w-4 text-muted-foreground" />

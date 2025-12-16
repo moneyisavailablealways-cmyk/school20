@@ -1,6 +1,6 @@
 import AttendanceManagement from '@/components/AttendanceManagement';
 
-const AdminAttendance = () => {
+const HeadTeacherAttendance = () => {
   return (
     <AttendanceManagement 
       title="Attendance Management"
@@ -9,4 +9,4 @@ const AdminAttendance = () => {
   );
 };
 
-export default AdminAttendance;
+export default HeadTeacherAttendance;

@@ -39,7 +39,10 @@ import TeacherStudents from "./pages/teacher/TeacherStudents";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
 import Schedule from "./pages/teacher/Schedule";
 import TeacherAttendance from "./pages/teacher/Attendance";
+import TeacherMyAttendance from "./pages/teacher/MyAttendance";
 import TeacherAppointments from "./pages/teacher/Appointments";
+import AdminTeacherAttendance from "./pages/admin/TeacherAttendance";
+import HeadTeacherTeacherAttendance from "./pages/head-teacher/TeacherAttendance";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentSubjects from "./pages/student/StudentSubjects";
 import StudentSchedule from "./pages/student/StudentSchedule";
@@ -130,6 +133,7 @@ const App = () => (
               <Route path="admissions" element={<Admissions />} />
               <Route path="timetable" element={<Timetable />} />
               <Route path="attendance" element={<AdminAttendance />} />
+              <Route path="teacher-attendance" element={<AdminTeacherAttendance />} />
               <Route path="reports" element={<Reports />} />
               <Route path="communications" element={<Communications />} />
               <Route path="settings" element={<Settings />} />
@@ -150,6 +154,7 @@ const App = () => (
               <Route path="students" element={<TeacherStudents />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="attendance" element={<TeacherAttendance />} />
+              <Route path="my-attendance" element={<TeacherMyAttendance />} />
               <Route path="appointments" element={<TeacherAppointments />} />
               <Route path="profile" element={<TeacherProfile />} />
             </Route>
@@ -169,6 +174,7 @@ const App = () => (
               <Route path="discipline" element={<DisciplineRecords />} />
               <Route path="timetable" element={<TimetableManagement />} />
               <Route path="attendance" element={<HeadTeacherAttendance />} />
+              <Route path="teacher-attendance" element={<HeadTeacherTeacherAttendance />} />
               <Route path="reports" element={<AcademicReports />} />
               <Route path="appointments" element={<HeadTeacherAppointments />} />
               <Route path="profile" element={<HeadTeacherProfile />} />

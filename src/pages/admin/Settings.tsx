@@ -27,9 +27,12 @@ import {
   Save,
   Upload,
   Key,
-  Lock
+  Lock,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from 'next-themes';
 
 interface SchoolSettings {
   school_name: string;
@@ -64,6 +67,72 @@ interface NotificationSettings {
   exam_notifications: boolean;
   announcement_notifications: boolean;
 }
+
+// Appearance Section Component with Dark Mode Toggle
+const AppearanceSection = ({ 
+  systemSettings, 
+  setSystemSettings 
+}: { 
+  systemSettings: SystemSettings; 
+  setSystemSettings: React.Dispatch<React.SetStateAction<SystemSettings>> 
+}) => {
+  const { theme, setTheme } = useTheme();
+  const isDarkMode = theme === 'dark';
+
+  return (
+    <div className="space-y-4">
+      <h4 className="font-semibold flex items-center space-x-2">
+        <Palette className="h-4 w-4" />
+        <span>Appearance</span>
+      </h4>
+      
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          {isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          <div>
+            <Label>Dark Mode</Label>
+            <p className="text-sm text-muted-foreground">
+              {isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            </p>
+          </div>
+        </div>
+        <Switch
+          checked={isDarkMode}
+          onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+        />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="theme_color">Accent Color</Label>
+          <Input
+            id="theme_color"
+            type="color"
+            value={systemSettings.theme_color}
+            onChange={(e) => setSystemSettings(prev => ({ ...prev, theme_color: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label htmlFor="language">Default Language</Label>
+          <Select 
+            value={systemSettings.language} 
+            onValueChange={(value) => setSystemSettings(prev => ({ ...prev, language: value }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select language" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="es">Spanish</SelectItem>
+              <SelectItem value="fr">French</SelectItem>
+              <SelectItem value="de">German</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
@@ -581,41 +650,7 @@ const Settings = () => {
 
               <Separator />
 
-              <div className="space-y-4">
-                <h4 className="font-semibold flex items-center space-x-2">
-                  <Palette className="h-4 w-4" />
-                  <span>Appearance</span>
-                </h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="theme_color">Theme Color</Label>
-                    <Input
-                      id="theme_color"
-                      type="color"
-                      value={systemSettings.theme_color}
-                      onChange={(e) => setSystemSettings(prev => ({ ...prev, theme_color: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="language">Default Language</Label>
-                    <Select 
-                      value={systemSettings.language} 
-                      onValueChange={(value) => setSystemSettings(prev => ({ ...prev, language: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select language" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="es">Spanish</SelectItem>
-                        <SelectItem value="fr">French</SelectItem>
-                        <SelectItem value="de">German</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
+              <AppearanceSection systemSettings={systemSettings} setSystemSettings={setSystemSettings} />
 
               <Separator />
 

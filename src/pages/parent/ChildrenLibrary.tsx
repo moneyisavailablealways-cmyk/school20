@@ -75,15 +75,16 @@ const ChildrenLibrary = () => {
           .eq('borrower_id', profileId)
           .eq('is_paid', false);
 
-        // Fetch reservations
+        // Fetch reservations (all active statuses)
         const { data: reservations } = await supabase
           .from('library_reservations')
           .select(`
             *,
-            library_items (title, author, category)
+            library_items (title, author, category, item_type, subject)
           `)
           .eq('reserver_id', profileId)
-          .eq('status', 'active');
+          .in('status', ['waiting', 'ready', 'active'])
+          .order('queue_position');
 
         childrenLibraryData.push({
           childId: student.id,
@@ -229,11 +230,14 @@ const ChildrenLibrary = () => {
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-primary" />
+                      <Clock className={`h-5 w-5 ${child.reservations.some((r: any) => r.status === 'ready') ? 'text-green-500' : 'text-primary'}`} />
                       <span className="text-sm font-medium">Reservations</span>
                     </div>
                     <div className="mt-2">
                       <div className="text-2xl font-bold">{child.reservations.length}</div>
+                      {child.reservations.some((r: any) => r.status === 'ready') && (
+                        <p className="text-xs text-green-600">Book ready for pickup!</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -360,6 +364,68 @@ const ChildrenLibrary = () => {
                     <div className="text-center py-8 text-muted-foreground">
                       <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p>No borrowing history</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Reservations */}
+              <Card className={child.reservations.some((r: any) => r.status === 'ready') ? 'border-green-200' : ''}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Active Reservations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {child.reservations.length > 0 ? (
+                    <div className="space-y-4">
+                      {child.reservations.map((reservation: any) => (
+                        <div 
+                          key={reservation.id} 
+                          className={`flex items-center justify-between p-4 border rounded-lg ${
+                            reservation.status === 'ready' ? 'border-green-200 bg-green-50/50' : ''
+                          }`}
+                        >
+                          <div className="flex-1">
+                            <h4 className="font-medium">{reservation.library_items?.title}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              by {reservation.library_items?.author || 'Unknown Author'}
+                            </p>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {reservation.library_items?.item_type && (
+                                <Badge variant="outline">{reservation.library_items.item_type}</Badge>
+                              )}
+                              {reservation.library_items?.subject && (
+                                <Badge variant="outline">{reservation.library_items.subject}</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                              <span>Queue Position: #{reservation.queue_position}</span>
+                              <span>•</span>
+                              <span>Reserved: {new Date(reservation.reservation_date).toLocaleDateString()}</span>
+                            </div>
+                            {reservation.hold_until && (
+                              <div className="mt-1 text-sm text-orange-600">
+                                Must collect by: {new Date(reservation.hold_until).toLocaleString()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            {reservation.status === 'ready' ? (
+                              <Badge variant="default" className="bg-green-500">Ready for Pickup</Badge>
+                            ) : (
+                              <Badge variant="secondary">Waiting (#{reservation.queue_position})</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No Active Reservations</p>
+                      <p className="text-sm">{child.childName} has no pending book reservations.</p>
                     </div>
                   )}
                 </CardContent>

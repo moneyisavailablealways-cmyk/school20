@@ -69,7 +69,7 @@ const StudentLibrary = () => {
     enabled: !!profile?.id
   });
 
-  // Get reservations
+  // Get reservations (all active queue statuses)
   const { data: reservations, isLoading: reservationsLoading } = useQuery({
     queryKey: ['student-reservations', profile?.id],
     queryFn: async () => {
@@ -87,8 +87,8 @@ const StudentLibrary = () => {
           )
         `)
         .eq('reserver_id', profile?.id)
-        .eq('status', 'active')
-        .order('reservation_date', { ascending: false });
+        .in('status', ['waiting', 'ready', 'active'])
+        .order('queue_position');
 
       if (error) throw error;
       return data || [];
@@ -249,14 +249,17 @@ const StudentLibrary = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={(reservations || []).some((r: any) => r.status === 'ready') ? 'border-green-300' : ''}>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-primary" />
+              <Heart className={`h-5 w-5 ${(reservations || []).some((r: any) => r.status === 'ready') ? 'text-green-500' : 'text-primary'}`} />
               <span className="text-sm font-medium">Active Reservations</span>
             </div>
             <div className="mt-2">
               <div className="text-2xl font-bold">{reservations?.length || 0}</div>
+              {(reservations || []).some((r: any) => r.status === 'ready') && (
+                <p className="text-xs text-green-600 font-medium">Book ready for pickup!</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -383,17 +386,41 @@ const StudentLibrary = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {reservations.map((reservation) => (
-                    <div key={reservation.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  {reservations.map((reservation: any) => (
+                    <div 
+                      key={reservation.id} 
+                      className={`flex items-center justify-between p-4 border rounded-lg ${
+                        reservation.status === 'ready' ? 'border-green-200 bg-green-50/50' : ''
+                      }`}
+                    >
                       <div className="flex-1">
                         <h4 className="font-medium">{reservation.library_items?.title}</h4>
-                        <p className="text-sm text-muted-foreground">{reservation.library_items?.author}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span>Reserved: {new Date(reservation.reservation_date).toLocaleDateString()}</span>
-                          <span>Expires: {new Date(reservation.expiry_date).toLocaleDateString()}</span>
+                        <p className="text-sm text-muted-foreground">{reservation.library_items?.author || 'Unknown author'}</p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {reservation.library_items?.item_type && (
+                            <Badge variant="outline">{reservation.library_items.item_type}</Badge>
+                          )}
+                          {reservation.library_items?.subject && (
+                            <Badge variant="outline">{reservation.library_items.subject}</Badge>
+                          )}
                         </div>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                          <span>Queue Position: #{reservation.queue_position}</span>
+                          <span>Reserved: {new Date(reservation.reservation_date).toLocaleDateString()}</span>
+                        </div>
+                        {reservation.hold_until && (
+                          <div className="mt-1 text-sm text-orange-600">
+                            Must collect by: {new Date(reservation.hold_until).toLocaleString()}
+                          </div>
+                        )}
                       </div>
-                      <Badge variant="secondary">Reserved</Badge>
+                      <div className="text-right">
+                        {reservation.status === 'ready' ? (
+                          <Badge variant="default" className="bg-green-500">Ready for Pickup!</Badge>
+                        ) : (
+                          <Badge variant="secondary">Waiting (#{reservation.queue_position})</Badge>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

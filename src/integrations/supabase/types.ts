@@ -1038,33 +1038,51 @@ export type Database = {
       }
       library_reservations: {
         Row: {
+          cancel_reason: string | null
+          cancelled_at: string | null
           created_at: string
           expiry_date: string
+          fulfilled_at: string | null
+          hold_until: string | null
           id: string
           library_item_id: string | null
           notes: string | null
+          notified_at: string | null
+          queue_position: number | null
           reservation_date: string | null
           reserver_id: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
           expiry_date: string
+          fulfilled_at?: string | null
+          hold_until?: string | null
           id?: string
           library_item_id?: string | null
           notes?: string | null
+          notified_at?: string | null
+          queue_position?: number | null
           reservation_date?: string | null
           reserver_id?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
           expiry_date?: string
+          fulfilled_at?: string | null
+          hold_until?: string | null
           id?: string
           library_item_id?: string | null
           notes?: string | null
+          notified_at?: string | null
+          queue_position?: number | null
           reservation_date?: string | null
           reserver_id?: string | null
           status?: string
@@ -2993,6 +3011,10 @@ export type Database = {
         Args: { p_best_eight_total: number }
         Returns: string
       }
+      cancel_library_reservation: {
+        Args: { p_reason?: string; p_reservation_id: string }
+        Returns: Json
+      }
       create_library_notification: {
         Args: {
           p_borrower_id: string
@@ -3003,12 +3025,29 @@ export type Database = {
         }
         Returns: string
       }
+      create_library_reservation: {
+        Args: {
+          p_library_item_id: string
+          p_notes?: string
+          p_reserver_id: string
+        }
+        Returns: Json
+      }
       delete_academic_year: { Args: { year_id: string }; Returns: boolean }
       delete_class: { Args: { class_id: string }; Returns: boolean }
       delete_level: { Args: { level_id: string }; Returns: boolean }
       delete_stream: { Args: { stream_id: string }; Returns: boolean }
+      expire_overdue_reservations: { Args: never; Returns: number }
+      fulfill_library_reservation: {
+        Args: { p_reservation_id: string }
+        Returns: Json
+      }
       generate_invoice_number: { Args: never; Returns: string }
       get_current_profile_id: { Args: never; Returns: string }
+      get_next_queue_position: {
+        Args: { p_library_item_id: string }
+        Returns: number
+      }
       is_admin_or_principal: { Args: never; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_bursar_user: { Args: never; Returns: boolean }
@@ -3043,6 +3082,14 @@ export type Database = {
           p_target_type: string
         }
         Returns: string
+      }
+      notify_next_in_queue: {
+        Args: { p_library_item_id: string }
+        Returns: undefined
+      }
+      reorder_reservation_queue: {
+        Args: { p_library_item_id: string }
+        Returns: undefined
       }
       teacher_can_mark_attendance: {
         Args: { p_class_id: string }

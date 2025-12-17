@@ -65,7 +65,7 @@ const Dashboard = () => {
     } else if (profile?.role === 'parent') {
       navigate('/parent', { replace: true });
     } else if (profile?.role === 'librarian') {
-      navigate('/library', { replace: true });
+      navigate('/librarian', { replace: true });
     } else if (profile?.role === 'student') {
       navigate('/student', { replace: true });
     }

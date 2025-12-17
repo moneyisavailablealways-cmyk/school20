@@ -17,8 +17,22 @@ const signInSchema = z.object({
 
 type SignInForm = z.infer<typeof signInSchema>;
 
+const getRoleRedirectPath = (role: string): string => {
+  const roleRoutes: Record<string, string> = {
+    admin: '/admin',
+    principal: '/principal',
+    head_teacher: '/head-teacher',
+    teacher: '/teacher',
+    bursar: '/bursar',
+    librarian: '/library',
+    student: '/student',
+    parent: '/parent',
+  };
+  return roleRoutes[role] || '/dashboard';
+};
+
 const Auth = () => {
-  const { signIn, user, loading } = useAuth();
+  const { signIn, user, profile, loading } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -31,18 +45,17 @@ const Auth = () => {
   });
 
   useEffect(() => {
-    if (user && !loading) {
-      navigate('/dashboard');
+    if (user && profile && !loading) {
+      const redirectPath = getRoleRedirectPath(profile.role);
+      navigate(redirectPath);
     }
-  }, [user, loading, navigate]);
+  }, [user, profile, loading, navigate]);
 
   const onSignIn = async (data: SignInForm) => {
     setIsSubmitting(true);
     try {
       const { error } = await signIn(data.email, data.password);
-      if (!error) {
-        navigate('/dashboard');
-      }
+      // Navigation will happen via useEffect when profile loads
     } finally {
       setIsSubmitting(false);
     }

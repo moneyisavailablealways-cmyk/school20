@@ -20,11 +20,11 @@ type SignInForm = z.infer<typeof signInSchema>;
 const getRoleRedirectPath = (role: string): string => {
   const roleRoutes: Record<string, string> = {
     admin: '/admin',
-    principal: '/principal',
+    principal: '/admin',
     head_teacher: '/head-teacher',
     teacher: '/teacher',
     bursar: '/bursar',
-    librarian: '/library',
+    librarian: '/librarian',
     student: '/student',
     parent: '/parent',
   };

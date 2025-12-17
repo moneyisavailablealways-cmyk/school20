@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Users, 
   FileCheck, 
@@ -16,86 +17,200 @@ import {
   UserCheck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { format, formatDistanceToNow } from 'date-fns';
+
+interface DashboardMetrics {
+  teachersCount: number;
+  pendingApprovals: number;
+  disciplineCases: number;
+  classesCount: number;
+}
+
+interface PendingApproval {
+  id: string;
+  subject_name: string;
+  class_name: string;
+  teacher_name: string;
+  submitted_at: string;
+  student_count: number;
+}
+
+interface RecentActivity {
+  id: string;
+  activity_type: string;
+  description: string;
+  created_at: string;
+}
 
 const HeadTeacherDashboard = () => {
   const { profile } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    teachersCount: 0,
+    pendingApprovals: 0,
+    disciplineCases: 0,
+    classesCount: 0,
+  });
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch teachers count
+      const { count: teachersCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'teacher')
+        .eq('is_active', true);
+
+      // Fetch pending mark approvals count
+      const { count: pendingCount } = await supabase
+        .from('subject_submissions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+
+      // Fetch discipline cases (behavior notes) from current month
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      const { count: disciplineCount } = await supabase
+        .from('behavior_notes')
+        .select('*', { count: 'exact', head: true })
+        .gte('date', startOfMonth.toISOString().split('T')[0]);
+
+      // Fetch classes count
+      const { count: classesCount } = await supabase
+        .from('classes')
+        .select('*', { count: 'exact', head: true });
+
+      setMetrics({
+        teachersCount: teachersCount || 0,
+        pendingApprovals: pendingCount || 0,
+        disciplineCases: disciplineCount || 0,
+        classesCount: classesCount || 0,
+      });
+
+      // Fetch pending approvals details
+      const { data: submissions } = await supabase
+        .from('subject_submissions')
+        .select(`
+          id,
+          submitted_at,
+          subject_id,
+          submitted_by
+        `)
+        .eq('status', 'pending')
+        .order('submitted_at', { ascending: false })
+        .limit(20);
+
+      if (submissions && submissions.length > 0) {
+        // Get unique subject IDs and teacher IDs
+        const subjectIds = [...new Set(submissions.map(s => s.subject_id))];
+        const teacherIds = [...new Set(submissions.map(s => s.submitted_by))];
+
+        // Fetch subjects with level_id
+        const { data: subjects } = await supabase
+          .from('subjects')
+          .select('id, name, level_id')
+          .in('id', subjectIds);
+
+        // Fetch teachers
+        const { data: teachers } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', teacherIds);
+
+        // Get level IDs from subjects for display
+        const levelIds = [...new Set(subjects?.map(s => s.level_id).filter(Boolean) || [])];
+        
+        // Fetch levels
+        const { data: levels } = await supabase
+          .from('levels')
+          .select('id, name')
+          .in('id', levelIds);
+
+        // Map data
+        const subjectMap = new Map(subjects?.map(s => [s.id, s]) || []);
+        const teacherMap = new Map(teachers?.map(t => [t.id, t]) || []);
+        const levelMap = new Map(levels?.map(l => [l.id, l]) || []);
+
+        // Group submissions by subject to get count
+        const submissionsBySubject = new Map<string, any[]>();
+        submissions.forEach(s => {
+          const key = s.subject_id;
+          if (!submissionsBySubject.has(key)) {
+            submissionsBySubject.set(key, []);
+          }
+          submissionsBySubject.get(key)!.push(s);
+        });
+
+        const approvalsList: PendingApproval[] = [];
+        submissionsBySubject.forEach((subs, subjectId) => {
+          const subject = subjectMap.get(subjectId);
+          const teacher = teacherMap.get(subs[0].submitted_by);
+          const levelInfo = subject?.level_id ? levelMap.get(subject.level_id) : null;
+
+          approvalsList.push({
+            id: subs[0].id,
+            subject_name: subject?.name || 'Unknown Subject',
+            class_name: levelInfo?.name || 'Unknown Level',
+            teacher_name: teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher',
+            submitted_at: subs[0].submitted_at,
+            student_count: subs.length,
+          });
+        });
+
+        setPendingApprovals(approvalsList.slice(0, 3));
+      }
+
+      // Fetch recent activities
+      const { data: activities } = await supabase
+        .from('activity_log')
+        .select('id, activity_type, description, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      setRecentActivities(activities || []);
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const academicMetrics = [
     {
       title: 'Teachers Supervised',
-      value: '24',
-      change: '+2',
+      value: metrics.teachersCount.toString(),
       icon: Users,
       color: 'text-blue-600',
     },
     {
       title: 'Pending Mark Approvals',
-      value: '18',
-      change: '-5',
+      value: metrics.pendingApprovals.toString(),
       icon: FileCheck,
       color: 'text-orange-600',
     },
     {
       title: 'Discipline Cases',
-      value: '7',
-      change: '+3',
+      value: metrics.disciplineCases.toString(),
       icon: AlertTriangle,
       color: 'text-red-600',
     },
     {
       title: 'Classes Monitored',
-      value: '45',
-      change: '0',
+      value: metrics.classesCount.toString(),
       icon: BookOpen,
       color: 'text-green-600',
-    },
-  ];
-
-  const pendingApprovals = [
-    {
-      type: 'Grade 10 Mathematics - Quiz Results',
-      teacher: 'Mr. Johnson',
-      dueDate: 'Today',
-      priority: 'high',
-    },
-    {
-      type: 'Grade 11 English - Essay Grades',
-      teacher: 'Ms. Smith',
-      dueDate: 'Tomorrow',
-      priority: 'medium',
-    },
-    {
-      type: 'Grade 9 Science - Lab Reports',
-      teacher: 'Dr. Brown',
-      dueDate: 'This Week',
-      priority: 'low',
-    },
-  ];
-
-  const recentActivities = [
-    {
-      time: '2 hours ago',
-      activity: 'Approved Grade 12 Physics final exam marks',
-      teacher: 'Dr. Wilson',
-      type: 'Approval',
-    },
-    {
-      time: '4 hours ago',
-      activity: 'Reviewed lesson plans for Mathematics department',
-      teacher: 'Mr. Johnson, Ms. Davis',
-      type: 'Review',
-    },
-    {
-      time: 'Yesterday',
-      activity: 'Updated Class 10B timetable allocation',
-      teacher: 'Multiple teachers',
-      type: 'Timetable',
-    },
-    {
-      time: '2 days ago',
-      activity: 'Resolved discipline case - Student misconduct',
-      teacher: 'Mrs. Thompson',
-      type: 'Discipline',
     },
   ];
 
@@ -106,7 +221,7 @@ const HeadTeacherDashboard = () => {
       icon: FileCheck,
       href: '/head-teacher/marks',
       color: 'text-orange-600',
-      badge: '18',
+      badge: metrics.pendingApprovals > 0 ? metrics.pendingApprovals.toString() : undefined,
     },
     {
       title: 'Teacher Supervision',
@@ -121,7 +236,7 @@ const HeadTeacherDashboard = () => {
       icon: AlertTriangle,
       href: '/head-teacher/discipline',
       color: 'text-red-600',
-      badge: '7',
+      badge: metrics.disciplineCases > 0 ? metrics.disciplineCases.toString() : undefined,
     },
     {
       title: 'Academic Reports',
@@ -132,24 +247,38 @@ const HeadTeacherDashboard = () => {
     },
   ];
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'text-red-600 bg-red-50 border-red-200';
-      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'low': return 'text-green-600 bg-green-50 border-green-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
-
   const getActivityTypeColor = (type: string) => {
-    switch (type) {
-      case 'Approval': return 'text-green-600 bg-green-50';
-      case 'Review': return 'text-blue-600 bg-blue-50';
-      case 'Timetable': return 'text-purple-600 bg-purple-50';
-      case 'Discipline': return 'text-red-600 bg-red-50';
+    switch (type.toLowerCase()) {
+      case 'approval': return 'text-green-600 bg-green-50';
+      case 'review': return 'text-blue-600 bg-blue-50';
+      case 'timetable': return 'text-purple-600 bg-purple-50';
+      case 'discipline': return 'text-red-600 bg-red-50';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -173,19 +302,6 @@ const HeadTeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{metric.value}</div>
-                <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                  {metric.change !== '0' && (
-                    <>
-                      <TrendingUp className={`h-3 w-3 ${metric.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`} />
-                      <span className={metric.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
-                        {metric.change} from last week
-                      </span>
-                    </>
-                  )}
-                  {metric.change === '0' && (
-                    <span className="text-muted-foreground">No change</span>
-                  )}
-                </div>
               </CardContent>
             </Card>
           ))}
@@ -235,22 +351,28 @@ const HeadTeacherDashboard = () => {
               <CardDescription>Teacher submissions requiring approval</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {pendingApprovals.map((approval, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className={`px-2 py-1 rounded text-xs font-medium border ${getPriorityColor(approval.priority)}`}>
-                      {approval.priority.toUpperCase()}
-                    </div>
+              {pendingApprovals.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  No pending approvals
+                </div>
+              ) : (
+                pendingApprovals.map((approval) => (
+                  <div key={approval.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div>
-                      <div className="font-medium">{approval.type}</div>
+                      <div className="font-medium">{approval.subject_name}</div>
                       <div className="text-sm text-muted-foreground">
-                        Teacher: {approval.teacher} • Due: {approval.dueDate}
+                        {approval.class_name} • {approval.teacher_name} • {approval.student_count} students
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Submitted {formatDistanceToNow(new Date(approval.submitted_at), { addSuffix: true })}
                       </div>
                     </div>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to="/head-teacher/marks">Review</Link>
+                    </Button>
                   </div>
-                  <Button size="sm" variant="outline">Review</Button>
-                </div>
-              ))}
+                ))
+              )}
               
               <div className="pt-3 border-t">
                 <Button asChild className="w-full">
@@ -266,29 +388,32 @@ const HeadTeacherDashboard = () => {
       <Card>
         <CardHeader>
           <CardTitle>Recent Activities</CardTitle>
-          <CardDescription>Your latest academic supervision activities</CardDescription>
+          <CardDescription>Latest system activities</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {recentActivities.map((activity, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="text-sm text-muted-foreground min-w-[80px]">
-                    {activity.time}
-                  </div>
-                  <div>
-                    <div className="font-medium">{activity.activity}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {activity.teacher}
+          {recentActivities.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              No recent activities
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentActivities.map((activity) => (
+                <div key={activity.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-sm text-muted-foreground min-w-[100px]">
+                      {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                    </div>
+                    <div>
+                      <div className="font-medium">{activity.description}</div>
                     </div>
                   </div>
+                  <Badge className={`text-xs px-2 py-1 ${getActivityTypeColor(activity.activity_type)}`}>
+                    {activity.activity_type}
+                  </Badge>
                 </div>
-                <Badge className={`text-xs px-2 py-1 ${getActivityTypeColor(activity.type)}`}>
-                  {activity.type}
-                </Badge>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

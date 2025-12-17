@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download, User, TrendingUp, Award } from 'lucide-react';
+import { FileText, Download, User, TrendingUp, Award, AlertTriangle, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -20,6 +20,18 @@ interface ReportCard {
   academic_year_id: string;
 }
 
+interface BehaviorNote {
+  id: string;
+  date: string;
+  category: string;
+  note_type: string;
+  description: string;
+  recorded_by_profile?: {
+    first_name: string;
+    last_name: string;
+  };
+}
+
 interface Student {
   id: string;
   profiles: {
@@ -33,6 +45,7 @@ const ReportsGrades = () => {
   const [children, setChildren] = useState<Student[]>([]);
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
+  const [behaviorNotes, setBehaviorNotes] = useState<BehaviorNote[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,10 +55,11 @@ const ReportsGrades = () => {
   useEffect(() => {
     if (selectedChild) {
       fetchReportCards();
+      fetchBehaviorNotes();
     }
   }, [selectedChild]);
 
-  // Real-time subscription for report cards
+  // Real-time subscription for report cards and behavior notes
   useEffect(() => {
     if (!profile?.id) return;
 
@@ -62,6 +76,24 @@ const ReportsGrades = () => {
           console.log('Report cards changed, refetching data');
           if (selectedChild) {
             fetchReportCards();
+          }
+        }
+      )
+      .subscribe();
+
+    const behaviorNotesChannel = supabase
+      .channel('behavior-notes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'behavior_notes'
+        },
+        () => {
+          console.log('Behavior notes changed, refetching data');
+          if (selectedChild) {
+            fetchBehaviorNotes();
           }
         }
       )
@@ -86,6 +118,7 @@ const ReportsGrades = () => {
 
     return () => {
       supabase.removeChannel(reportCardsChannel);
+      supabase.removeChannel(behaviorNotesChannel);
       supabase.removeChannel(parentRelationshipsChannel);
     };
   }, [profile?.id, selectedChild]);
@@ -144,6 +177,35 @@ const ReportsGrades = () => {
     }
   };
 
+  const fetchBehaviorNotes = async () => {
+    if (!selectedChild) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('behavior_notes')
+        .select(`
+          id,
+          date,
+          category,
+          note_type,
+          description,
+          recorded_by_profile:profiles!behavior_notes_recorded_by_fkey(
+            first_name,
+            last_name
+          )
+        `)
+        .eq('student_id', selectedChild)
+        .eq('is_private', false)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+
+      setBehaviorNotes(data || []);
+    } catch (error) {
+      console.error('Error fetching behavior notes:', error);
+    }
+  };
+
   const getGradeBadgeColor = (grade: string) => {
     if (!grade) return 'secondary';
     
@@ -167,6 +229,19 @@ const ReportsGrades = () => {
     if (percentage >= 80) return 'text-blue-600';
     if (percentage >= 70) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  const getCategoryBadgeVariant = (category: string): "default" | "secondary" | "destructive" | "outline" => {
+    switch (category.toLowerCase()) {
+      case 'disciplinary':
+        return 'destructive';
+      case 'positive':
+        return 'default';
+      case 'academic':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
   };
 
   const downloadReport = async (reportId: string) => {
@@ -193,7 +268,7 @@ const ReportsGrades = () => {
     <div className="container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Reports & Grades</h1>
-        <p className="text-muted-foreground">View your child's academic performance and report cards</p>
+        <p className="text-muted-foreground">View your child's academic performance, report cards, and discipline records</p>
       </div>
 
       {children.length === 0 ? (
@@ -223,96 +298,151 @@ const ReportsGrades = () => {
             </Select>
           </div>
 
-          {reportCards.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-xl font-semibold mb-2">No Reports Available</p>
-                <p className="text-muted-foreground text-center">
-                  No published report cards are available for the selected child.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {reportCards.map((report) => (
-                <Card key={report.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <Award className="h-5 w-5" />
-                          {report.term} Report Card
-                        </CardTitle>
-                        <CardDescription>
-                          Issued on {new Date(report.issued_date).toLocaleDateString()}
-                        </CardDescription>
-                      </div>
-                      <Button
-                        onClick={() => downloadReport(report.id)}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Overall Grade:</span>
-                          <Badge variant={getGradeBadgeColor(report.overall_grade)}>
-                            {report.overall_grade || 'N/A'}
+          {/* Discipline Records Section */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Discipline Records
+            </h2>
+            {behaviorNotes.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <AlertTriangle className="h-10 w-10 text-muted-foreground mb-3" />
+                  <p className="text-lg font-medium mb-1">No Discipline Records</p>
+                  <p className="text-muted-foreground text-center text-sm">
+                    No discipline records have been recorded for this child.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {behaviorNotes.map((note) => (
+                  <Card key={note.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getCategoryBadgeVariant(note.category)}>
+                            {note.category}
                           </Badge>
+                          <Badge variant="outline">{note.note_type}</Badge>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Overall Percentage:</span>
-                          <span className={`font-bold ${getPerformanceColor(report.overall_percentage)}`}>
-                            {report.overall_percentage ? `${report.overall_percentage}%` : 'N/A'}
-                          </span>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          {new Date(note.date).toLocaleDateString()}
                         </div>
                       </div>
-                      
-                      <div className="flex items-center justify-center">
-                        <div className="text-center">
-                          <div className={`text-3xl font-bold ${getPerformanceColor(report.overall_percentage)}`}>
-                            {report.overall_percentage ? `${report.overall_percentage}%` : 'N/A'}
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm mb-2">{note.description}</p>
+                      {note.recorded_by_profile && (
+                        <p className="text-xs text-muted-foreground">
+                          Recorded by: {note.recorded_by_profile.first_name} {note.recorded_by_profile.last_name}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Report Cards Section */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Award className="h-5 w-5" />
+              Report Cards
+            </h2>
+            {reportCards.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-xl font-semibold mb-2">No Reports Available</p>
+                  <p className="text-muted-foreground text-center">
+                    No published report cards are available for the selected child.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                {reportCards.map((report) => (
+                  <Card key={report.id}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <Award className="h-5 w-5" />
+                            {report.term} Report Card
+                          </CardTitle>
+                          <CardDescription>
+                            Issued on {new Date(report.issued_date).toLocaleDateString()}
+                          </CardDescription>
+                        </div>
+                        <Button
+                          onClick={() => downloadReport(report.id)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Overall Grade:</span>
+                            <Badge variant={getGradeBadgeColor(report.overall_grade)}>
+                              {report.overall_grade || 'N/A'}
+                            </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">Overall Performance</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Overall Percentage:</span>
+                            <span className={`font-bold ${getPerformanceColor(report.overall_percentage)}`}>
+                              {report.overall_percentage ? `${report.overall_percentage}%` : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-center">
+                          <div className="text-center">
+                            <div className={`text-3xl font-bold ${getPerformanceColor(report.overall_percentage)}`}>
+                              {report.overall_percentage ? `${report.overall_percentage}%` : 'N/A'}
+                            </div>
+                            <p className="text-sm text-muted-foreground">Overall Performance</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {report.teacher_comments && (
-                      <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Teacher's Comments</h4>
-                        <p className="text-blue-800 dark:text-blue-200">{report.teacher_comments}</p>
+                      {report.teacher_comments && (
+                        <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Teacher's Comments</h4>
+                          <p className="text-blue-800 dark:text-blue-200">{report.teacher_comments}</p>
+                        </div>
+                      )}
+
+                      {report.principal_comments && (
+                        <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                          <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">Principal's Comments</h4>
+                          <p className="text-green-800 dark:text-green-200">{report.principal_comments}</p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-2">
+                        <Button variant="outline" size="sm" className="flex-1">
+                          View Detailed Report
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1">
+                          Subject Breakdown
+                        </Button>
                       </div>
-                    )}
-
-                    {report.principal_comments && (
-                      <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
-                        <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">Principal's Comments</h4>
-                        <p className="text-green-800 dark:text-green-200">{report.principal_comments}</p>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        View Detailed Report
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1">
-                        Subject Breakdown
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

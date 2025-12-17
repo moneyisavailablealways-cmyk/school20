@@ -54,9 +54,30 @@ serve(async (req) => {
     let authUserId: string
     
     if (existingAuthUser) {
-      // User already exists in auth - use their ID
+      // User already exists in auth - use their ID and unban them if banned
       console.log('User already exists in auth, using existing user:', existingAuthUser.id)
       authUserId = existingAuthUser.id
+      
+      // Unban the user and update their password
+      const { error: updateError } = await supabase.auth.admin.updateUserById(authUserId, {
+        password,
+        email_confirm: true,
+        ban_duration: 'none', // Unban the user
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName,
+          role: role,
+        }
+      })
+      
+      if (updateError) {
+        console.error('Error updating existing user:', updateError)
+        return new Response(
+          JSON.stringify({ error: `Failed to reactivate user: ${updateError.message}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      console.log('Unbanned and updated existing user:', authUserId)
     } else {
       // Create the user with admin privileges
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({

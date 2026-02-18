@@ -27,6 +27,7 @@ const getRoleRedirectPath = (role: string): string => {
     librarian: '/librarian',
     student: '/student',
     parent: '/parent',
+    super_admin: '/super-admin',
   };
   return roleRoutes[role] || '/dashboard';
 };
@@ -140,6 +141,10 @@ const Auth = () => {
             <div className="mt-6 text-center text-sm text-muted-foreground">
               <p>Don't have an account?</p>
               <p>Contact your school administrator to get access or contact Skyline Tech Solutions +256705466283.</p>
+              <p className="mt-3">
+                <span className="font-medium">Are you a school? </span>
+                <a href="/school-signup" className="text-primary font-semibold hover:underline">Register your school →</a>
+              </p>
             </div>
           </CardContent>
         </Card>

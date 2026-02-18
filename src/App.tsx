@@ -17,7 +17,14 @@ import ParentLayout from "@/components/ParentLayout";
 import LibrarianLayout from "@/components/LibrarianLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import SchoolSignup from "./pages/SchoolSignup";
 import Dashboard from "./pages/Dashboard";
+import SuperAdminLayout from "@/components/SuperAdminLayout";
+import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
+import SchoolsManagement from "./pages/super-admin/SchoolsManagement";
+import PlatformAnalytics from "./pages/super-admin/PlatformAnalytics";
+import PlatformUsers from "./pages/super-admin/PlatformUsers";
+import PlatformSettings from "./pages/super-admin/PlatformSettings";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import StudentManagement from "./pages/admin/StudentManagement";
@@ -110,6 +117,23 @@ const App = () => (
             <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/school-signup" element={<SchoolSignup />} />
+
+            {/* Super Admin Routes */}
+            <Route
+              path="/super-admin"
+              element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SuperAdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<SuperAdminDashboard />} />
+              <Route path="schools" element={<SchoolsManagement />} />
+              <Route path="analytics" element={<PlatformAnalytics />} />
+              <Route path="users" element={<PlatformUsers />} />
+              <Route path="settings" element={<PlatformSettings />} />
+            </Route>
 
             {/* Backward-compatible aliases */}
             <Route path="/library" element={<Navigate to="/librarian" replace />} />

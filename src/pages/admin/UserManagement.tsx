@@ -29,7 +29,7 @@ import {
   Heart,
 } from 'lucide-react';
 
-type UserRole = 'admin' | 'principal' | 'head_teacher' | 'teacher' | 'bursar' | 'librarian' | 'student' | 'parent';
+type UserRole = 'admin' | 'principal' | 'head_teacher' | 'teacher' | 'bursar' | 'librarian' | 'student' | 'parent' | 'super_admin';
 
 interface Profile {
   id: string;
@@ -73,7 +73,7 @@ const createUserSchema = z.object({
   phone: z.string().optional(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Please confirm your password'),
-  role: z.enum(['admin', 'principal', 'head_teacher', 'teacher', 'bursar', 'librarian', 'student', 'parent']),
+  role: z.enum(['admin', 'principal', 'head_teacher', 'teacher', 'bursar', 'librarian', 'student', 'parent', 'super_admin']),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -83,7 +83,7 @@ const editUserSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   phone: z.string().optional(),
-  role: z.enum(['admin', 'principal', 'head_teacher', 'teacher', 'bursar', 'librarian', 'student', 'parent']),
+  role: z.enum(['admin', 'principal', 'head_teacher', 'teacher', 'bursar', 'librarian', 'student', 'parent', 'super_admin']),
   is_active: z.boolean(),
 });
 

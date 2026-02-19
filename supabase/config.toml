@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.process-reservation-expiry]
 verify_jwt = false
+
+[functions.register-school]
+verify_jwt = false

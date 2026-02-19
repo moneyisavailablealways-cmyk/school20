@@ -58,61 +58,24 @@ const SchoolSignup = () => {
   const onSubmit = async (data: SchoolSignupForm) => {
     setIsSubmitting(true);
     try {
-      // 1. Create the auth user for admin
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.admin_email,
-        password: data.admin_password,
-        options: {
-          data: {
-            first_name: data.admin_first_name,
-            last_name: data.admin_last_name,
-            role: 'admin',
-          },
+      const { data: result, error } = await supabase.functions.invoke('register-school', {
+        body: {
+          school_name: data.school_name,
+          school_code: data.school_code,
+          country: data.country,
+          region: data.region,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          admin_first_name: data.admin_first_name,
+          admin_last_name: data.admin_last_name,
+          admin_email: data.admin_email,
+          admin_password: data.admin_password,
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user');
-
-      // 2. Create the school record
-      const slug = data.school_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      const { data: schoolData, error: schoolError } = await supabase
-        .from('schools')
-        .insert([{
-          school_name: data.school_name,
-          school_code: data.school_code.toUpperCase(),
-          slug: `${slug}-${Date.now()}`,
-          country: data.country,
-          region: data.region || null,
-          email: data.email,
-          phone: data.phone || null,
-          address: data.address || null,
-          admin_name: `${data.admin_first_name} ${data.admin_last_name}`,
-          admin_email: data.admin_email,
-          status: 'active',
-        }])
-        .select()
-        .single();
-
-      if (schoolError) throw schoolError;
-
-      // 3. Update the profile with school_id and correct role
-      // Wait a moment for the trigger to create the profile
-      await new Promise(r => setTimeout(r, 1500));
-      
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          school_id: schoolData.id,
-          role: 'admin',
-          first_name: data.admin_first_name,
-          last_name: data.admin_last_name,
-        })
-        .eq('user_id', authData.user.id);
-
-      if (profileError) {
-        console.error('Profile update error:', profileError);
-      }
+      if (error) throw new Error(error.message || 'Registration failed');
+      if (result?.error) throw new Error(result.error);
 
       setStep('success');
     } catch (error: any) {

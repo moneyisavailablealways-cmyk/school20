@@ -74,6 +74,16 @@ serve(async (req) => {
       )
     }
 
+    // Check for duplicate admin email in auth.users
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const emailTaken = existingUsers?.users?.some(u => u.email === admin_email)
+    if (emailTaken) {
+      return new Response(
+        JSON.stringify({ error: 'A user with this email address already exists. Please use a different admin email or sign in with your existing account.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // 1. Create the school record
     const slug = school_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
     const { data: schoolData, error: schoolError } = await supabaseAdmin

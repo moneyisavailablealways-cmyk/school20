@@ -79,7 +79,12 @@ const SchoolSignup = () => {
 
       setStep('success');
     } catch (error: any) {
-      toast.error(error.message || 'Registration failed. Please try again.');
+      const msg = error.message || 'Registration failed. Please try again.';
+      if (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('already')) {
+        toast.error('This email is already registered. Please use a different admin email or sign in with your existing account.');
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setIsSubmitting(false);
     }

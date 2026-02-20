@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import QuickSetupDialog from '@/components/QuickSetupDialog';
 import {
   Users,
@@ -30,6 +31,7 @@ interface DashboardStats {
 }
 
 const AdminDashboard = () => {
+  const { profile } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalStudents: 0,
@@ -41,12 +43,28 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isQuickSetupOpen, setIsQuickSetupOpen] = useState(false);
   const [recentActivities, setRecentActivities] = useState([]);
+  const [schoolName, setSchoolName] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
     loadDashboardStats();
     loadRecentActivities();
-  }, []);
+    loadSchoolName();
+  }, [profile?.school_id]);
+
+  const loadSchoolName = async () => {
+    if (!profile?.school_id) return;
+    try {
+      const { data } = await supabase
+        .from('schools')
+        .select('school_name')
+        .eq('id', profile.school_id)
+        .single();
+      if (data) setSchoolName(data.school_name);
+    } catch (error) {
+      console.error('Error loading school name:', error);
+    }
+  };
 
   const loadDashboardStats = async () => {
     try {
@@ -264,7 +282,7 @@ const AdminDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome to School20 Administration Center
+            Welcome to {schoolName || 'Your School'} Administration Center
           </p>
         </div>
         <Button className="gap-2" onClick={() => setIsQuickSetupOpen(true)}>

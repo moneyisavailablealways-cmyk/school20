@@ -209,15 +209,15 @@ const Settings = () => {
       } else {
         // Use default values if no settings exist
         const defaultSchoolSettings: SchoolSettings = {
-          school_name: 'School20 Academy',
-          address: '123 Education Street, Learning City, LC 12345',
-          phone: '+1 (555) 123-4567',
-          email: 'contact@school20.edu',
-          website: 'https://www.school20.edu',
+          school_name: '',
+          address: '',
+          phone: '',
+          email: '',
+          website: '',
           logo_url: '',
-          established_year: '1995',
-          motto: 'Excellence in Education',
-          description: 'A premier educational institution dedicated to nurturing young minds and fostering academic excellence.',
+          established_year: '',
+          motto: '',
+          description: '',
         };
         setSchoolSettings(defaultSchoolSettings);
       }

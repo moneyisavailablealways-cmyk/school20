@@ -247,7 +247,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              Welcome to School20 - your comprehensive school management system. 
+              Welcome to your comprehensive school management system. 
               This is the foundation of your School Management System with role-based access control.
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

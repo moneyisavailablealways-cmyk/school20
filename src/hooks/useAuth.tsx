@@ -15,6 +15,7 @@ interface Profile {
   role: UserRole;
   is_active: boolean;
   avatar_url?: string;
+  school_id?: string;
   created_at: string;
   updated_at: string;
 }

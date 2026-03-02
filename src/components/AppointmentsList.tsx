@@ -3,7 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, User, Video, MapPin, Phone, Check, X, Send, Inbox } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Calendar, Clock, User, Video, MapPin, Phone, Check, X, Send, Inbox, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -69,6 +80,7 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
   const [receivedAppointments, setReceivedAppointments] = useState<ReceivedAppointment[]>([]);
   const [sentRecipients, setSentRecipients] = useState<Record<string, AppointmentRecipient[]>>({});
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('received');
 
   const fetchAppointments = async () => {
@@ -76,11 +88,12 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
     setLoading(true);
 
     try {
-      // Fetch sent appointments
+      // Fetch sent appointments (only upcoming)
       const { data: sentData, error: sentError } = await supabase
         .from('appointment_requests')
         .select('*')
         .eq('sender_id', profile.id)
+        .gte('appointment_date', new Date().toISOString())
         .order('appointment_date', { ascending: true });
 
       if (sentError) throw sentError;
@@ -96,7 +109,6 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
 
         if (recipientsError) throw recipientsError;
 
-        // Fetch recipient profiles
         if (recipientsData && recipientsData.length > 0) {
           const recipientIds = [...new Set(recipientsData.map(r => r.recipient_id))];
           const { data: profilesData } = await supabase
@@ -122,7 +134,7 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
         }
       }
 
-      // Fetch received appointments (where user is a recipient)
+      // Fetch received appointments (only upcoming)
       const { data: recipientRecords, error: recipientError } = await supabase
         .from('appointment_recipients')
         .select('*')
@@ -136,11 +148,11 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
           .from('appointment_requests')
           .select('*')
           .in('id', appointmentIds)
+          .gte('appointment_date', new Date().toISOString())
           .order('appointment_date', { ascending: true });
 
         if (appointmentsError) throw appointmentsError;
 
-        // Fetch sender profiles
         if (appointmentsData && appointmentsData.length > 0) {
           const senderIds = [...new Set(appointmentsData.map(a => a.sender_id))];
           const { data: sendersData } = await supabase
@@ -159,6 +171,8 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
           }));
 
           setReceivedAppointments(receivedWithDetails);
+        } else {
+          setReceivedAppointments([]);
         }
       } else {
         setReceivedAppointments([]);
@@ -178,7 +192,8 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
   useEffect(() => {
     if (profile?.id) {
       fetchAppointments();
-      setupRealtime();
+      const cleanup = setupRealtime();
+      return cleanup;
     }
   }, [profile?.id]);
 
@@ -202,6 +217,37 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
     };
   };
 
+  const handleDeleteAppointment = async (appointmentId: string) => {
+    if (!profile?.id) return;
+    setDeleting(appointmentId);
+
+    try {
+      const { data, error } = await supabase.rpc('delete_appointment_by_creator', {
+        p_appointment_id: appointmentId,
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; error?: string; message?: string };
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to delete appointment');
+        return;
+      }
+
+      toast.success('Appointment deleted successfully');
+      fetchAppointments();
+    } catch (error: any) {
+      console.error('Error deleting appointment:', error);
+      toast.error(error?.message || 'Failed to delete appointment');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleRecipientDeleteAttempt = () => {
+    toast.error('Only the appointment creator can delete this appointment.');
+  };
 
   const handleUpdateStatus = async (recipientRecordId: string, newStatus: 'approved' | 'rejected') => {
     try {
@@ -265,8 +311,6 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
     };
   };
 
-  const isUpcoming = (dateString: string) => new Date(dateString) >= new Date();
-
   if (loading) {
     return (
       <div className="space-y-4">
@@ -302,16 +346,15 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Inbox className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-xl font-semibold mb-2">No Received Appointments</p>
+              <p className="text-xl font-semibold mb-2">No Upcoming Appointments</p>
               <p className="text-muted-foreground text-center">
-                You haven't received any appointment requests yet.
+                You haven't received any upcoming appointment requests.
               </p>
             </CardContent>
           </Card>
         ) : (
           receivedAppointments.map((appointment) => {
             const dateTime = formatDateTime(appointment.appointment_date);
-            const upcoming = isUpcoming(appointment.appointment_date);
             
             return (
               <Card 
@@ -322,7 +365,7 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
                     : appointment.recipient_status === 'approved'
                     ? 'border-l-green-500'
                     : 'border-l-muted'
-                } ${!upcoming ? 'opacity-75' : ''}`}
+                }`}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -337,7 +380,17 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
                         <span className="text-xs">({roleLabels[appointment.sender_role] || appointment.sender_role})</span>
                       </CardDescription>
                     </div>
-                    {getStatusBadge(appointment.recipient_status)}
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(appointment.recipient_status)}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={handleRecipientDeleteAttempt}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -362,7 +415,7 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
                     </div>
                   )}
 
-                  {appointment.recipient_status === 'pending' && upcoming && (
+                  {appointment.recipient_status === 'pending' && (
                     <div className="flex gap-2">
                       <Button
                         size="sm"
@@ -395,22 +448,21 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Send className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-xl font-semibold mb-2">No Sent Appointments</p>
+              <p className="text-xl font-semibold mb-2">No Upcoming Sent Appointments</p>
               <p className="text-muted-foreground text-center">
-                You haven't sent any appointment requests yet.
+                You haven't sent any upcoming appointment requests.
               </p>
             </CardContent>
           </Card>
         ) : (
           sentAppointments.map((appointment) => {
             const dateTime = formatDateTime(appointment.appointment_date);
-            const upcoming = isUpcoming(appointment.appointment_date);
             const recipients = sentRecipients[appointment.id] || [];
             
             return (
               <Card 
                 key={appointment.id} 
-                className={`border-l-4 border-l-primary ${!upcoming ? 'opacity-75' : ''}`}
+                className="border-l-4 border-l-primary"
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -423,9 +475,40 @@ const AppointmentsList = forwardRef<AppointmentsListHandle, AppointmentsListProp
                         Sent on {new Date(appointment.created_at).toLocaleDateString()}
                       </CardDescription>
                     </div>
-                    <Badge variant="outline">
-                      {recipients.length} recipient(s)
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        {recipients.length} recipient(s)
+                      </Badge>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            disabled={deleting === appointment.id}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Appointment</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete this appointment for you and all recipients. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteAppointment(appointment.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>

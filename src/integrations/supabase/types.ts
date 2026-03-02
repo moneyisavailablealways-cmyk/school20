@@ -3521,6 +3521,7 @@ export type Database = {
         Args: { p_reason?: string; p_reservation_id: string }
         Returns: Json
       }
+      cleanup_expired_appointments: { Args: never; Returns: number }
       create_library_notification: {
         Args: {
           p_borrower_id: string
@@ -3540,6 +3541,10 @@ export type Database = {
         Returns: Json
       }
       delete_academic_year: { Args: { year_id: string }; Returns: boolean }
+      delete_appointment_by_creator: {
+        Args: { p_appointment_id: string }
+        Returns: Json
+      }
       delete_class: { Args: { class_id: string }; Returns: boolean }
       delete_level: { Args: { level_id: string }; Returns: boolean }
       delete_stream: { Args: { stream_id: string }; Returns: boolean }

@@ -116,6 +116,7 @@ const SubmissionsApproval = () => {
 
       return data;
     },
+    enabled: !!schoolId,
   });
 
   // Approve mutation

@@ -117,15 +117,30 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
         return;
       }
 
-      const recipientRecords = selectedRecipients.map(recipientId => {
-        const recipient = recipients.find(r => r.id === recipientId);
-        return {
-          appointment_id: appointment.id,
-          recipient_id: recipientId,
-          recipient_role: recipient?.role || 'unknown',
-          status: 'pending',
-        };
-      });
+      const { data: roleRecipients, error: roleRecipientsError } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('role', selectedRole as any)
+        .eq('is_active', true)
+        .neq('id', profile.id);
+
+      if (roleRecipientsError) {
+        console.error('[Appointments] Recipients fetch error:', roleRecipientsError);
+        toast.error(`Failed to fetch role recipients: ${roleRecipientsError.message}`);
+        return;
+      }
+
+      if (!roleRecipients || roleRecipients.length === 0) {
+        toast.error(`No users found for ${getRoleLabel(selectedRole)}.`);
+        return;
+      }
+
+      const recipientRecords = (roleRecipients as Recipient[]).map((recipient) => ({
+        appointment_id: appointment.id,
+        recipient_id: recipient.id,
+        recipient_role: recipient.role,
+        status: 'pending',
+      }));
 
       const { error: recipientsError } = await supabase
         .from('appointment_recipients')
@@ -137,7 +152,7 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
         return;
       }
 
-      toast.success(`Appointment request sent to ${selectedRecipients.length} recipient(s)`);
+      toast.success(`Appointment sent to ${getRoleLabel(selectedRole)} dashboard (${roleRecipients.length} users)`);
       setOpen(false);
       resetForm();
       onSuccess?.();

@@ -546,6 +546,8 @@ const AcademicStructure = () => {
       sub_level_parent: '',
     });
     setSelectedLevel(null);
+  };
+
   const resetClassForm = () => {
     setClassForm({ name: '', level_id: '', sub_level_id: '', max_students: '40', academic_year_id: '' });
     setSelectedClass(null);
@@ -565,6 +567,8 @@ const AcademicStructure = () => {
     });
     setIsYearDialogOpen(true);
   };
+
+  const openEditLevel = (level: Level) => {
     setSelectedLevel(level);
     setLevelForm({
       name: level.name,

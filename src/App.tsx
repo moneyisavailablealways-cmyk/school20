@@ -52,6 +52,7 @@ import TeacherMyAttendance from "./pages/teacher/MyAttendance";
 import TeacherAppointments from "./pages/teacher/Appointments";
 import AdminTeacherAttendance from "./pages/admin/TeacherAttendance";
 import AdminReportCards from "./pages/admin/ReportCards";
+import AcademicRiskDetection from "./pages/admin/AcademicRiskDetection";
 import TeacherMarksSubmission from "./pages/teacher/MarksSubmission";
 import HeadTeacherTeacherAttendance from "./pages/head-teacher/TeacherAttendance";
 import StudentDashboard from "./pages/student/StudentDashboard";

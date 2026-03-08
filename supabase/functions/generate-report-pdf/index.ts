@@ -346,6 +346,7 @@ serve(async (req) => {
         headTeacher: signatures.headTeacher,
       },
       stampUrl,
+      templateType: defaultTemplate?.template_type || 'classic',
       gradingScale: gradingConfig?.map((gc: any) => ({
         grade: gc.grade,
         minScore: gc.min_marks,

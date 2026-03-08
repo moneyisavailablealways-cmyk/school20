@@ -94,6 +94,7 @@ const SubjectManagement = () => {
       const { data, error } = await supabase
         .from('levels')
         .select('id, name, parent_id')
+        .eq('school_id', schoolId!)
         .order('name', { ascending: true });
 
       if (error) throw error;

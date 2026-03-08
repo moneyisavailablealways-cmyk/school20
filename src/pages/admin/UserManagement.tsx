@@ -177,6 +177,23 @@ const UserManagement = () => {
     if (avatarInputRef.current) avatarInputRef.current.value = '';
   };
 
+  const handleEditAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Error', description: 'Image must be under 2MB', variant: 'destructive' });
+      return;
+    }
+    setEditAvatarFile(file);
+    setEditAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const clearEditAvatar = () => {
+    setEditAvatarFile(null);
+    setEditAvatarPreview(null);
+    if (editAvatarInputRef.current) editAvatarInputRef.current.value = '';
+  };
+
   const createUser = async (data: CreateUserForm) => {
     try {
       const { data: result, error } = await supabase.functions.invoke('create-user', {

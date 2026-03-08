@@ -107,7 +107,7 @@ const AcademicStructure = () => {
 
   const [levelForm, setLevelForm] = useState({
     name: '',
-    parent_id: '',
+    parent_id: 'none',
     custom_parent_name: '',
     is_sub_level: false,
     sub_level_parent: '',

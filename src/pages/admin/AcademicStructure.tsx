@@ -1678,6 +1678,224 @@ const AcademicStructure = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="terms" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Academic Terms</CardTitle>
+                  <CardDescription>Manage terms within academic years</CardDescription>
+                </div>
+                <Dialog open={isTermDialogOpen} onOpenChange={setIsTermDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={resetTermForm}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Term
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {selectedTerm ? 'Edit Term' : 'Add Term'}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSaveTerm} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="term-name">Term Name *</Label>
+                          <Input
+                            id="term-name"
+                            placeholder="e.g., Term 1"
+                            value={termForm.term_name}
+                            onChange={(e) => setTermForm(prev => ({ ...prev, term_name: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="term-number">Term Number *</Label>
+                          <Input
+                            id="term-number"
+                            type="number"
+                            min="1"
+                            value={termForm.term_number}
+                            onChange={(e) => setTermForm(prev => ({ ...prev, term_number: e.target.value }))}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="term-year">Academic Year *</Label>
+                        <Select
+                          value={termForm.academic_year_id}
+                          onValueChange={(value) => setTermForm(prev => ({ ...prev, academic_year_id: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select academic year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {academicYears.map(year => (
+                              <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="term-start">Start Date *</Label>
+                          <Input
+                            id="term-start"
+                            type="date"
+                            value={termForm.start_date}
+                            onChange={(e) => setTermForm(prev => ({ ...prev, start_date: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="term-end">End Date *</Label>
+                          <Input
+                            id="term-end"
+                            type="date"
+                            value={termForm.end_date}
+                            onChange={(e) => setTermForm(prev => ({ ...prev, end_date: e.target.value }))}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="term-opening">Opening Day</Label>
+                          <Input
+                            id="term-opening"
+                            type="date"
+                            value={termForm.opening_day}
+                            onChange={(e) => setTermForm(prev => ({ ...prev, opening_day: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="term-closing">Closing Day</Label>
+                          <Input
+                            id="term-closing"
+                            type="date"
+                            value={termForm.closing_day}
+                            onChange={(e) => setTermForm(prev => ({ ...prev, closing_day: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="term-holiday-start">Holiday Start</Label>
+                          <Input
+                            id="term-holiday-start"
+                            type="date"
+                            value={termForm.holiday_start_date}
+                            onChange={(e) => setTermForm(prev => ({ ...prev, holiday_start_date: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="term-holiday-end">Holiday End</Label>
+                          <Input
+                            id="term-holiday-end"
+                            type="date"
+                            value={termForm.holiday_end_date}
+                            onChange={(e) => setTermForm(prev => ({ ...prev, holiday_end_date: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsTermDialogOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit">
+                          {selectedTerm ? 'Update' : 'Create'}
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Term Name</TableHead>
+                    <TableHead>#</TableHead>
+                    <TableHead>Academic Year</TableHead>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Opening / Closing</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {academicTerms.map((term) => (
+                    <TableRow key={term.id}>
+                      <TableCell className="font-medium">{term.term_name}</TableCell>
+                      <TableCell>{term.term_number}</TableCell>
+                      <TableCell>{(term as any).academic_years?.name || '—'}</TableCell>
+                      <TableCell>
+                        {format(new Date(term.start_date), 'MMM dd, yyyy')} –{' '}
+                        {format(new Date(term.end_date), 'MMM dd, yyyy')}
+                      </TableCell>
+                      <TableCell>
+                        {term.opening_day ? format(new Date(term.opening_day), 'MMM dd') : '—'}{' / '}
+                        {term.closing_day ? format(new Date(term.closing_day), 'MMM dd') : '—'}
+                      </TableCell>
+                      <TableCell>
+                        {term.is_current ? (
+                          <Badge variant="default">
+                            <CheckCircle className="mr-1 h-3 w-3" />
+                            Current
+                          </Badge>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSetCurrentTerm(term.id)}
+                          >
+                            Set as Current
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditTerm(term)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {!term.is_current && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeleteDialog('term', term)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {academicTerms.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        No terms found. Add your first academic term.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Delete Confirmation Dialog */}

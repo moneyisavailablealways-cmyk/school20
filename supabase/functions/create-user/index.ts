@@ -152,8 +152,9 @@ serve(async (req) => {
           last_name: lastName,
           email,
           phone: phone || null,
-          role: role, // Update role to admin-selected value
+          role: role,
           is_active: true,
+          school_id: profile.school_id || null,
         })
         .eq('id', existingProfile.id)
 

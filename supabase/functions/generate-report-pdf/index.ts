@@ -332,7 +332,7 @@ serve(async (req) => {
     // Generate verification code
     const verificationCode = `${studentId.substring(0, 8)}-${Date.now().toString(36).toUpperCase()}`;
 
-    // Store generated report record
+    // Store generated report record with full report data
     const { data: report, error: reportError } = await supabase
       .from('generated_reports')
       .upsert({
@@ -345,6 +345,7 @@ serve(async (req) => {
         generated_by: generatedBy,
         generated_at: new Date().toISOString(),
         verification_code: verificationCode,
+        report_data: reportData,
       }, {
         onConflict: 'student_id,academic_year_id,term',
       })

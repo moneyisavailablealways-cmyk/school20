@@ -110,7 +110,7 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
       {/* Comments with Signatures beside them */}
       <div style={{ border: '1px solid #000', marginBottom: '6px', position: 'relative' }}>
         {/* Class Teacher Comment */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #999', padding: '6px 8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '6px 8px' }}>
           <div style={{ flex: 1, fontSize: '10.5px' }}>
             <strong>Class teacher's Comment:</strong><br />
             <span style={{ fontStyle: 'italic' }}>{summary.classTeacherComment || 'No comment'}</span>

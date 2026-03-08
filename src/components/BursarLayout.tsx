@@ -10,7 +10,8 @@ import {
   User,
   Settings,
   GraduationCap,
-  CalendarCheck
+  CalendarCheck,
+  ClipboardList
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';

@@ -331,62 +331,34 @@ const AcademicStructure = () => {
 
   const handleSaveLevel = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation based on form type
-    if (levelForm.is_sub_level) {
-      // Sub-level validation
-      if (!levelForm.name || !levelForm.sub_level_parent) {
-        toast({
-          title: 'Validation Error',
-          description: 'Please fill in all required fields',
-          variant: 'destructive',
-        });
-        return;
-      }
-    } else {
-      // Parent level validation
-      if (levelForm.parent_id === 'other' && !levelForm.custom_parent_name) {
-        toast({
-          title: 'Validation Error',
-          description: 'Please enter a custom parent level name',
-          variant: 'destructive',
-        });
-        return;
-      }
-      if (!levelForm.name) {
-        toast({
-          title: 'Validation Error',
-          description: 'Please fill in all required fields',
-          variant: 'destructive',
-        });
-        return;
-      }
+
+    const trimmedName = levelForm.name.trim();
+    const selectedParentId = levelForm.is_sub_level
+      ? levelForm.sub_level_parent
+      : null;
+
+    if (!trimmedName) {
+      toast({
+        title: 'Validation Error',
+        description: 'Level name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (levelForm.is_sub_level && !selectedParentId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a parent level for this sub-level',
+        variant: 'destructive',
+      });
+      return;
     }
 
     try {
-      let parentId = null;
-      let levelName = levelForm.name;
-      
-      if (levelForm.is_sub_level) {
-        // Creating a sub-level
-        parentId = levelForm.sub_level_parent;
-      } else if (levelForm.parent_id === 'other') {
-        // Creating new parent level first, then sub-level
-        const { data: newParent, error: parentError } = await supabase
-          .from('levels')
-          .insert([{ name: levelForm.custom_parent_name, parent_id: null }])
-          .select()
-          .single();
-        
-        if (parentError) throw parentError;
-        parentId = newParent.id;
-      } else if (levelForm.parent_id !== 'none') {
-        parentId = levelForm.parent_id;
-      }
-
       const levelData = {
-        name: levelName,
-        parent_id: parentId,
+        name: trimmedName,
+        parent_id: selectedParentId,
       };
 
       if (selectedLevel) {
@@ -411,9 +383,12 @@ const AcademicStructure = () => {
       fetchData();
     } catch (error: any) {
       console.error('Error saving level:', error);
+      const isDuplicate = error?.message?.toLowerCase().includes('duplicate');
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save level',
+        description: isDuplicate
+          ? 'A level with this name already exists.'
+          : error.message || 'Failed to save level',
         variant: 'destructive',
       });
     }

@@ -307,7 +307,7 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalUsers}</div>
             <p className="text-xs text-muted-foreground">
-              All system users
+              All school users
             </p>
           </CardContent>
         </Card>

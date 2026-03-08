@@ -125,6 +125,7 @@ const SubmissionsApproval = () => {
       toast.success('Submissions approved');
       setSelectedIds([]);
       queryClient.invalidateQueries({ queryKey: ['submissions-for-approval'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions-stats-counts'] });
     },
     onError: (error) => {
       toast.error(`Failed to approve: ${error.message}`);

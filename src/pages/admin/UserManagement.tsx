@@ -518,7 +518,9 @@ const UserManagement = () => {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">Create User</Button>
+                  <Button type="submit" disabled={uploadingAvatar}>
+                    {uploadingAvatar ? 'Uploading...' : 'Create User'}
+                  </Button>
                 </div>
               </form>
             </Form>

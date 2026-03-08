@@ -244,16 +244,20 @@ const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProp
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Brain className="h-7 w-7 text-primary" />
-            Academic Risk Detection
+            {viewMode === 'teacher' ? 'My Students - Academic Risk' : 'Academic Risk Detection'}
           </h1>
           <p className="text-muted-foreground mt-1">
-            AI-powered analysis to identify at-risk students before they fail
+            {viewMode === 'teacher'
+              ? 'View at-risk students in your classes'
+              : 'AI-powered analysis to identify at-risk students before they fail'}
           </p>
         </div>
-        <Button onClick={runAnalysis} disabled={analyzing || !selectedYear} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${analyzing ? 'animate-spin' : ''}`} />
-          {analyzing ? 'Analyzing...' : 'Run Analysis'}
-        </Button>
+        {viewMode === 'admin' && (
+          <Button onClick={runAnalysis} disabled={analyzing || !selectedYear} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${analyzing ? 'animate-spin' : ''}`} />
+            {analyzing ? 'Analyzing...' : 'Run Analysis'}
+          </Button>
+        )}
       </div>
 
       {/* Filters */}

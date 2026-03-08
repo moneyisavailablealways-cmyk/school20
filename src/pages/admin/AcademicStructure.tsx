@@ -195,7 +195,7 @@ const AcademicStructure = () => {
       
       toast({ 
         title: 'Success', 
-        description: `${deleteType.charAt(0).toUpperCase() + deleteType.slice(1)} "${itemToDelete.name}" deleted successfully` 
+        description: `${deleteType.charAt(0).toUpperCase() + deleteType.slice(1)} "${itemToDelete.name || itemToDelete.term_name}" deleted successfully` 
       });
       
       setDeleteDialogOpen(false);

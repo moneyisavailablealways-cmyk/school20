@@ -183,23 +183,17 @@ const TermConfiguration = () => {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Term Configurations
-            </CardTitle>
-            <CardDescription>
-              Configure term dates and information for report cards
-            </CardDescription>
-          </div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Term Configurations
+          </CardTitle>
+          <CardDescription>
+            View and manage term configurations for report cards
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openAddDialog}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Term
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>

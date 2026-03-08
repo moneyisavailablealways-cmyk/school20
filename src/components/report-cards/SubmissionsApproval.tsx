@@ -532,6 +532,47 @@ const SubmissionsApproval = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reset Marks Dialog */}
+      <Dialog open={resetDialog.isOpen} onOpenChange={(open) => { if (!open) { setResetDialog({ isOpen: false, submission: null }); setResetReason(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Approved Marks</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reset the approved marks for this student? This will allow the teacher to enter the marks again.
+            </DialogDescription>
+          </DialogHeader>
+          {resetDialog.submission && (
+            <div className="text-sm space-y-1 p-3 rounded-md bg-muted">
+              <p><span className="text-muted-foreground">Student:</span> <strong>{(resetDialog.submission.student as any)?.profiles?.first_name} {(resetDialog.submission.student as any)?.profiles?.last_name}</strong></p>
+              <p><span className="text-muted-foreground">Subject:</span> <strong>{(resetDialog.submission.subject as any)?.name}</strong></p>
+              <p><span className="text-muted-foreground">Current Marks:</span> <strong>{resetDialog.submission.marks}</strong></p>
+              <p><span className="text-muted-foreground">Grade:</span> <strong>{resetDialog.submission.grade}</strong></p>
+            </div>
+          )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Reason for correction (optional)</label>
+            <Textarea
+              value={resetReason}
+              onChange={(e) => setResetReason(e.target.value)}
+              placeholder="e.g., Teacher entered incorrect exam score..."
+              rows={2}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResetDialog({ isOpen: false, submission: null }); setResetReason(''); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => resetMarksMutation.mutate({ submission: resetDialog.submission, reason: resetReason })}
+              disabled={resetMarksMutation.isPending}
+            >
+              {resetMarksMutation.isPending ? 'Resetting...' : 'Confirm Reset'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

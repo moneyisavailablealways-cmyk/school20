@@ -248,17 +248,57 @@ const ReportCardFees = () => {
 
               <div>
                 <Label>Class (Optional — leave empty for all classes)</Label>
-                <Select value={formData.class_id || 'all'} onValueChange={(v) => setFormData(p => ({ ...p, class_id: v === 'all' ? '' : v }))}>
-                  <SelectTrigger><SelectValue placeholder="All classes" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Classes</SelectItem>
-                    {classes.map((cls) => (
-                      <SelectItem key={cls.id} value={cls.id}>
-                        {cls.name} {cls.levels && `(${cls.levels.name})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={classComboOpen} onOpenChange={setClassComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={classComboOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {formData.class_id
+                        ? (() => {
+                            const cls = classes.find(c => c.id === formData.class_id);
+                            return cls ? `${cls.name}${cls.levels ? ` (${cls.levels.name})` : ''}` : 'All Classes';
+                          })()
+                        : 'All Classes'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search classes..." />
+                      <CommandList>
+                        <CommandEmpty>No class found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="all-classes"
+                            onSelect={() => {
+                              setFormData(p => ({ ...p, class_id: '' }));
+                              setClassComboOpen(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", !formData.class_id ? "opacity-100" : "opacity-0")} />
+                            All Classes
+                          </CommandItem>
+                          {classes.map((cls) => (
+                            <CommandItem
+                              key={cls.id}
+                              value={`${cls.name} ${cls.levels?.name || ''}`}
+                              onSelect={() => {
+                                setFormData(p => ({ ...p, class_id: cls.id }));
+                                setClassComboOpen(false);
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", formData.class_id === cls.id ? "opacity-100" : "opacity-0")} />
+                              {cls.name} {cls.levels && `(${cls.levels.name})`}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div>

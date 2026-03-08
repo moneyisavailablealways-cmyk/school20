@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, BookOpen } from 'lucide-react';
+import { Plus, Pencil, Trash2, BookOpen, Info } from 'lucide-react';
+import { useSchoolLevel, SUGGESTED_SUBJECTS } from '@/hooks/useSchoolLevel';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Level {
   id: string;
@@ -28,6 +30,7 @@ interface Subject {
   sub_level: string | null;
   is_core: boolean;
   is_active: boolean;
+  education_level: string | null;
   created_at: string;
   updated_at: string;
   level?: Level;
@@ -49,6 +52,7 @@ const SubjectManagement = () => {
     is_active: true,
   });
   const { toast } = useToast();
+  const { schoolLevel } = useSchoolLevel();
 
   useEffect(() => {
     fetchSubjects();

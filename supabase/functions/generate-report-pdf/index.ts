@@ -265,8 +265,19 @@ serve(async (req) => {
       ? Math.round(processedSubjects.reduce((sum, s) => sum + (s.identifier || 2), 0) / processedSubjects.length)
       : 2;
 
-    const classTeacherComment = overrideCtComment || comments?.find((c: any) => c.comment_type === 'class_teacher')?.comment || '';
-    const headTeacherComment = overrideHtComment || comments?.find((c: any) => c.comment_type === 'head_teacher')?.comment || '';
+    // Auto-generate comment from auto_comment_rules if no manual comment exists
+    const getAutoComment = (score: number): string => {
+      if (!autoCommentRules || autoCommentRules.length === 0) return '';
+      const rule = autoCommentRules.find((r: any) => score >= r.min_score && score <= r.max_score);
+      return rule?.comment_text || '';
+    };
+
+    const savedCtComment = comments?.find((c: any) => c.comment_type === 'class_teacher')?.comment || '';
+    const savedHtComment = comments?.find((c: any) => c.comment_type === 'head_teacher')?.comment || '';
+    const autoComment = getAutoComment(overallAvg);
+
+    const classTeacherComment = overrideCtComment || savedCtComment || autoComment;
+    const headTeacherComment = overrideHtComment || savedHtComment || autoComment;
 
     // Format fees balance for display
     const feesBalanceDisplay = feesData.finalBalance > 0

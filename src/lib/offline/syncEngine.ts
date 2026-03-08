@@ -84,7 +84,7 @@ async function syncItem(item: SyncQueueItem): Promise<'success' | 'conflict' | '
           .maybeSingle();
 
         if (existing) {
-          const existingRecord = existing as Record<string, unknown>;
+          const existingRecord = existing as unknown as Record<string, unknown>;
           const serverUpdatedAt = new Date((existingRecord.updated_at as string) || 0).getTime();
           if (serverUpdatedAt > item.timestamp) {
             await updateSyncItemStatus(item.id, 'conflict', existingRecord);

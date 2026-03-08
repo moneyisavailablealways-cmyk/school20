@@ -6,7 +6,7 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
   return (
     <div
       className="bg-white text-black mx-auto"
-      style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '11px', maxWidth: '210mm', padding: '8mm 10mm' }}
+      style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '11px', maxWidth: '210mm', padding: '8mm 10mm', position: 'relative' }}
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
@@ -107,8 +107,23 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
         </table>
       )}
 
+      {/* Stamp overlay - positioned over comments area like a real rubber stamp */}
+      {stampUrl && (
+        <div style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translate(-50%, -30px) rotate(-12deg)',
+          zIndex: 10,
+          pointerEvents: 'none',
+          opacity: 0.75,
+          mixBlendMode: 'multiply',
+        }}>
+          <img src={stampUrl} alt="School Stamp" style={{ height: '90px', objectFit: 'contain' }} />
+        </div>
+      )}
+
       {/* Comments with Signatures beside them */}
-      <div style={{ border: '1px solid #000', marginBottom: '6px' }}>
+      <div style={{ border: '1px solid #000', marginBottom: '6px', position: 'relative' }}>
         {/* Class Teacher Comment */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #999', padding: '6px 8px' }}>
           <div style={{ flex: 1, fontSize: '10.5px' }}>
@@ -137,12 +152,6 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
         </div>
       </div>
 
-      {/* Stamp centered */}
-      {stampUrl && (
-        <div style={{ textAlign: 'center', marginBottom: '6px' }}>
-          <img src={stampUrl} alt="Stamp" style={{ height: '50px', objectFit: 'contain', opacity: 0.8 }} />
-        </div>
-      )}
 
       {/* Key */}
       <div style={{ border: '1px solid #000', padding: '4px 6px', fontSize: '9px', marginBottom: '6px', backgroundColor: '#fafafa' }}>

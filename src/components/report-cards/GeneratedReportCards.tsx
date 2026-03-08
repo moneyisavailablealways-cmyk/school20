@@ -299,19 +299,19 @@ const GeneratedReportCards = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Preview" onClick={() => handlePreview(report)}>
-                              <Eye className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Preview" disabled={isLoading} onClick={() => handlePreview(report)}>
+                              {isLoading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <Eye className="h-4 w-4" />}
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => handleEdit(report)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" disabled={isLoading} onClick={() => handleEdit(report)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Print" onClick={() => handlePrint(report)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Print" disabled={isLoading} onClick={() => handlePrint(report)}>
                               <Printer className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Download" onClick={() => handleDownload(report)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Download" disabled={isLoading} onClick={() => handleDownload(report)}>
                               <Download className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Share" onClick={() => handleShare(report)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Share" disabled={isLoading} onClick={() => handleShare(report)}>
                               <Share2 className="h-4 w-4" />
                             </Button>
                             <AlertDialog>

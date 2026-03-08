@@ -180,6 +180,7 @@ const Communications = () => {
         priority: announcementForm.priority,
         expiry_date: announcementForm.expiry_date || null,
         is_active: true,
+        school_id: schoolId,
       };
 
       if (selectedAnnouncement) {

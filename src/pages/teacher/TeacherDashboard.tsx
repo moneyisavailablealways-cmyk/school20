@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Users, BookOpen, Calendar, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import TermCountdownWidget from '@/components/academic-calendar/TermCountdownWidget';
 
 const TeacherDashboard = () => {
   const { profile } = useAuth();
@@ -163,6 +164,9 @@ const TeacherDashboard = () => {
           Here's what's happening with your classes today.
         </p>
       </div>
+
+      {/* Term Countdown */}
+      {profile?.school_id && <TermCountdownWidget schoolId={profile.school_id} compact />}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">

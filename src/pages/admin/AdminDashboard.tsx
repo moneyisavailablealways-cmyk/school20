@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import QuickSetupDialog from '@/components/QuickSetupDialog';
+import TermCountdownWidget from '@/components/academic-calendar/TermCountdownWidget';
 import {
   Users,
   GraduationCap,
@@ -290,6 +291,11 @@ const AdminDashboard = () => {
           Quick Setup
         </Button>
       </div>
+
+      {/* Term Countdown Widget */}
+      {profile?.school_id && (
+        <TermCountdownWidget schoolId={profile.school_id} schoolName={schoolName} />
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

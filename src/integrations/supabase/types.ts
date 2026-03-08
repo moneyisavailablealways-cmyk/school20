@@ -14,6 +14,82 @@ export type Database = {
   }
   public: {
     Tables: {
+      academic_terms: {
+        Row: {
+          academic_year_id: string
+          closing_day: string | null
+          created_at: string
+          created_by: string | null
+          end_date: string
+          holiday_end_date: string | null
+          holiday_start_date: string | null
+          id: string
+          is_current: boolean
+          opening_day: string | null
+          school_id: string
+          start_date: string
+          term_name: string
+          term_number: number
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          closing_day?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          holiday_end_date?: string | null
+          holiday_start_date?: string | null
+          id?: string
+          is_current?: boolean
+          opening_day?: string | null
+          school_id: string
+          start_date: string
+          term_name: string
+          term_number?: number
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          closing_day?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          holiday_end_date?: string | null
+          holiday_start_date?: string | null
+          id?: string
+          is_current?: boolean
+          opening_day?: string | null
+          school_id?: string
+          start_date?: string
+          term_name?: string
+          term_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_terms_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_terms_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_terms_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academic_years: {
         Row: {
           created_at: string | null
@@ -2491,6 +2567,82 @@ export type Database = {
           },
         ]
       }
+      school_events: {
+        Row: {
+          academic_term_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          end_time: string | null
+          event_type: string
+          id: string
+          is_all_day: boolean
+          school_id: string
+          start_date: string
+          start_time: string | null
+          target_audience: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          academic_term_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          event_type?: string
+          id?: string
+          is_all_day?: boolean
+          school_id: string
+          start_date: string
+          start_time?: string | null
+          target_audience?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          academic_term_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          event_type?: string
+          id?: string
+          is_all_day?: boolean
+          school_id?: string
+          start_date?: string
+          start_time?: string | null
+          target_audience?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_events_academic_term_id_fkey"
+            columns: ["academic_term_id"]
+            isOneToOne: false
+            referencedRelation: "academic_terms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_events_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_settings: {
         Row: {
           address: string | null
@@ -4117,6 +4269,26 @@ export type Database = {
         Args: { p_school_id: string; p_score: number }
         Returns: string
       }
+      get_current_academic_term: {
+        Args: { p_school_id: string }
+        Returns: {
+          academic_year_name: string
+          closing_day: string
+          days_passed: number
+          days_remaining: number
+          end_date: string
+          holiday_end_date: string
+          holiday_start_date: string
+          id: string
+          is_holiday: boolean
+          opening_day: string
+          progress_percentage: number
+          start_date: string
+          term_name: string
+          term_number: number
+          total_days: number
+        }[]
+      }
       get_current_profile_id: { Args: never; Returns: string }
       get_current_school_id: { Args: never; Returns: string }
       get_next_queue_position: {
@@ -4166,6 +4338,14 @@ export type Database = {
       reorder_reservation_queue: {
         Args: { p_library_item_id: string }
         Returns: undefined
+      }
+      send_term_notifications: {
+        Args: {
+          p_custom_message?: string
+          p_notification_type: string
+          p_school_id: string
+        }
+        Returns: number
       }
       teacher_can_mark_attendance: {
         Args: { p_class_id: string }

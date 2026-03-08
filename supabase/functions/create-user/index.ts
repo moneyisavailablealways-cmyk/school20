@@ -129,6 +129,7 @@ serve(async (req) => {
           phone: phone || null,
           role,
           is_active: true,
+          school_id: profile.school_id || null,
         })
         .select('id')
         .single()

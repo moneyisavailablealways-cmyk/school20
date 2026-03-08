@@ -156,40 +156,46 @@ export function ResponsiveHeader({
   const isMobile = useIsMobile();
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-      <div className="flex h-14 items-center gap-4 px-4 md:px-6">
-        {/* Mobile Menu Button */}
-        {isMobile && (
-          <ResponsiveSidebar
-            navigation={navigation}
-            portalName={portalName}
-            portalIcon={PortalIcon}
-            userName={userName}
-            onSignOut={onSignOut}
-          />
-        )}
+    <div>
+      <header className="sticky top-0 z-40 border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+        <div className="flex h-14 items-center gap-4 px-4 md:px-6">
+          {/* Mobile Menu Button */}
+          {isMobile && (
+            <ResponsiveSidebar
+              navigation={navigation}
+              portalName={portalName}
+              portalIcon={PortalIcon}
+              userName={userName}
+              onSignOut={onSignOut}
+            />
+          )}
 
-        {/* Portal Title - Desktop shows full, mobile shows compact */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <PortalIcon className="h-6 w-6 text-primary shrink-0 hidden md:block" />
-          <div className="min-w-0">
-            <h1 className="text-lg font-semibold truncate">{portalName}</h1>
-            {userName && !isMobile && (
-              <p className="text-sm text-muted-foreground truncate">
-                Welcome, {userName}
-              </p>
-            )}
+          {/* Portal Title - Desktop shows full, mobile shows compact */}
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <PortalIcon className="h-6 w-6 text-primary shrink-0 hidden md:block" />
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold truncate">{portalName}</h1>
+              {userName && !isMobile && (
+                <p className="text-sm text-muted-foreground truncate">
+                  Welcome, {userName}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Sign Out - Desktop only (mobile has it in drawer) */}
-        {!isMobile && (
-          <Button onClick={onSignOut} variant="outline" size="sm">
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
-        )}
-      </div>
-    </header>
+          {/* Connection Status Indicator */}
+          <ConnectionStatusIndicator />
+
+          {/* Sign Out - Desktop only (mobile has it in drawer) */}
+          {!isMobile && (
+            <Button onClick={onSignOut} variant="outline" size="sm">
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          )}
+        </div>
+      </header>
+      <OfflineBanner />
+    </div>
   );
 }

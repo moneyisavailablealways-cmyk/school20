@@ -570,7 +570,7 @@ const UserManagement = () => {
 
         {/* Edit User Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
               <DialogDescription>
@@ -578,7 +578,7 @@ const UserManagement = () => {
               </DialogDescription>
             </DialogHeader>
             <Form {...editForm}>
-              <form onSubmit={editForm.handleSubmit(updateUser)} className="space-y-4">
+              <form onSubmit={editForm.handleSubmit(updateUser)} className="space-y-4 overflow-y-auto flex-1 pr-1">
                 {editingUser && (
                   <div className="p-3 bg-muted rounded-lg">
                     <p className="text-sm font-medium">{editingUser.email}</p>

@@ -80,7 +80,22 @@ const SchoolSignup = () => {
       if (error) throw new Error(error.message || 'Registration failed');
       if (result?.error) throw new Error(result.error);
 
-      setStep('success');
+      // Auto-login the newly registered admin
+      setRegisteredEmail(data.admin_email);
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.admin_email,
+        password: data.admin_password,
+      });
+
+      if (signInError) {
+        // If auto-login fails, show success and let them login manually
+        console.warn('Auto-login failed after registration:', signInError.message);
+        setStep('success');
+      } else {
+        // Auto-login succeeded, redirect to admin dashboard
+        toast.success('School registered successfully! Redirecting to your dashboard...');
+        navigate('/admin');
+      }
     } catch (error: any) {
       const msg = error.message || 'Registration failed. Please try again.';
       if (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('already')) {

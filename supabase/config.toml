@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.register-school]
 verify_jwt = false
+
+[functions.ai-risk-insights]
+verify_jwt = false

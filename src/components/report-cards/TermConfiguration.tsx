@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,15 @@ interface TermConfig {
   fees_next_term: string;
   other_requirements: string;
   is_current: boolean;
+  academic_years?: {
+    name: string;
+  } | null;
+}
+
+interface AcademicYear {
+  id: string;
+  name: string;
+  is_current: boolean | null;
 }
 
 const defaultTerm: TermConfig = {
@@ -41,14 +50,40 @@ const defaultTerm: TermConfig = {
   is_current: false,
 };
 
+const getTermNumber = (termName: string) => {
+  const match = termName.match(/(\d+)/);
+  return match ? Number(match[1]) : 1;
+};
+
+const formatDate = (value?: string) => {
+  if (!value) return '-';
+  return format(new Date(value), 'MMM d, yyyy');
+};
+
 const TermConfiguration = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTerm, setEditingTerm] = useState<TermConfig | null>(null);
   const [formData, setFormData] = useState<TermConfig>(defaultTerm);
 
-  // Fetch term configurations
-  const { data: termConfigs, isLoading } = useQuery({
+  const { data: academicYears = [] } = useQuery({
+    queryKey: ['academic-years'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('academic_years')
+        .select('id, name, is_current')
+        .order('start_date', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as AcademicYear[];
+    },
+  });
+
+  const currentAcademicYear = useMemo(
+    () => academicYears.find((year) => year.is_current) ?? academicYears[0],
+    [academicYears]
+  );
+
+  const { data: termConfigs = [], isLoading } = useQuery({
     queryKey: ['term-configurations'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -60,13 +95,49 @@ const TermConfiguration = () => {
         .order('academic_year_id')
         .order('term_number');
       if (error) throw error;
-      return data;
+      return (data ?? []) as TermConfig[];
     },
   });
 
-  // Save mutation
+  const { data: systemTerms = [] } = useQuery({
+    queryKey: ['system-terms-from-submissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subject_submissions')
+        .select('term')
+        .not('term', 'is', null);
+
+      if (error) throw error;
+
+      return Array.from(new Set((data ?? []).map((row) => row.term).filter(Boolean))).sort();
+    },
+  });
+
+  const termsToDisplay = useMemo(() => {
+    if (systemTerms.length === 0) {
+      return termConfigs;
+    }
+
+    return systemTerms.map((termName) => {
+      const existing = termConfigs.find((config) => config.term_name === termName);
+      if (existing) return existing;
+
+      return {
+        ...defaultTerm,
+        term_name: termName,
+        term_number: getTermNumber(termName),
+        academic_year_id: currentAcademicYear?.id ?? '',
+        academic_years: currentAcademicYear ? { name: currentAcademicYear.name } : null,
+      } as TermConfig;
+    });
+  }, [systemTerms, termConfigs, currentAcademicYear]);
+
   const saveMutation = useMutation({
     mutationFn: async (term: TermConfig) => {
+      if (!term.academic_year_id) {
+        throw new Error('No academic year found for this term configuration');
+      }
+
       if (term.id) {
         const { error } = await supabase
           .from('term_configurations')
@@ -81,7 +152,23 @@ const TermConfiguration = () => {
           })
           .eq('id', term.id);
         if (error) throw error;
+        return;
       }
+
+      const { error } = await supabase.from('term_configurations').insert({
+        academic_year_id: term.academic_year_id,
+        term_name: term.term_name,
+        term_number: term.term_number,
+        start_date: term.start_date,
+        end_date: term.end_date,
+        next_term_start_date: term.next_term_start_date || null,
+        fees_balance_note: term.fees_balance_note || null,
+        fees_next_term: term.fees_next_term || null,
+        other_requirements: term.other_requirements || null,
+        is_current: term.is_current,
+      });
+
+      if (error) throw error;
     },
     onSuccess: () => {
       toast.success('Term configuration saved');
@@ -90,43 +177,40 @@ const TermConfiguration = () => {
       setFormData(defaultTerm);
       setEditingTerm(null);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(`Failed to save: ${error.message}`);
     },
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('term_configurations')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('term_configurations').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success('Term configuration deleted');
       queryClient.invalidateQueries({ queryKey: ['term-configurations'] });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(`Failed to delete: ${error.message}`);
     },
   });
 
-  const openEditDialog = (term: any) => {
+  const openEditDialog = (term: TermConfig) => {
     setEditingTerm(term);
     setFormData({
       id: term.id,
-      academic_year_id: term.academic_year_id,
+      academic_year_id: term.academic_year_id || currentAcademicYear?.id || '',
       term_name: term.term_name,
-      term_number: term.term_number,
-      start_date: term.start_date,
-      end_date: term.end_date,
+      term_number: term.term_number || getTermNumber(term.term_name),
+      start_date: term.start_date || '',
+      end_date: term.end_date || '',
       next_term_start_date: term.next_term_start_date || '',
       fees_balance_note: term.fees_balance_note || '',
       fees_next_term: term.fees_next_term || '',
       other_requirements: term.other_requirements || '',
-      is_current: term.is_current,
+      is_current: term.is_current || false,
+      academic_years: term.academic_years,
     });
     setIsDialogOpen(true);
   };
@@ -147,33 +231,27 @@ const TermConfiguration = () => {
             <Calendar className="h-5 w-5" />
             Term Configurations
           </CardTitle>
-          <CardDescription>
-            View and manage term configurations for report cards
-          </CardDescription>
+          <CardDescription>Terms are loaded from the system automatically.</CardDescription>
         </CardHeader>
         <CardContent>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Edit Term Configuration</DialogTitle>
+                <DialogTitle>{formData.id ? 'Edit Term Configuration' : 'Configure Term'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Academic Year</Label>
                     <Input
-                      value={(editingTerm as any)?.academic_years?.name || ''}
+                      value={editingTerm?.academic_years?.name || currentAcademicYear?.name || ''}
                       disabled
                       className="bg-muted"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Term</Label>
-                    <Input
-                      value={formData.term_name}
-                      disabled
-                      className="bg-muted"
-                    />
+                    <Input value={formData.term_name} disabled className="bg-muted" />
                   </div>
                 </div>
 
@@ -183,7 +261,7 @@ const TermConfiguration = () => {
                     <Input
                       type="date"
                       value={formData.start_date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, start_date: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -191,7 +269,7 @@ const TermConfiguration = () => {
                     <Input
                       type="date"
                       value={formData.end_date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, end_date: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -201,7 +279,7 @@ const TermConfiguration = () => {
                   <Input
                     type="date"
                     value={formData.next_term_start_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, next_term_start_date: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, next_term_start_date: e.target.value }))}
                   />
                 </div>
 
@@ -210,7 +288,7 @@ const TermConfiguration = () => {
                     <Label>Fees Balance Note</Label>
                     <Input
                       value={formData.fees_balance_note}
-                      onChange={(e) => setFormData(prev => ({ ...prev, fees_balance_note: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, fees_balance_note: e.target.value }))}
                       placeholder="e.g., UGX 500,000"
                     />
                   </div>
@@ -218,7 +296,7 @@ const TermConfiguration = () => {
                     <Label>Fees Next Term</Label>
                     <Input
                       value={formData.fees_next_term}
-                      onChange={(e) => setFormData(prev => ({ ...prev, fees_next_term: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, fees_next_term: e.target.value }))}
                       placeholder="e.g., UGX 1,200,000"
                     />
                   </div>
@@ -228,7 +306,7 @@ const TermConfiguration = () => {
                   <Label>Other Requirements</Label>
                   <Textarea
                     value={formData.other_requirements}
-                    onChange={(e) => setFormData(prev => ({ ...prev, other_requirements: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, other_requirements: e.target.value }))}
                     placeholder="Any other requirements for the next term..."
                     rows={2}
                   />
@@ -237,7 +315,7 @@ const TermConfiguration = () => {
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={formData.is_current}
-                    onCheckedChange={(v) => setFormData(prev => ({ ...prev, is_current: v }))}
+                    onCheckedChange={(v) => setFormData((prev) => ({ ...prev, is_current: v }))}
                   />
                   <Label>Current Term</Label>
                 </div>
@@ -256,12 +334,12 @@ const TermConfiguration = () => {
 
           {isLoading ? (
             <div className="animate-pulse space-y-2">
-              {[1, 2, 3].map(i => <div key={i} className="h-12 bg-muted rounded" />)}
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-12 bg-muted rounded" />
+              ))}
             </div>
-          ) : termConfigs?.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No term configurations found in the system.
-            </div>
+          ) : termsToDisplay.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No terms found in the system yet.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -276,42 +354,34 @@ const TermConfiguration = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {termConfigs?.map((term: any) => (
-                  <TableRow key={term.id}>
-                    <TableCell>{term.academic_years?.name}</TableCell>
+                {termsToDisplay.map((term) => (
+                  <TableRow key={`${term.id ?? 'new'}-${term.term_name}`}>
+                    <TableCell>{term.academic_years?.name || currentAcademicYear?.name || '-'}</TableCell>
                     <TableCell className="font-medium">{term.term_name}</TableCell>
-                    <TableCell>{format(new Date(term.start_date), 'MMM d, yyyy')}</TableCell>
-                    <TableCell>{format(new Date(term.end_date), 'MMM d, yyyy')}</TableCell>
+                    <TableCell>{formatDate(term.start_date)}</TableCell>
+                    <TableCell>{formatDate(term.end_date)}</TableCell>
+                    <TableCell>{formatDate(term.next_term_start_date)}</TableCell>
                     <TableCell>
-                      {term.next_term_start_date 
-                        ? format(new Date(term.next_term_start_date), 'MMM d, yyyy')
-                        : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {term.is_current && (
-                        <Badge className="bg-primary">Current</Badge>
-                      )}
+                      {term.is_current ? <Badge>Current</Badge> : <span className="text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => openEditDialog(term)}
-                        >
+                        <Button size="icon" variant="ghost" onClick={() => openEditDialog(term)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => {
-                            if (confirm('Delete this term configuration?')) {
-                              deleteMutation.mutate(term.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {term.id && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              if (confirm('Delete this term configuration?')) {
+                                deleteMutation.mutate(term.id!);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

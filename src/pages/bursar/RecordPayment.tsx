@@ -354,7 +354,7 @@ const RecordPayment = () => {
                 {!selectedInvoice && formData.amount && (
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Payment Amount:</span>
-                    <span>${formData.amount}</span>
+                    <span>UGX {formData.amount || '0'}</span>
                   </div>
                 )}
               </div>

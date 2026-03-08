@@ -70,8 +70,8 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
       return;
     }
 
-    if (selectedRecipients.length === 0) {
-      toast.error('Please select at least one recipient role and recipient.');
+    if (!selectedRole) {
+      toast.error('Please select a recipient role.');
       return;
     }
 

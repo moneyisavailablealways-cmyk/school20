@@ -37,6 +37,7 @@ const CreateInvoice = () => {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   

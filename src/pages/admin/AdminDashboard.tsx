@@ -50,6 +50,30 @@ const AdminDashboard = () => {
     loadDashboardStats();
     loadRecentActivities();
     loadSchoolName();
+
+    if (!profile?.school_id) return;
+
+    // Real-time subscription for activity_log
+    const channel = supabase
+      .channel(`activity-log-${profile.school_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'activity_log',
+          filter: `school_id=eq.${profile.school_id}`,
+        },
+        () => {
+          loadRecentActivities();
+          loadDashboardStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [profile?.school_id]);
 
   const loadSchoolName = async () => {

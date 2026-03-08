@@ -246,7 +246,7 @@ const RecordPayment = () => {
               </div>
 
               <div>
-                <Label htmlFor="amount">Amount ($) *</Label>
+                <Label htmlFor="amount">Amount (UGX) *</Label>
                 <Input
                   id="amount"
                   type="number"

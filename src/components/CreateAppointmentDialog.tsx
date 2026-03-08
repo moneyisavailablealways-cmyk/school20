@@ -33,6 +33,17 @@ interface Recipient {
   role: string;
 }
 
+const availableRoles = [
+  { value: 'teacher', label: 'Teachers' },
+  { value: 'parent', label: 'Parents' },
+  { value: 'student', label: 'Students' },
+  { value: 'head_teacher', label: 'Head Teachers' },
+  { value: 'principal', label: 'Principals' },
+  { value: 'bursar', label: 'Bursars' },
+  { value: 'librarian', label: 'Librarians' },
+  { value: 'admin', label: 'Admins' },
+];
+
 interface CreateAppointmentDialogProps {
   onSuccess?: () => void;
 }

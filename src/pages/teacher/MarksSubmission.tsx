@@ -80,8 +80,29 @@ const MarksSubmission = () => {
       (st || []).forEach((s: any) => s.class_id && classIds.add(s.class_id));
       (sp || []).forEach((s: any) => s.class_id && classIds.add(s.class_id));
       if (classIds.size === 0) return [];
-      const { data } = await supabase.from('classes').select('id, name').in('id', Array.from(classIds)).order('name');
+      const { data } = await supabase.from('classes').select('id, name, class_teacher_id').in('id', Array.from(classIds)).order('name');
       return data || [];
+    },
+    enabled: !!profile?.id,
+  });
+
+  // Check if teacher is class teacher for the selected class
+  const isClassTeacher = selectedClass
+    ? classes?.find(c => c.id === selectedClass)?.class_teacher_id === profile?.id
+    : false;
+
+  // Fetch existing signature for this teacher
+  const { data: existingSignature, refetch: refetchSignature } = useQuery({
+    queryKey: ['teacher-signature', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+      const { data } = await supabase
+        .from('digital_signatures')
+        .select('*')
+        .eq('user_id', profile.id)
+        .eq('is_active', true)
+        .maybeSingle();
+      return data;
     },
     enabled: !!profile?.id,
   });

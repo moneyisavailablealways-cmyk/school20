@@ -55,61 +55,64 @@ const ReportGeneration = () => {
     },
   });
 
-  // Fetch current academic year
-  const { data: currentYear } = useQuery({
-    queryKey: ['current-academic-year'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('academic_years')
-        .select('id, name')
-        .eq('is_current', true)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Derive the academic year ID from the selected term
+  const selectedTermData = terms?.find(t => t.id === selectedTerm);
+  const selectedAcademicYearId = selectedTermData?.academic_year_id || null;
 
-  // Fetch students based on class filter
+  // Fetch students based on class filter and the selected term's academic year
   const { data: students } = useQuery({
-    queryKey: ['students-for-generation', selectedClass, currentYear?.id],
+    queryKey: ['students-for-generation', selectedClass, selectedAcademicYearId],
     queryFn: async () => {
-      if (!currentYear?.id) return [];
+      if (!selectedAcademicYearId) return [];
 
+      // Step 1: Fetch enrollments
       let query = supabase
         .from('student_enrollments')
-        .select(`
-          student_id,
-          class_id,
-          students!inner(
-            id,
-            student_id,
-            profile_id,
-            profiles:profile_id(first_name, last_name)
-          )
-        `)
+        .select('student_id, class_id')
         .eq('status', 'active')
-        .eq('academic_year_id', currentYear.id);
+        .eq('academic_year_id', selectedAcademicYearId);
 
       if (selectedClass !== 'all') {
         query = query.eq('class_id', selectedClass);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      const { data: enrollments, error: enrollError } = await query;
+      if (enrollError) throw enrollError;
+      if (!enrollments || enrollments.length === 0) return [];
 
-      return data?.map(enrollment => {
-        const student = enrollment.students as any;
+      // Step 2: Fetch student records
+      const studentIds = [...new Set(enrollments.map(e => e.student_id))];
+      const { data: studentRecords, error: studentError } = await supabase
+        .from('students')
+        .select('id, student_id, profile_id')
+        .in('id', studentIds);
+      if (studentError) throw studentError;
+
+      // Step 3: Fetch profiles
+      const profileIds = studentRecords?.map(s => s.profile_id).filter(Boolean) as string[];
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', profileIds);
+      if (profileError) throw profileError;
+
+      // Build lookup maps
+      const profileMap = new Map(profiles?.map(p => [p.id, p]));
+      const studentMap = new Map(studentRecords?.map(s => [s.id, s]));
+
+      return enrollments.map(enrollment => {
+        const student = studentMap.get(enrollment.student_id);
+        const prof = student?.profile_id ? profileMap.get(student.profile_id) : null;
         return {
           studentId: enrollment.student_id,
-          name: `${student?.profiles?.first_name || ''} ${student?.profiles?.last_name || ''}`.trim(),
+          name: `${prof?.first_name || ''} ${prof?.last_name || ''}`.trim() || 'Unknown',
           admissionNo: student?.student_id || '',
         };
-      }) || [];
+      }).sort((a, b) => a.name.localeCompare(b.name));
     },
-    enabled: !!currentYear?.id,
+    enabled: !!selectedAcademicYearId,
   });
 
-  const selectedTermData = terms?.find(t => t.id === selectedTerm);
   const termLabel = selectedTermData
     ? `${selectedTermData.term_name} ${(selectedTermData.academic_years as any)?.name || ''}`
     : '';
@@ -135,7 +138,7 @@ const ReportGeneration = () => {
         const { error } = await supabase.functions.invoke('generate-report-pdf', {
           body: {
             studentId,
-            academicYearId: currentYear?.id,
+            academicYearId: selectedAcademicYearId,
             term: termName,
             generatedBy: profile?.id,
             classTeacherComment: classTeacherComment || undefined,

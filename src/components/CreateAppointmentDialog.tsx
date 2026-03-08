@@ -121,7 +121,6 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
         .from('profiles')
         .select('id, role')
         .eq('role', selectedRole as any)
-        .eq('is_active', true)
         .neq('id', profile.id);
 
       if (roleRecipientsError) {

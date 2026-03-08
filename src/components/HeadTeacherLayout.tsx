@@ -11,7 +11,8 @@ import {
   GraduationCap,
   ClipboardCheck,
   CalendarCheck,
-  UserCheck
+  UserCheck,
+  Brain
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';

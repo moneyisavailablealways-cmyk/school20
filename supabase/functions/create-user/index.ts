@@ -31,10 +31,10 @@ serve(async (req) => {
       )
     }
 
-    // Check if user is admin
+    // Check if user is admin and get their school_id
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, school_id')
       .eq('user_id', user.user.id)
       .single()
 

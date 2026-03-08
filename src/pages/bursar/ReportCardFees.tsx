@@ -281,7 +281,12 @@ const ReportCardFees = () => {
                             <Check className={cn("mr-2 h-4 w-4", !formData.class_id ? "opacity-100" : "opacity-0")} />
                             All Classes
                           </CommandItem>
-                          {classes.map((cls) => (
+                          {classes
+                            .filter((cls) => {
+                              const levelName = cls.levels?.name?.toLowerCase() || '';
+                              return !levelName.includes('s5') && !levelName.includes('s6') && !levelName.includes('s.5') && !levelName.includes('s.6') && !levelName.includes('senior 5') && !levelName.includes('senior 6');
+                            })
+                            .map((cls) => (
                             <CommandItem
                               key={cls.id}
                               value={`${cls.name} ${cls.levels?.name || ''}`}

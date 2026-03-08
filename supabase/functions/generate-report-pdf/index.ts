@@ -173,7 +173,7 @@ function processSubjects(submissions: any[]) {
       total100: total100 !== null ? Math.round(total100 * 10) / 10 : null,
       identifier: sub.identifier || 2,
       grade: sub.grade || '',
-      remark: sub.remark || '',
+      remark: total100 !== null ? (total100 >= 80 ? 'Outstanding' : total100 >= 45 ? 'Moderate' : 'Basic') : (sub.remark || ''),
       teacherInitials: sub.teacher_initials || '',
     };
   });

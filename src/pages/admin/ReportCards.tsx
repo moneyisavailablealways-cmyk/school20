@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, CheckCircle, Settings, BarChart3, Layout, Building2, Calendar, PenTool, MessageSquareText } from 'lucide-react';
+import { FileText, CheckCircle, Settings, BarChart3, Layout, Building2, Calendar, PenTool, MessageSquareText, ClipboardList } from 'lucide-react';
 import SubmissionsApproval from '@/components/report-cards/SubmissionsApproval';
 import ReportGeneration from '@/components/report-cards/ReportGeneration';
 import GradingConfig from '@/components/report-cards/GradingConfig';
@@ -10,6 +10,7 @@ import SchoolSettings from '@/components/report-cards/SchoolSettings';
 import TermConfiguration from '@/components/report-cards/TermConfiguration';
 import SignaturesStamps from '@/components/report-cards/SignaturesStamps';
 import AutoCommentRules from '@/components/report-cards/AutoCommentRules';
+import GeneratedReportCards from '@/components/report-cards/GeneratedReportCards';
 
 const ReportCards = () => {
   const [activeTab, setActiveTab] = useState('approvals');

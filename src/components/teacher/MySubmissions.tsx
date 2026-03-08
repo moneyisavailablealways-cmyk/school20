@@ -23,12 +23,17 @@ interface MySubmissionsProps {
 }
 
 const MySubmissions = ({ teacherId, currentYearId, selectedTerm, onEditSubmission }: MySubmissionsProps) => {
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [viewSubmission, setViewSubmission] = useState<any | null>(null);
   const [editSubmission, setEditSubmission] = useState<any | null>(null);
   const [editValues, setEditValues] = useState({ a1: '', a2: '', a3: '', score20: '', score80: '' });
   const [saving, setSaving] = useState(false);
+  const [resetDialog, setResetDialog] = useState<{ isOpen: boolean; submission: any | null }>({ isOpen: false, submission: null });
+  const [resetReason, setResetReason] = useState('');
+
+  const canResetMarks = profile?.role && ['admin', 'principal', 'head_teacher', 'teacher'].includes(profile.role);
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['my-submissions', teacherId, currentYearId, selectedTerm],

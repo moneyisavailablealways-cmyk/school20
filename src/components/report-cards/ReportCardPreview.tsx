@@ -2,6 +2,7 @@ import ClassicTemplate from './templates/ClassicTemplate';
 import ModernTemplate from './templates/ModernTemplate';
 import MinimalTemplate from './templates/MinimalTemplate';
 import ColorfulTemplate from './templates/ColorfulTemplate';
+import PrimaryTemplate from './templates/PrimaryTemplate';
 
 interface ReportCardPreviewProps {
   data: any;
@@ -19,6 +20,8 @@ const ReportCardPreview = ({ data }: ReportCardPreviewProps) => {
       return <MinimalTemplate data={data} />;
     case 'colorful':
       return <ColorfulTemplate data={data} />;
+    case 'primary':
+      return <PrimaryTemplate data={data} />;
     case 'classic':
     default:
       return <ClassicTemplate data={data} />;

@@ -344,7 +344,7 @@ const RecordPayment = () => {
                       <div className="flex justify-between text-sm font-medium">
                         <span>New Balance:</span>
                         <span>
-                          ${Math.max(0, selectedInvoice.balance_amount - (parseFloat(formData.amount) || 0)).toFixed(2)}
+                          UGX {Math.max(0, selectedInvoice.balance_amount - (parseFloat(formData.amount) || 0)).toLocaleString()}
                         </span>
                       </div>
                     </div>

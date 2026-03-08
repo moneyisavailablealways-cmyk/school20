@@ -120,6 +120,7 @@ const Communications = () => {
       const { data: announcementsData, error: announcementsError } = await supabase
         .from('announcements')
         .select('*')
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
 
       if (announcementsError) {

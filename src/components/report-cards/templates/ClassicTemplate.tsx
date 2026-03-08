@@ -107,21 +107,6 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
         </table>
       )}
 
-      {/* Stamp overlay - positioned over comments area like a real rubber stamp */}
-      {stampUrl && (
-        <div style={{
-          position: 'absolute',
-          left: '50%',
-          transform: 'translate(-50%, -30px) rotate(-12deg)',
-          zIndex: 10,
-          pointerEvents: 'none',
-          opacity: 0.75,
-          mixBlendMode: 'multiply',
-        }}>
-          <img src={stampUrl} alt="School Stamp" style={{ height: '90px', objectFit: 'contain' }} />
-        </div>
-      )}
-
       {/* Comments with Signatures beside them */}
       <div style={{ border: '1px solid #000', marginBottom: '6px', position: 'relative' }}>
         {/* Class Teacher Comment */}
@@ -138,16 +123,31 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
           </div>
         </div>
         {/* Head Teacher Comment */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '6px 8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '6px 8px', position: 'relative' }}>
           <div style={{ flex: 1, fontSize: '10.5px' }}>
             <strong>Headteacher's Comment:</strong><br />
             <span style={{ fontStyle: 'italic' }}>{summary.headTeacherComment || 'No comment'}</span>
           </div>
-          <div style={{ textAlign: 'center', minWidth: '140px', paddingLeft: '10px' }}>
+          <div style={{ textAlign: 'center', minWidth: '140px', paddingLeft: '10px', position: 'relative' }}>
             {signatures?.headTeacher && <div style={{ marginBottom: '2px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
             <p style={{ margin: 0, fontSize: '9px', fontStyle: 'italic', borderTop: '1px dashed #999', paddingTop: '2px' }}>
               <strong>Headteacher's Signature:</strong>
             </p>
+            {/* Stamp overlaid near head teacher signature */}
+            {stampUrl && (
+              <div style={{
+                position: 'absolute',
+                right: '-10px',
+                top: '10px',
+                transform: 'rotate(-8deg)',
+                zIndex: 10,
+                pointerEvents: 'none',
+                opacity: 0.7,
+                mixBlendMode: 'multiply',
+              }}>
+                <img src={stampUrl} alt="School Stamp" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
+              </div>
+            )}
           </div>
         </div>
       </div>

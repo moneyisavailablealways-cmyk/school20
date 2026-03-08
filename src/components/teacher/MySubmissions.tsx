@@ -143,6 +143,62 @@ const MySubmissions = ({ teacherId, currentYearId, selectedTerm, onEditSubmissio
     }
   };
 
+  // Reset approved marks mutation
+  const resetMarksMutation = useMutation({
+    mutationFn: async ({ submission, reason }: { submission: any; reason: string }) => {
+      const { data: enrollment } = await supabase
+        .from('student_enrollments')
+        .select('class_id')
+        .eq('student_id', submission.student_id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      const { error: logError } = await supabase
+        .from('marks_correction_logs')
+        .insert({
+          submission_id: submission.id,
+          student_id: submission.student_id,
+          subject_id: submission.subject_id,
+          class_id: enrollment?.class_id || null,
+          term: submission.term,
+          academic_year_id: submission.academic_year_id,
+          school_id: submission.school_id,
+          previous_marks: submission.marks,
+          previous_grade: submission.grade,
+          previous_a1: submission.a1_score,
+          previous_a2: submission.a2_score,
+          previous_a3: submission.a3_score,
+          previous_exam_score: submission.exam_score,
+          previous_status: submission.status,
+          reset_by: profile?.id,
+          reason: reason || null,
+        } as any);
+
+      if (logError) throw logError;
+
+      const { error: updateError } = await supabase
+        .from('subject_submissions')
+        .update({
+          status: 'draft',
+          approved_by: null,
+          approved_at: null,
+          rejection_reason: null,
+        })
+        .eq('id', submission.id);
+
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      toast.success('Marks have been reset successfully. You can now enter the correct marks.');
+      setResetDialog({ isOpen: false, submission: null });
+      setResetReason('');
+      queryClient.invalidateQueries({ queryKey: ['my-submissions'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to reset marks: ${error.message}`);
+    },
+  });
+
   const statusBadge = (status: string) => {
     switch (status) {
       case 'approved': return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Approved</Badge>;

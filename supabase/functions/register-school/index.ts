@@ -25,6 +25,7 @@ serve(async (req) => {
       email,
       phone,
       address,
+      school_level,
       admin_first_name,
       admin_last_name,
       admin_email,

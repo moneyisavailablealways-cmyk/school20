@@ -211,13 +211,14 @@ serve(async (req) => {
     const classTeacherId = enrollment?.classes?.class_teacher_id || null;
 
     // Fetch school-specific data in parallel
-    const [schoolSettings, termConfig, feesData, attendanceSummary, signatures, stampUrl] = await Promise.all([
+    const [schoolSettings, termConfig, feesData, attendanceSummary, signatures, stampUrl, defaultTemplate] = await Promise.all([
       supabase.from('school_settings').select('*').eq('school_id', schoolId).maybeSingle().then((r: any) => r.data),
       supabase.from('term_configurations').select('*').eq('academic_year_id', academicYearId).eq('term_name', term).maybeSingle().then((r: any) => r.data),
       calculateFeesBalance(supabase, studentId, academicYearId, term),
       fetchAttendanceSummary(supabase, studentId, schoolId),
       fetchSignatures(supabase, schoolId, classTeacherId),
       fetchSchoolStamp(supabase, schoolId),
+      supabase.from('report_templates').select('template_type').eq('school_id', schoolId).eq('is_default', true).maybeSingle().then((r: any) => r.data),
     ]);
 
     // Fetch report_card_fees

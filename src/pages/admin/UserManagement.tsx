@@ -570,7 +570,7 @@ const UserManagement = () => {
 
         {/* Edit User Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
               <DialogDescription>

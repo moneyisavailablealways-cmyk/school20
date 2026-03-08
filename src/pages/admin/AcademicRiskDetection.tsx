@@ -25,8 +25,14 @@ import {
   Minus,
   Info,
   Lightbulb,
+  BarChart3,
+  Sparkles,
+  Target,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import AIInsightsPanel from '@/components/risk-detection/AIInsightsPanel';
+import StudentProgressDashboard from '@/components/risk-detection/StudentProgressDashboard';
+import SchoolWideAnalytics from '@/components/risk-detection/SchoolWideAnalytics';
 
 interface RiskAssessment {
   id: string;

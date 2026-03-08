@@ -585,6 +585,39 @@ const UserManagement = () => {
                   </div>
                 )}
 
+                {/* Avatar Upload for Edit */}
+                <div className="flex flex-col items-center gap-2">
+                  <div className="relative">
+                    <div
+                      className="w-20 h-20 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center cursor-pointer hover:border-primary transition-colors overflow-hidden bg-muted"
+                      onClick={() => editAvatarInputRef.current?.click()}
+                    >
+                      {editAvatarPreview ? (
+                        <img src={editAvatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera className="h-6 w-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    {editAvatarPreview && (
+                      <button
+                        type="button"
+                        onClick={clearEditAvatar}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={editAvatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleEditAvatarSelect}
+                  />
+                  <p className="text-xs text-muted-foreground">Change photo (max 2MB)</p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={editForm.control}

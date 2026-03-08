@@ -250,6 +250,28 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
                 </div>
               </div>
 
+              {/* Recipient Role */}
+              <div className="space-y-2">
+                <Label htmlFor="recipientRole">Recipient Dashboard *</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger id="recipientRole">
+                    <SelectValue placeholder="Select role dashboard" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRoles.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedRole && (
+                  <p className="text-sm text-muted-foreground">
+                    This appointment will be sent to all {getRoleLabel(selectedRole).toLowerCase()} dashboards.
+                  </p>
+                )}
+              </div>
+
               {/* Duration & Meeting Type */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -287,28 +309,6 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              {/* Recipient Role */}
-              <div className="space-y-2">
-                <Label htmlFor="recipientRole">Recipient Dashboard *</Label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger id="recipientRole">
-                    <SelectValue placeholder="Select role dashboard" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableRoles.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedRole && (
-                  <p className="text-sm text-muted-foreground">
-                    This appointment will be sent to all {getRoleLabel(selectedRole).toLowerCase()} dashboards.
-                  </p>
-                )}
               </div>
             </div>
           </ScrollArea>

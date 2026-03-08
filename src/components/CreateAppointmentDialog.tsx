@@ -58,49 +58,8 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
     meeting_type: 'in_person',
   });
 
-  // Fetch recipients whenever selected roles change
-  useEffect(() => {
-    if (open && selectedRoles.length > 0) {
-      fetchRecipientsByRoles();
-    } else {
-      setRecipients([]);
-      setSelectedRecipients([]);
-    }
-  }, [open, selectedRoles]);
-
-  const fetchRecipientsByRoles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email, role')
-        .eq('is_active', true)
-        .neq('id', profile?.id || '')
-        .in('role', selectedRoles as any)
-        .order('first_name');
-
-      if (error) throw error;
-      setRecipients(data || []);
-      // Auto-select all fetched recipients
-      setSelectedRecipients((data || []).map(r => r.id));
-    } catch (error) {
-      console.error('Error fetching recipients:', error);
-    }
-  };
-
-  const handleRoleToggle = (roleValue: string) => {
-    setSelectedRoles(prev =>
-      prev.includes(roleValue)
-        ? prev.filter(r => r !== roleValue)
-        : [...prev, roleValue]
-    );
-  };
-
-  const handleRecipientToggle = (recipientId: string) => {
-    setSelectedRecipients(prev =>
-      prev.includes(recipientId)
-        ? prev.filter(id => id !== recipientId)
-        : [...prev, recipientId]
-    );
+  const getRoleLabel = (roleValue: string) => {
+    return availableRoles.find((role) => role.value === roleValue)?.label || roleValue;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

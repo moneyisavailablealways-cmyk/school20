@@ -342,8 +342,6 @@ const OfflineModeSettings = () => {
     </div>
   );
 };
-  );
-};
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);

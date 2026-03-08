@@ -122,10 +122,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data: authData, error } = await supabase.auth.signInWithPassword({
-        email,
+      let loginEmail = email.trim();
+      let { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
         password,
       });
+
+      // Fallback: if user entered school contact email or school code, resolve to admin login email
+      if (error?.message?.includes('Invalid login credentials')) {
+        const { data: resolvedData } = await supabase.functions.invoke('resolve-school-login', {
+          body: { identifier: loginEmail },
+        });
+
+        const resolvedAdminEmail = resolvedData?.admin_email as string | undefined;
+        if (resolvedAdminEmail && resolvedAdminEmail !== loginEmail) {
+          loginEmail = resolvedAdminEmail;
+          const retry = await supabase.auth.signInWithPassword({
+            email: loginEmail,
+            password,
+          });
+          authData = retry.data;
+          error = retry.error;
+        }
+      }
 
       if (error) {
         const errorMessage = error.message?.includes('Invalid login credentials')

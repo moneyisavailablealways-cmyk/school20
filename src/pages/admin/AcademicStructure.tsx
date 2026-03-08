@@ -186,6 +186,9 @@ const AcademicStructure = () => {
         case 'stream':
           result = await supabase.rpc('delete_stream', { stream_id: itemToDelete.id });
           break;
+        case 'term':
+          result = await supabase.from('academic_terms').delete().eq('id', itemToDelete.id);
+          break;
       }
       
       if (result?.error) throw result.error;

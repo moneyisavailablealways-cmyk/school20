@@ -273,9 +273,17 @@ serve(async (req) => {
     for (const gc of gradingConfig || []) {
       if (overallAvg >= gc.min_marks && overallAvg <= gc.max_marks) {
         overallGrade = gc.grade;
-        overallRemark = gc.remark || '';
         break;
       }
+    }
+
+    // Map overall average to achievement levels
+    if (overallAvg >= 80) {
+      overallRemark = 'Outstanding';
+    } else if (overallAvg >= 50) {
+      overallRemark = 'Moderate';
+    } else {
+      overallRemark = 'Basic';
     }
 
     const avgIdentifier = processedSubjects.length > 0

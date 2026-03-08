@@ -231,6 +231,11 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
                     <span className="text-xs text-muted-foreground">{label}</span>
                   </div>
                 ))}
+                <div className="flex items-center gap-1.5">
+                  <Flag className="w-3 h-3 text-destructive" />
+                  <span className="text-xs text-muted-foreground">Public Holiday</span>
+                </div>
+                ))}
               </div>
 
               {/* Calendar Grid */}

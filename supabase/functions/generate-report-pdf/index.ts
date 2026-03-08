@@ -103,16 +103,16 @@ async function fetchAttendanceSummary(supabase: any, studentId: string, schoolId
 async function fetchSignatures(supabase: any, schoolId: string, classTeacherId: string | null) {
   const result: any = { classTeacher: null, headTeacher: null };
 
-  // Head teacher signature - any admin/principal/head_teacher with active signature
-  const { data: htSigs } = await supabase
+  const { data: allSigs } = await supabase
     .from('digital_signatures')
     .select('signature_data, signature_type, font_family, user_id, profiles:user_id(first_name, last_name, role)')
     .eq('school_id', schoolId)
     .eq('is_active', true);
 
-  if (htSigs) {
-    const headSig = htSigs.find((s: any) => 
-      s.profiles?.role === 'head_teacher' || s.profiles?.role === 'principal'
+  if (allSigs) {
+    // Head teacher signature - match head_teacher, principal, OR admin
+    const headSig = allSigs.find((s: any) => 
+      ['head_teacher', 'principal', 'admin'].includes(s.profiles?.role)
     );
     if (headSig) {
       result.headTeacher = {
@@ -122,18 +122,18 @@ async function fetchSignatures(supabase: any, schoolId: string, classTeacherId: 
         name: `${headSig.profiles?.first_name || ''} ${headSig.profiles?.last_name || ''}`.trim(),
       };
     }
-  }
 
-  // Class teacher signature
-  if (classTeacherId && htSigs) {
-    const ctSig = htSigs.find((s: any) => s.user_id === classTeacherId);
-    if (ctSig) {
-      result.classTeacher = {
-        signatureData: ctSig.signature_data,
-        signatureType: ctSig.signature_type,
-        fontFamily: ctSig.font_family,
-        name: `${ctSig.profiles?.first_name || ''} ${ctSig.profiles?.last_name || ''}`.trim(),
-      };
+    // Class teacher signature
+    if (classTeacherId) {
+      const ctSig = allSigs.find((s: any) => s.user_id === classTeacherId);
+      if (ctSig) {
+        result.classTeacher = {
+          signatureData: ctSig.signature_data,
+          signatureType: ctSig.signature_type,
+          fontFamily: ctSig.font_family,
+          name: `${ctSig.profiles?.first_name || ''} ${ctSig.profiles?.last_name || ''}`.trim(),
+        };
+      }
     }
   }
 

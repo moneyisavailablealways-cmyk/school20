@@ -227,26 +227,16 @@ const Schedule = () => {
                   <p>No classes scheduled</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {daySchedule.classes.map((classItem, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                      className="aspect-square flex flex-col items-center justify-center p-3 bg-primary/10 border border-primary/20 rounded-xl text-center"
                     >
-                      <div className="flex items-center space-x-4">
-                        <div className="text-sm font-medium text-primary">
-                          {classItem.time}
-                        </div>
-                        <div>
-                          <div className="font-medium">{classItem.subject}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {classItem.class}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {classItem.room}
-                      </div>
+                      <div className="font-semibold text-sm leading-tight">{classItem.subject}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{classItem.class}</div>
+                      <div className="text-xs font-medium text-primary mt-2">{classItem.time}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">{classItem.room}</div>
                     </div>
                   ))}
                 </div>

@@ -211,7 +211,7 @@ const AcademicStructure = () => {
     }
   };
   
-  const openDeleteDialog = (type: 'year' | 'level' | 'class' | 'stream', item: any) => {
+  const openDeleteDialog = (type: 'year' | 'level' | 'class' | 'stream' | 'term', item: any) => {
     setDeleteType(type);
     setItemToDelete(item);
     setDeleteDialogOpen(true);

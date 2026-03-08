@@ -244,9 +244,8 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
                 {weekDays.map(day => (
                   <div key={day} className="text-center font-medium text-muted-foreground py-2 text-sm">
                     {day}
-                  </div>
-                ))}
-
+                </div>
+              </div>
                 {/* Empty cells for days before the first of the month */}
                 {Array.from({ length: firstDayOfMonth }).map((_, i) => (
                   <div key={`empty-${i}`} className="aspect-square" />

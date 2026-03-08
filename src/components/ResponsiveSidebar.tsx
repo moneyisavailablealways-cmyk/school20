@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { ConnectionStatusIndicator } from '@/components/ConnectionStatusIndicator';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 interface NavigationItem {
   name: string;

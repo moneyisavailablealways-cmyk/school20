@@ -37,7 +37,7 @@ const SchoolSignup = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const form = useForm<SchoolSignupForm>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -80,7 +80,22 @@ const SchoolSignup = () => {
       if (error) throw new Error(error.message || 'Registration failed');
       if (result?.error) throw new Error(result.error);
 
-      setStep('success');
+      // Auto-login the newly registered admin
+      setRegisteredEmail(data.admin_email);
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.admin_email,
+        password: data.admin_password,
+      });
+
+      if (signInError) {
+        // If auto-login fails, show success and let them login manually
+        console.warn('Auto-login failed after registration:', signInError.message);
+        setStep('success');
+      } else {
+        // Auto-login succeeded, redirect to admin dashboard
+        toast.success('School registered successfully! Redirecting to your dashboard...');
+        navigate('/admin');
+      }
     } catch (error: any) {
       const msg = error.message || 'Registration failed. Please try again.';
       if (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('already')) {
@@ -103,12 +118,12 @@ const SchoolSignup = () => {
             </div>
             <h2 className="text-2xl font-bold text-foreground">School Registered!</h2>
             <p className="text-muted-foreground">
-              Your school has been registered successfully. Check your admin email to verify your account, then sign in to access your dashboard.
+              Your school has been registered successfully. Sign in below with your admin credentials to access your dashboard.
             </p>
             <div className="bg-muted rounded-lg p-4 text-left text-sm space-y-2">
-              <p className="font-medium">Sample login credentials:</p>
-              <p className="text-muted-foreground">Email: <span className="font-mono text-foreground">{form.getValues('admin_email')}</span></p>
-              <p className="text-muted-foreground">Password: <span className="font-mono text-foreground">Your chosen password</span></p>
+              <p className="font-medium">Your login credentials:</p>
+              <p className="text-muted-foreground">Email: <span className="font-mono text-foreground">{registeredEmail || form.getValues('admin_email')}</span></p>
+              <p className="text-muted-foreground">Password: <span className="font-mono text-foreground">The password you entered during registration</span></p>
             </div>
             <Button className="w-full" onClick={() => navigate('/auth')}>
               Go to Sign In

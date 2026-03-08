@@ -128,9 +128,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        const errorMessage = error.message?.includes('Invalid login credentials')
+          ? 'Incorrect email or password. Please check your credentials and try again.'
+          : error.message;
         toast({
           title: "Sign In Failed",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
         return { error };
@@ -147,8 +150,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (profileError || !profileData) {
           await supabase.auth.signOut();
           toast({
-            title: "Sign In Failed",
-            description: "User profile not found. Please contact an administrator.",
+            title: "Account Configuration Error",
+            description: "Your user profile was not found. This may be a school account configuration error. Please contact your administrator or Skyline Tech Solutions +256705466283.",
             variant: "destructive",
           });
           return { error: new Error('Profile not found') };

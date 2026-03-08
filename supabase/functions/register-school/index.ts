@@ -115,6 +115,7 @@ serve(async (req) => {
     }
 
     // 2. Create the admin auth user
+    console.log('Creating admin auth user for email:', admin_email)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: admin_email,
       password: admin_password,
@@ -135,6 +136,8 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log('Auth user created successfully:', authData.user.id, 'email:', authData.user.email)
 
     // 3. Wait for profile trigger, then update with school_id and admin role
     await new Promise(r => setTimeout(r, 1500))

@@ -540,34 +540,14 @@ const AcademicStructure = () => {
   const resetLevelForm = () => {
     setLevelForm({
       name: '',
-      parent_id: '',
+      parent_id: 'none',
       custom_parent_name: '',
       is_sub_level: false,
       sub_level_parent: '',
     });
     setSelectedLevel(null);
   };
-
-  const resetClassForm = () => {
-    setClassForm({ name: '', level_id: '', sub_level_id: '', max_students: '40', academic_year_id: '' });
-    setSelectedClass(null);
-  };
-
-  const resetStreamForm = () => {
-    setStreamForm({ name: '', class_id: '', max_students: '30' });
-    setSelectedStream(null);
-  };
-
-  const openEditYear = (year: AcademicYear) => {
-    setSelectedYear(year);
-    setYearForm({
-      name: year.name,
-      start_date: year.start_date,
-      end_date: year.end_date,
-    });
-    setIsYearDialogOpen(true);
-  };
-
+...
   const openEditLevel = (level: Level) => {
     setSelectedLevel(level);
     setLevelForm({

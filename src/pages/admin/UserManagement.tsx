@@ -348,6 +348,7 @@ const UserManagement = () => {
       setIsEditDialogOpen(false);
       setEditingUser(null);
       editForm.reset();
+      clearEditAvatar();
       loadUsers();
     } catch (error: any) {
       console.error('Error updating user:', error);

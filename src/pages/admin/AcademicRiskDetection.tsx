@@ -473,7 +473,17 @@ const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProp
                           ))}
                         </ul>
                       </div>
-                    )}
+               )}
+
+                    {/* AI Insights Panel */}
+                    <AIInsightsPanel student={selectedStudent} />
+
+                    {/* Student Progress Dashboard */}
+                    <StudentProgressDashboard
+                      studentId={selectedStudent.student_id}
+                      academicYearId={selectedYear}
+                      studentName={`${selectedStudent.students.profiles.first_name} ${selectedStudent.students.profiles.last_name}`}
+                    />
                   </CardContent>
                 </Card>
               )}

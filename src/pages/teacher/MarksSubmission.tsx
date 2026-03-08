@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Send, Plus, X, ArrowLeft, ArrowDownAZ } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import MySubmissions from '@/components/teacher/MySubmissions';
 
 interface SubjectMarks {
   id: string;
@@ -761,6 +762,15 @@ const MarksSubmission = () => {
             </Button>
           </div>
         </>
+      )}
+
+      {/* My Submissions Section */}
+      {selectedTerm && currentYear?.id && profile?.id && (
+        <MySubmissions
+          teacherId={profile.id}
+          currentYearId={currentYear.id}
+          selectedTerm={selectedTerm}
+        />
       )}
     </div>
   );

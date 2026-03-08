@@ -169,8 +169,8 @@ const MySubmissions = ({ teacherId, currentYearId, selectedTerm, onEditSubmissio
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">No submissions found</p>
         ) : (
-          <div className="overflow-x-auto rounded-md border">
-            <Table>
+          <div className="overflow-x-auto rounded-md border max-w-full">
+            <Table className="min-w-[700px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>

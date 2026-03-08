@@ -47,6 +47,18 @@ const SubmissionsApproval = () => {
     },
   });
 
+  // Fetch all submission counts for stats
+  const { data: allSubmissions } = useQuery({
+    queryKey: ['submissions-stats-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subject_submissions')
+        .select('id, status');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Fetch submissions
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['submissions-for-approval', filterStatus, filterClass, filterSubject],

@@ -235,7 +235,6 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
                   <Flag className="w-3 h-3 text-destructive" />
                   <span className="text-xs text-muted-foreground">Public Holiday</span>
                 </div>
-                ))}
               </div>
 
               {/* Calendar Grid */}
@@ -244,15 +243,13 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
                 {weekDays.map(day => (
                   <div key={day} className="text-center font-medium text-muted-foreground py-2 text-sm">
                     {day}
-                </div>
-              </div>
+                  </div>
+                ))}
+
                 {/* Empty cells for days before the first of the month */}
                 {Array.from({ length: firstDayOfMonth }).map((_, i) => (
                   <div key={`empty-${i}`} className="aspect-square" />
                 ))}
-
-                {/* Legend for holidays */}
-                
 
                 {/* Calendar days */}
                 {days.map(day => {
@@ -288,10 +285,10 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
                         </div>
                       )}
                       <div className="flex flex-wrap justify-center gap-0.5">
-                        {dayAttendance.slice(0, 4).map((record, i) => (
+                        {dayAttendance.slice(0, 4).map((record) => (
                           <div
                             key={record.id}
-                          className={cn(
+                            className={cn(
                               "w-2 h-2 rounded-full",
                               statusColors[record.status as AttendanceStatus]
                             )}

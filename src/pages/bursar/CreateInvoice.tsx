@@ -402,7 +402,7 @@ const CreateInvoice = () => {
                     </div>
 
                     <div>
-                      <Label>Amount ($)</Label>
+                      <Label>Amount (UGX)</Label>
                       <Input
                         type="number"
                         step="0.01"

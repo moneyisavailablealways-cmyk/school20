@@ -17,6 +17,7 @@ import {
   Heart,
   ClipboardCheck,
   FileText,
+  Brain,
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';

@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 
 const ReportGeneration = () => {
@@ -22,6 +22,7 @@ const ReportGeneration = () => {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [generatingProgress, setGeneratingProgress] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedStream, setSelectedStream] = useState<string>('all');
 
   // Fetch classes with streams
   const { data: classes } = useQuery({
@@ -49,21 +50,20 @@ const ReportGeneration = () => {
     },
   });
 
-  const [selectedStream, setSelectedStream] = useState<string>('all');
-
-  // Fetch current academic year
-  const { data: currentYear } = useQuery({
-    queryKey: ['current-academic-year'],
+  // Fetch all academic years to find the right one
+  const { data: academicYears } = useQuery({
+    queryKey: ['academic-years-for-generation'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('academic_years')
-        .select('id, name')
-        .eq('is_current', true)
-        .maybeSingle();
+        .select('id, name, is_current')
+        .order('is_current', { ascending: false });
       if (error) throw error;
       return data;
     },
   });
+
+  const currentYear = academicYears?.[0] || null;
 
   // Fetch students with their submission readiness
   const { data: studentsData, isLoading } = useQuery({
@@ -71,13 +71,24 @@ const ReportGeneration = () => {
     queryFn: async () => {
       if (!currentYear?.id) return [];
 
-      // Get enrollments with stream info
+      // First, find which academic_year_id has approved submissions for the selected term
+      const { data: submissionYears } = await supabase
+        .from('subject_submissions')
+        .select('academic_year_id')
+        .eq('term', selectedTerm)
+        .eq('status', 'approved')
+        .limit(1);
+
+      const targetAcademicYearId = submissionYears?.[0]?.academic_year_id || currentYear.id;
+
+      // Get enrollments - handle both null and matching academic_year_id
       let query = supabase
         .from('student_enrollments')
         .select(`
           student_id,
           class_id,
           stream_id,
+          academic_year_id,
           classes(name, level_id, levels(name)),
           streams(name),
           students!inner(
@@ -87,8 +98,7 @@ const ReportGeneration = () => {
             profiles:profile_id(first_name, last_name)
           )
         `)
-        .eq('status', 'active')
-        .eq('academic_year_id', currentYear.id);
+        .eq('status', 'active');
 
       if (selectedClass !== 'all') {
         query = query.eq('class_id', selectedClass);
@@ -101,39 +111,39 @@ const ReportGeneration = () => {
       const { data: enrollments, error: enrollError } = await query;
       if (enrollError) throw enrollError;
 
-      // Get all approved submissions for these students
-      const studentIds = enrollments?.map(e => e.student_id) || [];
+      // Filter enrollments: include those with matching academic_year_id OR null academic_year_id
+      const filteredEnrollments = enrollments?.filter(e => 
+        !e.academic_year_id || e.academic_year_id === targetAcademicYearId || e.academic_year_id === currentYear.id
+      ) || [];
+
+      const studentIds = filteredEnrollments.map(e => e.student_id);
+      if (studentIds.length === 0) return [];
+
+      // Get all submissions for these students (approved + pending)
       const { data: submissions } = await supabase
         .from('subject_submissions')
         .select('student_id, subject_id, status')
-        .eq('academic_year_id', currentYear.id)
+        .eq('academic_year_id', targetAcademicYearId)
         .eq('term', selectedTerm)
         .in('student_id', studentIds);
 
       // Get existing generated reports
       const { data: reports } = await supabase
         .from('generated_reports')
-        .select('student_id, status, verification_code, generated_at')
-        .eq('academic_year_id', currentYear.id)
+        .select('student_id, status, verification_code, generated_at, file_url')
+        .eq('academic_year_id', targetAcademicYearId)
         .eq('term', selectedTerm)
         .in('student_id', studentIds);
 
-      // Get subject count per class
-      const { data: subjectCounts } = await supabase
-        .from('subjects')
-        .select('id')
-        .eq('is_active', true);
-
-      const totalSubjects = subjectCounts?.length || 0;
-
       // Build student readiness data
-      return enrollments?.map(enrollment => {
+      return filteredEnrollments.map(enrollment => {
         const student = enrollment.students as any;
         const classInfo = enrollment.classes as any;
         const streamInfo = enrollment.streams as any;
         const studentSubmissions = submissions?.filter(s => s.student_id === enrollment.student_id) || [];
         const approvedCount = studentSubmissions.filter(s => s.status === 'approved').length;
         const pendingCount = studentSubmissions.filter(s => s.status === 'pending').length;
+        const totalSubmissions = studentSubmissions.length;
         const existingReport = reports?.find(r => r.student_id === enrollment.student_id);
 
         return {
@@ -145,13 +155,14 @@ const ReportGeneration = () => {
           levelName: classInfo?.levels?.name || '',
           approvedSubjects: approvedCount,
           pendingSubjects: pendingCount,
-          totalSubjects,
-          isReady: approvedCount >= 3, // At least 3 approved subjects
+          totalSubjects: totalSubmissions,
+          isReady: approvedCount >= 1, // At least 1 approved subject
           reportStatus: existingReport?.status || null,
           reportCode: existingReport?.verification_code || null,
           reportDate: existingReport?.generated_at || null,
+          reportUrl: (existingReport as any)?.file_url || null,
         };
-      }) || [];
+      });
     },
     enabled: !!currentYear?.id,
   });
@@ -162,14 +173,22 @@ const ReportGeneration = () => {
       setIsGenerating(true);
       setGeneratingProgress(0);
 
+      const submissionYears = await supabase
+        .from('subject_submissions')
+        .select('academic_year_id')
+        .eq('term', selectedTerm)
+        .eq('status', 'approved')
+        .limit(1);
+
+      const targetAcademicYearId = submissionYears?.data?.[0]?.academic_year_id || currentYear?.id;
+
       for (let i = 0; i < studentIds.length; i++) {
         const studentId = studentIds[i];
-        
-        // Call edge function to generate PDF
+
         const { data, error } = await supabase.functions.invoke('generate-report-pdf', {
           body: {
             studentId,
-            academicYearId: currentYear?.id,
+            academicYearId: targetAcademicYearId,
             term: selectedTerm,
             generatedBy: profile?.id,
           },
@@ -207,10 +226,55 @@ const ReportGeneration = () => {
     setSelectedStudents(readyIds);
   };
 
+  const handlePreview = (student: any) => {
+    if (student.reportUrl) {
+      window.open(student.reportUrl, '_blank');
+    } else {
+      toast.info('Report preview not available yet');
+    }
+  };
+
+  const handleDownload = (student: any) => {
+    if (student.reportUrl) {
+      const link = document.createElement('a');
+      link.href = student.reportUrl;
+      link.download = `report-${student.admissionNo || student.studentId}.pdf`;
+      link.click();
+    } else {
+      toast.info('Report not available for download');
+    }
+  };
+
+  const handlePrint = (student: any) => {
+    if (student.reportUrl) {
+      const printWindow = window.open(student.reportUrl, '_blank');
+      printWindow?.addEventListener('load', () => {
+        printWindow.print();
+      });
+    } else {
+      toast.info('Report not available for printing');
+    }
+  };
+
+  const handleShare = (student: any) => {
+    if (navigator.share && student.reportUrl) {
+      navigator.share({
+        title: `Report Card - ${student.name}`,
+        text: `Report card for ${student.name}`,
+        url: student.reportUrl,
+      }).catch(() => {});
+    } else if (student.reportCode) {
+      navigator.clipboard.writeText(student.reportCode);
+      toast.success('Verification code copied to clipboard');
+    } else {
+      toast.info('Nothing to share yet');
+    }
+  };
+
   const stats = {
     ready: studentsData?.filter(s => s.isReady).length || 0,
     notReady: studentsData?.filter(s => !s.isReady).length || 0,
-    generated: studentsData?.filter(s => s.reportStatus === 'finalized').length || 0,
+    generated: studentsData?.filter(s => s.reportStatus).length || 0,
   };
 
   return (
@@ -255,13 +319,13 @@ const ReportGeneration = () => {
       {/* Filters & Actions */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <CardTitle>Generate Report Cards</CardTitle>
               <CardDescription>Select students and generate PDF report cards</CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
+            <div className="flex flex-wrap gap-2">
+              <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setSelectedStream('all'); }}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="All Classes" />
                 </SelectTrigger>
@@ -272,8 +336,8 @@ const ReportGeneration = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Select 
-                value={selectedStream} 
+              <Select
+                value={selectedStream}
                 onValueChange={setSelectedStream}
                 disabled={selectedClass === 'all'}
               >
@@ -412,14 +476,22 @@ const ReportGeneration = () => {
                         <div className="flex gap-1">
                           {student.reportStatus && (
                             <>
-                              <Button size="icon" variant="ghost" className="h-8 w-8">
+                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Preview" onClick={() => handlePreview(student)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8">
+                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Download" onClick={() => handleDownload(student)}>
                                 <Download className="h-4 w-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8">
+                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Print" onClick={() => handlePrint(student)}>
                                 <Printer className="h-4 w-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Share" onClick={() => handleShare(student)}>
+                                <Share2 className="h-4 w-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit" onClick={() => {
+                                toast.info('Edit functionality - regenerate the report after making changes');
+                              }}>
+                                <Pencil className="h-4 w-4" />
                               </Button>
                             </>
                           )}
@@ -428,6 +500,7 @@ const ReportGeneration = () => {
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8"
+                              title={student.reportStatus ? 'Regenerate' : 'Generate'}
                               onClick={() => generateReports.mutate([student.studentId])}
                               disabled={isGenerating}
                             >

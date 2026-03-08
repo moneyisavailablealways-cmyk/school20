@@ -248,6 +248,7 @@ const App = () => (
             >
               <Route index element={<BursarDashboard />} />
               <Route path="fee-structures" element={<FeeStructures />} />
+              <Route path="report-card-fees" element={<ReportCardFees />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="invoices/create" element={<CreateInvoice />} />
               <Route path="payments" element={<Payments />} />

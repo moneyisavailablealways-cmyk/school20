@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, BookOpen, Info } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { useSchoolLevel, SUGGESTED_SUBJECTS } from '@/hooks/useSchoolLevel';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 

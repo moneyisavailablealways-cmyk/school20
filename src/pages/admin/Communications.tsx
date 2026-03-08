@@ -57,6 +57,8 @@ interface Message {
 }
 
 const Communications = () => {
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id;
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);

@@ -128,7 +128,7 @@ const RecordPayment = () => {
       }
 
       if (selectedInvoice && paymentAmount > selectedInvoice.balance_amount) {
-        throw new Error(`Payment amount cannot exceed outstanding balance of $${selectedInvoice.balance_amount}`);
+        throw new Error(`Payment amount cannot exceed outstanding balance of UGX ${selectedInvoice.balance_amount.toLocaleString()}`);
       }
 
       // Create payment record

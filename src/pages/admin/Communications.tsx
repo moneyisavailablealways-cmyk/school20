@@ -109,8 +109,8 @@ const Communications = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (schoolId) fetchData();
+  }, [schoolId]);
 
   const fetchData = async () => {
     try {

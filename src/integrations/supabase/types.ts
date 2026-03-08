@@ -169,6 +169,83 @@ export type Database = {
           },
         ]
       }
+      admission_applications: {
+        Row: {
+          address: string | null
+          application_date: string
+          class_applying_for: string
+          created_at: string | null
+          created_by: string | null
+          date_of_birth: string | null
+          documents_submitted: boolean | null
+          gender: string | null
+          id: string
+          interview_date: string | null
+          interview_scheduled: boolean | null
+          notes: string | null
+          parent_email: string | null
+          parent_name: string
+          parent_phone: string | null
+          previous_school: string | null
+          school_id: string
+          status: string
+          student_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          application_date?: string
+          class_applying_for: string
+          created_at?: string | null
+          created_by?: string | null
+          date_of_birth?: string | null
+          documents_submitted?: boolean | null
+          gender?: string | null
+          id?: string
+          interview_date?: string | null
+          interview_scheduled?: boolean | null
+          notes?: string | null
+          parent_email?: string | null
+          parent_name: string
+          parent_phone?: string | null
+          previous_school?: string | null
+          school_id: string
+          status?: string
+          student_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          application_date?: string
+          class_applying_for?: string
+          created_at?: string | null
+          created_by?: string | null
+          date_of_birth?: string | null
+          documents_submitted?: boolean | null
+          gender?: string | null
+          id?: string
+          interview_date?: string | null
+          interview_scheduled?: boolean | null
+          notes?: string | null
+          parent_email?: string | null
+          parent_name?: string
+          parent_phone?: string | null
+          previous_school?: string | null
+          school_id?: string
+          status?: string
+          student_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admission_applications_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           content: string

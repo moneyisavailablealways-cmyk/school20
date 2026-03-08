@@ -169,6 +169,23 @@ const SchoolSignup = () => {
                         <FormMessage />
                       </FormItem>
                     )} />
+                    <FormField control={form.control} name="school_level" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>School Level *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="primary">Primary</SelectItem>
+                            <SelectItem value="secondary">Secondary</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
                     <FormField control={form.control} name="email" render={({ field }) => (
                       <FormItem>
                         <FormLabel>School Email *</FormLabel>

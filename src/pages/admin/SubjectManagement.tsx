@@ -54,11 +54,15 @@ const SubjectManagement = () => {
   });
   const { toast } = useToast();
   const { schoolLevel } = useSchoolLevel();
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id;
 
   useEffect(() => {
-    fetchSubjects();
-    fetchLevels();
-  }, []);
+    if (schoolId) {
+      fetchSubjects();
+      fetchLevels();
+    }
+  }, [schoolId]);
 
   const fetchSubjects = async () => {
     try {
@@ -68,6 +72,7 @@ const SubjectManagement = () => {
           *,
           level:levels(id, name, parent_id)
         `)
+        .eq('school_id', schoolId!)
         .order('name', { ascending: true });
 
       if (error) throw error;

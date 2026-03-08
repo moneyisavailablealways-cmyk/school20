@@ -342,6 +342,9 @@ const ParentDashboard = () => {
         </p>
       </div>
 
+      {/* Term Countdown */}
+      {profile?.school_id && <TermCountdownWidget schoolId={profile.school_id} compact />}
+
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>

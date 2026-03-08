@@ -147,9 +147,21 @@ const AcademicStructure = () => {
     max_students: '30',
   });
 
+  const [termForm, setTermForm] = useState({
+    term_name: '',
+    term_number: '1',
+    academic_year_id: '',
+    start_date: '',
+    end_date: '',
+    opening_day: '',
+    closing_day: '',
+    holiday_start_date: '',
+    holiday_end_date: '',
+  });
+
   // Add delete confirmation states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteType, setDeleteType] = useState<'year' | 'level' | 'class' | 'stream'>('year');
+  const [deleteType, setDeleteType] = useState<'year' | 'level' | 'class' | 'stream' | 'term'>('year');
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
   const { toast } = useToast();

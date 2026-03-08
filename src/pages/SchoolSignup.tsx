@@ -178,10 +178,11 @@ const SchoolSignup = () => {
                               <SelectValue placeholder="Select level" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="primary">Primary</SelectItem>
-                            <SelectItem value="secondary">Secondary</SelectItem>
-                          </SelectContent>
+          <SelectContent>
+            <SelectItem value="primary">Primary School</SelectItem>
+            <SelectItem value="secondary">Secondary School</SelectItem>
+            <SelectItem value="higher_institution">Higher Institution (Beta)</SelectItem>
+          </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>

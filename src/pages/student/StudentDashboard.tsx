@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, Calendar, BarChart3, Library, Clock, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import TermCountdownWidget from '@/components/academic-calendar/TermCountdownWidget';
 
 const StudentDashboard = () => {
   const { profile } = useAuth();

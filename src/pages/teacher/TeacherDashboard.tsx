@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Users, BookOpen, Calendar, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import TermCountdownWidget from '@/components/academic-calendar/TermCountdownWidget';
 
 const TeacherDashboard = () => {
   const { profile } = useAuth();

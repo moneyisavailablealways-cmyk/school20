@@ -197,6 +197,25 @@ const UserManagement = () => {
         throw new Error(result.error);
       }
 
+      // Upload avatar if provided
+      if (avatarFile && result?.profile_id) {
+        setUploadingAvatar(true);
+        const fileExt = avatarFile.name.split('.').pop();
+        const filePath = `${result.profile_id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, avatarFile);
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+          await supabase
+            .from('profiles')
+            .update({ avatar_url: urlData.publicUrl })
+            .eq('id', result.profile_id);
+        }
+        setUploadingAvatar(false);
+      }
+
       toast({
         title: 'Success',
         description: 'User created successfully with login credentials',
@@ -204,6 +223,7 @@ const UserManagement = () => {
 
       setIsCreateDialogOpen(false);
       form.reset();
+      clearAvatar();
       loadUsers();
     } catch (error: any) {
       console.error('Error creating user:', error);

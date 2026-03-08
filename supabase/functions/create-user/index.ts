@@ -31,10 +31,10 @@ serve(async (req) => {
       )
     }
 
-    // Check if user is admin
+    // Check if user is admin and get their school_id
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, school_id')
       .eq('user_id', user.user.id)
       .single()
 
@@ -129,6 +129,7 @@ serve(async (req) => {
           phone: phone || null,
           role,
           is_active: true,
+          school_id: profile.school_id || null,
         })
         .select('id')
         .single()
@@ -151,8 +152,9 @@ serve(async (req) => {
           last_name: lastName,
           email,
           phone: phone || null,
-          role: role, // Update role to admin-selected value
+          role: role,
           is_active: true,
+          school_id: profile.school_id || null,
         })
         .eq('id', existingProfile.id)
 

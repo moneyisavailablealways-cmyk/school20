@@ -26,6 +26,7 @@ const GeneratedReportCards = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const [previewStudentName, setPreviewStudentName] = useState('');
+  const [loadingReportId, setLoadingReportId] = useState<string | null>(null);
 
   // Fetch generated reports with student info
   const { data: reports = [], isLoading } = useQuery({

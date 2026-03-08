@@ -66,7 +66,11 @@ const RISK_BADGES: Record<string, { label: string; icon: string; variant: 'defau
   critical: { label: '🔴 Critical Risk', icon: '🔴', variant: 'destructive' },
 };
 
-const AcademicRiskDetection = () => {
+interface AcademicRiskDetectionProps {
+  viewMode?: 'admin' | 'teacher' | 'head_teacher';
+}
+
+const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProps) => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [assessments, setAssessments] = useState<RiskAssessment[]>([]);
@@ -108,7 +112,40 @@ const AcademicRiskDetection = () => {
   const fetchAssessments = async () => {
     if (!profile?.school_id || !selectedYear) return;
     setLoading(true);
-    const { data, error } = await supabase
+
+    let studentIds: string[] | null = null;
+
+    // For teacher view, get only students in teacher's classes
+    if (viewMode === 'teacher' && profile?.id) {
+      const { data: classes } = await supabase
+        .from('classes')
+        .select('id')
+        .or(`class_teacher_id.eq.${profile.id}`);
+      
+      const classIds = classes?.map(c => c.id) || [];
+
+      // Also check streams where teacher is section teacher
+      const { data: streams } = await supabase
+        .from('streams')
+        .select('class_id')
+        .eq('section_teacher_id', profile.id);
+      
+      const streamClassIds = streams?.map(s => s.class_id) || [];
+      const allClassIds = [...new Set([...classIds, ...streamClassIds])];
+
+      if (allClassIds.length > 0) {
+        const { data: enrollments } = await supabase
+          .from('student_enrollments')
+          .select('student_id')
+          .in('class_id', allClassIds)
+          .eq('status', 'active');
+        studentIds = enrollments?.map(e => e.student_id) || [];
+      } else {
+        studentIds = [];
+      }
+    }
+
+    let query = supabase
       .from('student_risk_assessments')
       .select(`
         *,
@@ -118,6 +155,16 @@ const AcademicRiskDetection = () => {
       .eq('academic_year_id', selectedYear)
       .eq('term', selectedTerm)
       .order('risk_score', { ascending: false });
+
+    if (studentIds !== null && studentIds.length > 0) {
+      query = query.in('student_id', studentIds);
+    } else if (studentIds !== null && studentIds.length === 0) {
+      setAssessments([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching assessments:', error);
@@ -197,16 +244,20 @@ const AcademicRiskDetection = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Brain className="h-7 w-7 text-primary" />
-            Academic Risk Detection
+            {viewMode === 'teacher' ? 'My Students - Academic Risk' : 'Academic Risk Detection'}
           </h1>
           <p className="text-muted-foreground mt-1">
-            AI-powered analysis to identify at-risk students before they fail
+            {viewMode === 'teacher'
+              ? 'View at-risk students in your classes'
+              : 'AI-powered analysis to identify at-risk students before they fail'}
           </p>
         </div>
-        <Button onClick={runAnalysis} disabled={analyzing || !selectedYear} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${analyzing ? 'animate-spin' : ''}`} />
-          {analyzing ? 'Analyzing...' : 'Run Analysis'}
-        </Button>
+        {viewMode === 'admin' && (
+          <Button onClick={runAnalysis} disabled={analyzing || !selectedYear} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${analyzing ? 'animate-spin' : ''}`} />
+            {analyzing ? 'Analyzing...' : 'Run Analysis'}
+          </Button>
+        )}
       </div>
 
       {/* Filters */}

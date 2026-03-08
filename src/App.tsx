@@ -54,7 +54,9 @@ import AdminTeacherAttendance from "./pages/admin/TeacherAttendance";
 import AdminReportCards from "./pages/admin/ReportCards";
 import AcademicRiskDetection from "./pages/admin/AcademicRiskDetection";
 import TeacherMarksSubmission from "./pages/teacher/MarksSubmission";
+import TeacherAcademicRisk from "./pages/teacher/AcademicRisk";
 import HeadTeacherTeacherAttendance from "./pages/head-teacher/TeacherAttendance";
+import HeadTeacherAcademicRisk from "./pages/head-teacher/AcademicRisk";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentSubjects from "./pages/student/StudentSubjects";
 import StudentSchedule from "./pages/student/StudentSchedule";
@@ -196,6 +198,7 @@ const App = () => (
               <Route path="my-attendance" element={<TeacherMyAttendance />} />
               <Route path="appointments" element={<TeacherAppointments />} />
               <Route path="marks" element={<TeacherMarksSubmission />} />
+              <Route path="academic-risk" element={<TeacherAcademicRisk />} />
               <Route path="profile" element={<TeacherProfile />} />
             </Route>
             
@@ -216,6 +219,7 @@ const App = () => (
               <Route path="attendance" element={<HeadTeacherAttendance />} />
               <Route path="teacher-attendance" element={<HeadTeacherTeacherAttendance />} />
               <Route path="reports" element={<AcademicReports />} />
+              <Route path="academic-risk" element={<HeadTeacherAcademicRisk />} />
               <Route path="appointments" element={<HeadTeacherAppointments />} />
               <Route path="profile" element={<HeadTeacherProfile />} />
             </Route>

@@ -145,7 +145,7 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
                 opacity: 0.7,
                 mixBlendMode: 'multiply',
               }}>
-                <img src={stampUrl} alt="School Stamp" style={{ width: '4000px', height: '4000px', objectFit: 'contain' }} />
+                <img src={stampUrl} alt="School Stamp" style={{ width: '400px', height: '400px', objectFit: 'contain' }} />
               </div>
             )}
           </div>

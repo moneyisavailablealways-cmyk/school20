@@ -102,8 +102,11 @@ const UserManagement = () => {
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const editAvatarInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const form = useForm<CreateUserForm>({

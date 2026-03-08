@@ -459,26 +459,39 @@ const SubmissionsApproval = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {submission.status === 'pending' && (
-                            <div className="flex gap-1">
+                          <div className="flex gap-1">
+                            {submission.status === 'pending' && (
+                              <>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-green-600"
+                                  onClick={() => approveMutation.mutate([submission.id])}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-red-600"
+                                  onClick={() => setRejectDialog({ isOpen: true, ids: [submission.id] })}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            {submission.status === 'approved' && canResetMarks && (
                               <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-green-600"
-                                onClick={() => approveMutation.mutate([submission.id])}
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs gap-1"
+                                onClick={() => setResetDialog({ isOpen: true, submission })}
                               >
-                                <Check className="h-4 w-4" />
+                                <RotateCcw className="h-3 w-3" />
+                                Reset Marks
                               </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-red-600"
-                                onClick={() => setRejectDialog({ isOpen: true, ids: [submission.id] })}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );

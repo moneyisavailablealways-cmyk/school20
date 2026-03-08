@@ -337,8 +337,7 @@ const MarksSubmission = () => {
       const updates = cardsWithMarks.filter(c => c.existingId);
       const inserts = cardsWithMarks.filter(c => !c.existingId);
 
-      const buildRecord = (card: typeof cardsWithMarks[0], includeId: boolean) => ({
-        ...(includeId && card.existingId ? { id: card.existingId } : {}),
+      const buildRecord = (card: typeof cardsWithMarks[0]) => ({
         student_id: selectedStudent,
         subject_id: card.subjectId,
         academic_year_id: currentYear!.id,
@@ -356,13 +355,24 @@ const MarksSubmission = () => {
         submitted_by: profile!.id,
         submitted_at: new Date().toISOString(),
         status: 'pending',
-      }));
+      });
 
-      const { error } = await supabase
-        .from('subject_submissions')
-        .upsert(records, { onConflict: 'student_id,subject_id,academic_year_id,term' });
-      if (error) throw error;
-      return records.length;
+      // Update existing records by id, insert new ones via onConflict
+      for (const card of updates) {
+        const record = { id: card.existingId, ...buildRecord(card) };
+        const { error } = await supabase.from('subject_submissions').upsert(record);
+        if (error) throw error;
+      }
+
+      if (inserts.length > 0) {
+        const newRecords = inserts.map(card => buildRecord(card));
+        const { error } = await supabase
+          .from('subject_submissions')
+          .insert(newRecords);
+        if (error) throw error;
+      }
+
+      return cardsWithMarks.length;
     },
     onSuccess: (count) => {
       toast.success(`${count} subject mark(s) submitted for approval`);

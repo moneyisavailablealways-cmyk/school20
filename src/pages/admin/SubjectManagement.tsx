@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, BookOpen, Info } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { useSchoolLevel, SUGGESTED_SUBJECTS } from '@/hooks/useSchoolLevel';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -53,11 +54,15 @@ const SubjectManagement = () => {
   });
   const { toast } = useToast();
   const { schoolLevel } = useSchoolLevel();
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id;
 
   useEffect(() => {
-    fetchSubjects();
-    fetchLevels();
-  }, []);
+    if (schoolId) {
+      fetchSubjects();
+      fetchLevels();
+    }
+  }, [schoolId]);
 
   const fetchSubjects = async () => {
     try {
@@ -67,6 +72,7 @@ const SubjectManagement = () => {
           *,
           level:levels(id, name, parent_id)
         `)
+        .eq('school_id', schoolId!)
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -88,6 +94,7 @@ const SubjectManagement = () => {
       const { data, error } = await supabase
         .from('levels')
         .select('id, name, parent_id')
+        .eq('school_id', schoolId!)
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -116,6 +123,7 @@ const SubjectManagement = () => {
         is_core: formData.is_core,
         is_active: formData.is_active,
         education_level: schoolLevel || 'secondary',
+        school_id: schoolId,
       };
 
       if (editingSubject) {

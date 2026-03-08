@@ -146,18 +146,18 @@ const ModernTemplate = ({ data }: { data: ReportData }) => {
 
       {/* Signatures */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px', fontSize: '10px' }}>
-        <div style={{ textAlign: 'center', borderTop: '2px solid #2563eb', paddingTop: '6px' }}>
-          {signatures?.classTeacher && <div style={{ marginBottom: '4px' }}><SignatureRenderer sig={signatures.classTeacher} /></div>}
+        <div style={{ textAlign: 'center', borderBottom: '2px solid #2563eb', paddingBottom: '6px' }}>
           <p style={{ margin: 0, fontWeight: '700', fontSize: '10px' }}>{signatures?.classTeacher?.name || summary.classTeacherName || 'Class Teacher'}</p>
-          <p style={{ margin: 0, fontSize: '9px', color: '#64748b' }}>Class Teacher</p>
+          <p style={{ margin: '0 0 4px', fontSize: '9px', color: '#64748b' }}>Class Teacher</p>
+          {signatures?.classTeacher && <div style={{ marginTop: '4px' }}><SignatureRenderer sig={signatures.classTeacher} /></div>}
         </div>
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {stampUrl ? <img src={stampUrl} alt="Stamp" style={{ height: '55px', objectFit: 'contain', opacity: 0.85 }} /> : <span style={{ fontSize: '9px', color: '#aaa' }}>[Stamp]</span>}
         </div>
-        <div style={{ textAlign: 'center', borderTop: '2px solid #2563eb', paddingTop: '6px' }}>
-          {signatures?.headTeacher && <div style={{ marginBottom: '4px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
+        <div style={{ textAlign: 'center', borderBottom: '2px solid #2563eb', paddingBottom: '6px' }}>
           <p style={{ margin: 0, fontWeight: '700', fontSize: '10px' }}>{signatures?.headTeacher?.name || 'Head Teacher'}</p>
-          <p style={{ margin: 0, fontSize: '9px', color: '#64748b' }}>Head Teacher / Principal</p>
+          <p style={{ margin: '0 0 4px', fontSize: '9px', color: '#64748b' }}>Head Teacher / Principal</p>
+          {signatures?.headTeacher && <div style={{ marginTop: '4px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
         </div>
       </div>
 

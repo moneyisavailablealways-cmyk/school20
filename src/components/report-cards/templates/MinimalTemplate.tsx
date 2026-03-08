@@ -113,21 +113,21 @@ const MinimalTemplate = ({ data }: { data: ReportData }) => {
       {/* Signatures */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '10px', fontSize: '10px' }}>
         <div style={{ textAlign: 'center' }}>
-          {signatures?.classTeacher && <div style={{ marginBottom: '4px' }}><SignatureRenderer sig={signatures.classTeacher} /></div>}
-          <div style={{ borderTop: '1px solid #ddd', paddingTop: '4px' }}>
+          <div style={{ borderBottom: '1px solid #ddd', paddingBottom: '4px', marginBottom: '4px' }}>
             <p style={{ margin: 0, fontWeight: '500' }}>{signatures?.classTeacher?.name || summary.classTeacherName || '—'}</p>
             <p style={{ margin: 0, fontSize: '8px', color: '#999' }}>Class Teacher</p>
           </div>
+          {signatures?.classTeacher && <div style={{ marginTop: '4px' }}><SignatureRenderer sig={signatures.classTeacher} /></div>}
         </div>
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {stampUrl ? <img src={stampUrl} alt="Stamp" style={{ height: '50px', objectFit: 'contain', opacity: 0.7 }} /> : null}
         </div>
         <div style={{ textAlign: 'center' }}>
-          {signatures?.headTeacher && <div style={{ marginBottom: '4px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
-          <div style={{ borderTop: '1px solid #ddd', paddingTop: '4px' }}>
+          <div style={{ borderBottom: '1px solid #ddd', paddingBottom: '4px', marginBottom: '4px' }}>
             <p style={{ margin: 0, fontWeight: '500' }}>{signatures?.headTeacher?.name || '—'}</p>
             <p style={{ margin: 0, fontSize: '8px', color: '#999' }}>Head Teacher</p>
           </div>
+          {signatures?.headTeacher && <div style={{ marginTop: '4px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
         </div>
       </div>
 

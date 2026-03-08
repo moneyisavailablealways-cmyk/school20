@@ -129,10 +129,10 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
             <span style={{ fontStyle: 'italic' }}>{summary.headTeacherComment || 'No comment'}</span>
           </div>
           <div style={{ textAlign: 'center', minWidth: '140px', paddingLeft: '10px', position: 'relative' }}>
-            {signatures?.headTeacher && <div style={{ marginBottom: '2px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
-            <p style={{ margin: 0, fontSize: '9px', fontStyle: 'italic', borderTop: '1px dashed #999', paddingTop: '2px' }}>
+            <p style={{ margin: 0, fontSize: '9px', fontStyle: 'italic', borderBottom: '1px dashed #999', paddingBottom: '2px', marginBottom: '2px' }}>
               <strong>Headteacher's Signature:</strong>
             </p>
+            {signatures?.headTeacher && <div style={{ marginTop: '2px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
             {/* Stamp overlaid near head teacher signature */}
             {stampUrl && (
               <div style={{

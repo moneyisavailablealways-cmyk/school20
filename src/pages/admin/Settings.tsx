@@ -992,6 +992,11 @@ const Settings = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Offline Mode Tab */}
+        <TabsContent value="offline" className="space-y-6">
+          <OfflineModeSettings />
+        </TabsContent>
       </Tabs>
     </div>
   );

@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.ai-risk-insights]
 verify_jwt = false
+
+[functions.resolve-school-login]
+verify_jwt = false

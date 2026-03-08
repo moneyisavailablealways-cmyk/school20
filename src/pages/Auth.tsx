@@ -86,7 +86,7 @@ const Auth = () => {
           <CardHeader>
             <CardTitle className="text-center">Welcome Back</CardTitle>
             <CardDescription className="text-center">
-              Sign in to access your school account
+              Sign in with your Admin Email (or School Email/Code for school accounts)
             </CardDescription>
           </CardHeader>
           <CardContent>

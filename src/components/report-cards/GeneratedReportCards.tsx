@@ -277,9 +277,10 @@ const GeneratedReportCards = () => {
                   {filtered.map((report: any) => {
                     const studentName = getStudentName(report);
                     const studentNumber = report.students?.student_id || 'N/A';
+                    const isLoading = loadingReportId === report.id;
 
                     return (
-                      <TableRow key={report.id}>
+                      <TableRow key={report.id} className={isLoading ? 'opacity-60' : ''}>
                         <TableCell className="font-medium">{studentName}</TableCell>
                         <TableCell>{studentNumber}</TableCell>
                         <TableCell>{getStudentClass(report.student_id)}</TableCell>

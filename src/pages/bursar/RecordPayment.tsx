@@ -339,7 +339,7 @@ const RecordPayment = () => {
                     <div className="border-t pt-2">
                       <div className="flex justify-between text-sm">
                         <span>Payment Amount:</span>
-                        <span>${formData.amount || '0.00'}</span>
+                        <span>UGX {formData.amount || '0'}</span>
                       </div>
                       <div className="flex justify-between text-sm font-medium">
                         <span>New Balance:</span>

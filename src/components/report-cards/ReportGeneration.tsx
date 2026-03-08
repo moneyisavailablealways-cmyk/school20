@@ -9,9 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil } from 'lucide-react';
+import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const ReportGeneration = () => {

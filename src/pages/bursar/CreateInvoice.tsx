@@ -313,6 +313,25 @@ const CreateInvoice = () => {
               </div>
 
               <div>
+                <Label htmlFor="academic_year">Academic Year *</Label>
+                <Select
+                  value={formData.academic_year_id}
+                  onValueChange={(value) => handleInputChange('academic_year_id', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select academic year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {academicYears.map((year: any) => (
+                      <SelectItem key={year.id} value={year.id}>
+                        {year.name} {year.is_current ? '(Current)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label htmlFor="due_date">Due Date *</Label>
                 <Input
                   id="due_date"

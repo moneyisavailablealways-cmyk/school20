@@ -723,7 +723,9 @@ const UserManagement = () => {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">Save Changes</Button>
+                  <Button type="submit" disabled={uploadingAvatar}>
+                    {uploadingAvatar ? 'Uploading...' : 'Save Changes'}
+                  </Button>
                 </div>
               </form>
             </Form>

@@ -139,7 +139,7 @@ const MarksSubmission = () => {
     },
     enabled: !!teacherRecord?.id,
   });
-  // Fetch current academic year
+  // Fetch current academic year (use LIMIT 1 + order to handle multiple is_current=true)
   const { data: currentYear } = useQuery({
     queryKey: ['current-academic-year'],
     queryFn: async () => {
@@ -147,9 +147,10 @@ const MarksSubmission = () => {
         .from('academic_years')
         .select('id, name')
         .eq('is_current', true)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
       if (error) throw error;
-      return data;
+      return data?.[0] || null;
     },
   });
 

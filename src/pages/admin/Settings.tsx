@@ -141,6 +141,210 @@ const AppearanceSection = ({
   );
 };
 
+// Offline Mode Settings Component
+const OfflineModeSettings = () => {
+  const { profile } = useAuth();
+  const { toast } = useToast();
+  const [offlineEnabled, setOfflineEnabled] = useState(true);
+  const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
+  const [isCaching, setIsCaching] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  useEffect(() => {
+    loadOfflineSettings();
+  }, []);
+
+  const loadOfflineSettings = async () => {
+    try {
+      const enabled = await getOfflineSetting<boolean>('offline_mode_enabled');
+      if (enabled !== null) setOfflineEnabled(enabled);
+      const logs = await getRecentSyncLogs(10);
+      setSyncLogs(logs);
+    } catch (err) {
+      console.error('Error loading offline settings:', err);
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  const handleToggleOffline = async (enabled: boolean) => {
+    setOfflineEnabled(enabled);
+    await setOfflineSetting('offline_mode_enabled', enabled);
+    toast({
+      title: enabled ? 'Offline Mode Enabled' : 'Offline Mode Disabled',
+      description: enabled
+        ? 'Data will be cached locally for offline access.'
+        : 'Offline caching has been turned off.',
+    });
+  };
+
+  const handlePreCache = async () => {
+    setIsCaching(true);
+    try {
+      const result = await preCacheAllData(profile?.school_id);
+      toast({
+        title: 'Cache Updated',
+        description: `Cached ${result.success} data sets. ${result.failed > 0 ? `${result.failed} failed.` : ''}`,
+      });
+    } catch (err) {
+      toast({
+        title: 'Cache Error',
+        description: 'Failed to cache data for offline use.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCaching(false);
+    }
+  };
+
+  const handleClearCache = async () => {
+    try {
+      const { openDB } = await import('idb');
+      const db = await openDB('school20-offline', 2);
+      const tx = db.transaction('cachedData', 'readwrite');
+      await tx.store.clear();
+      await tx.done;
+      toast({
+        title: 'Cache Cleared',
+        description: 'All cached offline data has been removed.',
+      });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to clear cache.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (loadingSettings) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <WifiOff className="h-5 w-5" />
+            Offline Mode Configuration
+          </CardTitle>
+          <CardDescription>
+            Enable offline functionality for rural schools with limited internet access
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base">Enable Offline Mode</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow teachers and staff to work without internet connection
+              </p>
+            </div>
+            <Switch checked={offlineEnabled} onCheckedChange={handleToggleOffline} />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h4 className="font-semibold flex items-center gap-2">
+              <HardDrive className="h-4 w-4" />
+              Data Caching
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Pre-download school data so it's available offline. Cached data includes student lists,
+              class lists, subjects, timetables, and teacher assignments.
+            </p>
+            <div className="flex gap-3">
+              <Button onClick={handlePreCache} disabled={isCaching}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isCaching ? 'animate-spin' : ''}`} />
+                {isCaching ? 'Caching...' : 'Update Offline Cache'}
+              </Button>
+              <Button variant="outline" onClick={handleClearCache}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear Cache
+              </Button>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h4 className="font-semibold flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Offline-Capable Features
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                { feature: 'Student Attendance Recording', status: true },
+                { feature: 'Marks Entry', status: true },
+                { feature: 'View Class Lists', status: true },
+                { feature: 'View Timetables', status: true },
+                { feature: 'View Student Profiles', status: true },
+                { feature: 'Record Behavior Notes', status: true },
+              ].map((item) => (
+                <div key={item.feature} className="flex items-center justify-between p-3 border rounded-lg">
+                  <span className="text-sm">{item.feature}</span>
+                  <Badge variant={item.status ? 'default' : 'secondary'}>
+                    {item.status ? 'Available' : 'Online Only'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sync History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5" />
+            Sync History
+          </CardTitle>
+          <CardDescription>Recent data synchronization events</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {syncLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No sync events recorded yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {syncLogs.map((log) => (
+                <div key={log.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium">{log.details}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(log.syncedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {log.itemsSynced > 0 && (
+                      <Badge variant="default">{log.itemsSynced} synced</Badge>
+                    )}
+                    {log.itemsFailed > 0 && (
+                      <Badge variant="destructive">{log.itemsFailed} failed</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+  );
+};
+
 const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

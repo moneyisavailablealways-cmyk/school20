@@ -50,7 +50,7 @@ const EditTimetableDialog: React.FC<EditTimetableDialogProps> = ({
 }) => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [autoTeacher, setAutoTeacher] = useState<Teacher | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     class_id: '',
@@ -90,21 +90,28 @@ const EditTimetableDialog: React.FC<EditTimetableDialogProps> = ({
     }
   }, [open, entry]);
 
+  // Auto-fill teacher when class and subject change
+  useEffect(() => {
+    if (formData.class_id && formData.subject_id) {
+      fetchTeacherForClassSubject(formData.class_id, formData.subject_id);
+    } else {
+      setAutoTeacher(null);
+      setFormData(prev => ({ ...prev, teacher_id: '' }));
+    }
+  }, [formData.class_id, formData.subject_id]);
+
   const fetchData = async () => {
     try {
-      const [classesRes, subjectsRes, teachersRes] = await Promise.all([
-        supabase.from('classes').select('id, name').eq('name', 'active'),
-        supabase.from('subjects').select('id, name, code').eq('is_active', true),
-        supabase.from('profiles').select('id, first_name, last_name').eq('role', 'teacher')
+      const [classesRes, subjectsRes] = await Promise.all([
+        supabase.from('classes').select('id, name').order('name'),
+        supabase.from('subjects').select('id, name, code').eq('is_active', true).order('name'),
       ]);
 
       if (classesRes.error) throw classesRes.error;
       if (subjectsRes.error) throw subjectsRes.error;
-      if (teachersRes.error) throw teachersRes.error;
 
       setClasses(classesRes.data || []);
       setSubjects(subjectsRes.data || []);
-      setTeachers(teachersRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -112,6 +119,33 @@ const EditTimetableDialog: React.FC<EditTimetableDialogProps> = ({
         description: 'Failed to load data',
         variant: 'destructive'
       });
+    }
+  };
+
+  const fetchTeacherForClassSubject = async (classId: string, subjectId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('teacher_enrollments')
+        .select('teacher_id, teacher:profiles!fk_teacher_enrollments_teacher_id(id, first_name, last_name)')
+        .eq('class_id', classId)
+        .eq('subject_id', subjectId)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data?.teacher && !Array.isArray(data.teacher)) {
+        const teacher = data.teacher as Teacher;
+        setAutoTeacher(teacher);
+        setFormData(prev => ({ ...prev, teacher_id: teacher.id }));
+      } else {
+        setAutoTeacher(null);
+        setFormData(prev => ({ ...prev, teacher_id: '' }));
+      }
+    } catch (error) {
+      console.error('Error fetching teacher:', error);
+      setAutoTeacher(null);
     }
   };
 
@@ -205,18 +239,15 @@ const EditTimetableDialog: React.FC<EditTimetableDialogProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="teacher">Teacher *</Label>
-            <Select value={formData.teacher_id} onValueChange={(value) => setFormData(prev => ({ ...prev, teacher_id: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select teacher" />
-              </SelectTrigger>
-              <SelectContent>
-                {teachers.map((teacher) => (
-                  <SelectItem key={teacher.id} value={teacher.id}>
-                    {teacher.first_name} {teacher.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              id="teacher"
+              value={autoTeacher ? `${autoTeacher.first_name} ${autoTeacher.last_name}` : 'Select class & subject first'}
+              readOnly
+              className="bg-muted cursor-not-allowed"
+            />
+            {formData.class_id && formData.subject_id && !autoTeacher && (
+              <p className="text-xs text-destructive">No teacher assigned to this class/subject combination.</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -260,13 +291,13 @@ const EditTimetableDialog: React.FC<EditTimetableDialogProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="room_number">Room Number</Label>
+            <Label htmlFor="room_number">Room Number <span className="text-muted-foreground text-xs">(optional)</span></Label>
             <Input
               id="room_number"
               type="text"
               value={formData.room_number}
               onChange={(e) => setFormData(prev => ({ ...prev, room_number: e.target.value }))}
-              placeholder="Enter room number (optional)"
+              placeholder="e.g., Room 101, Lab A"
             />
           </div>
 
@@ -274,7 +305,7 @@ const EditTimetableDialog: React.FC<EditTimetableDialogProps> = ({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || !autoTeacher}>
               {isLoading ? 'Updating...' : 'Update Schedule'}
             </Button>
           </div>

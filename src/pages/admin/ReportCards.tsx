@@ -92,6 +92,9 @@ const ReportCards = () => {
         <TabsContent value="templates">
           <ReportTemplates />
         </TabsContent>
+        <TabsContent value="generated">
+          <GeneratedReportCards />
+        </TabsContent>
         <TabsContent value="school">
           <SchoolSettings />
         </TabsContent>

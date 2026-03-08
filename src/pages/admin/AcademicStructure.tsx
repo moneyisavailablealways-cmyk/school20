@@ -951,8 +951,9 @@ const AcademicStructure = () => {
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="years">Academic Years</TabsTrigger>
+          <TabsTrigger value="terms">Terms</TabsTrigger>
           <TabsTrigger value="hierarchy">Hierarchy View</TabsTrigger>
           <TabsTrigger value="levels">Levels</TabsTrigger>
           <TabsTrigger value="classes">Classes</TabsTrigger>

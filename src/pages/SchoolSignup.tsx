@@ -16,6 +16,7 @@ const schema = z.object({
   school_name: z.string().min(3, 'School name must be at least 3 characters'),
   school_code: z.string().min(2, 'School code required (e.g. KHS001)').max(10),
   country: z.string().min(2, 'Country required'),
+  school_level: z.enum(['primary', 'secondary'], { required_error: 'Select school level' }),
   region: z.string().optional(),
   email: z.string().email('Valid school email required'),
   phone: z.string().optional(),

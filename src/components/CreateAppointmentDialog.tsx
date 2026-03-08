@@ -324,46 +324,40 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
                 </div>
               </div>
 
-              {/* Recipients Section */}
+              {/* Recipient Roles */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Select Recipients *
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSelectAll}
-                      disabled={recipients.length === 0}
-                    >
-                      {selectedRecipients.length === recipients.length && recipients.length > 0 ? 'Deselect All' : 'Select All'}
-                    </Button>
-                    <Select value={filterRole} onValueChange={setFilterRole}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Filter by role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="teacher">Teachers</SelectItem>
-                        <SelectItem value="parent">Parents</SelectItem>
-                        <SelectItem value="head_teacher">Head Teachers</SelectItem>
-                        <SelectItem value="principal">Principals</SelectItem>
-                        <SelectItem value="bursar">Bursars</SelectItem>
-                        <SelectItem value="librarian">Librarians</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <Label className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Select Recipient Roles *
+                </Label>
+                <div className="border rounded-lg p-3 space-y-2">
+                  {availableRoles
+                    .filter(r => r.value !== profile?.role)
+                    .map((role) => (
+                      <label
+                        key={role.value}
+                        className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={selectedRoles.includes(role.value)}
+                          onCheckedChange={() => handleRoleToggle(role.value)}
+                        />
+                        <span className="text-sm font-medium">{role.label}</span>
+                      </label>
+                    ))}
                 </div>
-                
-                <div className="border rounded-lg p-2 max-h-48 overflow-y-auto">
-                  {recipients.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No recipients found
-                    </p>
-                  ) : (
+                {selectedRoles.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {selectedRoles.length} role(s) selected
+                  </p>
+                )}
+              </div>
+
+              {/* Individual Recipients from selected roles */}
+              {recipients.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Recipients ({recipients.length} found)</Label>
+                  <div className="border rounded-lg p-2 max-h-48 overflow-y-auto">
                     <div className="space-y-2">
                       {recipients.map((recipient) => (
                         <label
@@ -379,20 +373,18 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
                               {recipient.first_name} {recipient.last_name}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {roleLabels[recipient.role] || recipient.role} • {recipient.email}
+                              {recipient.role} • {recipient.email}
                             </p>
                           </div>
                         </label>
                       ))}
                     </div>
-                  )}
-                </div>
-                {selectedRecipients.length > 0 && (
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    {selectedRecipients.length} recipient(s) selected
+                    {selectedRecipients.length} of {recipients.length} recipient(s) selected
                   </p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </ScrollArea>
 

@@ -114,14 +114,15 @@ async function syncItem(item: SyncQueueItem): Promise<'success' | 'conflict' | '
       // Check for conflict
       const { data: existing } = await supabase
         .from(table as any)
-        .select('updated_at')
+        .select('*')
         .eq('id', data.id as string)
         .maybeSingle();
 
       if (existing) {
-        const serverUpdatedAt = new Date(existing.updated_at || 0).getTime();
+        const existingRecord = existing as Record<string, unknown>;
+        const serverUpdatedAt = new Date((existingRecord.updated_at as string) || 0).getTime();
         if (serverUpdatedAt > item.timestamp) {
-          await updateSyncItemStatus(item.id, 'conflict', existing);
+          await updateSyncItemStatus(item.id, 'conflict', existingRecord);
           return 'conflict';
         }
       }

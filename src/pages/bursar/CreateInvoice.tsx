@@ -170,6 +170,7 @@ const CreateInvoice = () => {
         .insert({
           invoice_number: invoiceNumberData,
           student_id: formData.student_id,
+          academic_year_id: formData.academic_year_id || null,
           total_amount: totalAmount,
           balance_amount: totalAmount,
           due_date: formData.due_date,

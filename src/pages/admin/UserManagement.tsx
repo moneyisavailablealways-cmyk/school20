@@ -102,8 +102,11 @@ const UserManagement = () => {
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const editAvatarInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const form = useForm<CreateUserForm>({
@@ -172,6 +175,23 @@ const UserManagement = () => {
     setAvatarFile(null);
     setAvatarPreview(null);
     if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
+
+  const handleEditAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Error', description: 'Image must be under 2MB', variant: 'destructive' });
+      return;
+    }
+    setEditAvatarFile(file);
+    setEditAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const clearEditAvatar = () => {
+    setEditAvatarFile(null);
+    setEditAvatarPreview(null);
+    if (editAvatarInputRef.current) editAvatarInputRef.current.value = '';
   };
 
   const createUser = async (data: CreateUserForm) => {
@@ -280,6 +300,8 @@ const UserManagement = () => {
       role: user.role,
       is_active: user.is_active,
     });
+    setEditAvatarFile(null);
+    setEditAvatarPreview(user.avatar_url || null);
     setIsEditDialogOpen(true);
   };
 
@@ -287,6 +309,23 @@ const UserManagement = () => {
     if (!editingUser) return;
 
     try {
+      // Upload new avatar if selected
+      let avatarUrl = editingUser.avatar_url;
+      if (editAvatarFile) {
+        setUploadingAvatar(true);
+        const fileExt = editAvatarFile.name.split('.').pop();
+        const filePath = `${editingUser.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, editAvatarFile);
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+          avatarUrl = urlData.publicUrl;
+        }
+        setUploadingAvatar(false);
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -295,6 +334,7 @@ const UserManagement = () => {
           phone: data.phone || null,
           role: data.role,
           is_active: data.is_active,
+          avatar_url: avatarUrl,
         })
         .eq('id', editingUser.id);
 
@@ -308,6 +348,7 @@ const UserManagement = () => {
       setIsEditDialogOpen(false);
       setEditingUser(null);
       editForm.reset();
+      clearEditAvatar();
       loadUsers();
     } catch (error: any) {
       console.error('Error updating user:', error);
@@ -544,6 +585,39 @@ const UserManagement = () => {
                   </div>
                 )}
 
+                {/* Avatar Upload for Edit */}
+                <div className="flex flex-col items-center gap-2">
+                  <div className="relative">
+                    <div
+                      className="w-20 h-20 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center cursor-pointer hover:border-primary transition-colors overflow-hidden bg-muted"
+                      onClick={() => editAvatarInputRef.current?.click()}
+                    >
+                      {editAvatarPreview ? (
+                        <img src={editAvatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera className="h-6 w-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    {editAvatarPreview && (
+                      <button
+                        type="button"
+                        onClick={clearEditAvatar}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={editAvatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleEditAvatarSelect}
+                  />
+                  <p className="text-xs text-muted-foreground">Change photo (max 2MB)</p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={editForm.control}
@@ -649,7 +723,9 @@ const UserManagement = () => {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">Save Changes</Button>
+                  <Button type="submit" disabled={uploadingAvatar}>
+                    {uploadingAvatar ? 'Uploading...' : 'Save Changes'}
+                  </Button>
                 </div>
               </form>
             </Form>

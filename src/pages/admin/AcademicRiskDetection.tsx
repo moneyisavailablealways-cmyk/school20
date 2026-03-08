@@ -650,6 +650,13 @@ const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProp
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* School-Wide Analytics Tab (Admin only) */}
+        {viewMode === 'admin' && (
+          <TabsContent value="school-analytics" className="space-y-4">
+            <SchoolWideAnalytics academicYearId={selectedYear} term={selectedTerm} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -9,10 +9,10 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { FileText, Check, Eye, Layout, Building2 } from 'lucide-react';
 
-const templatePreviews = {
+const templatePreviews: Record<string, { name: string; description: string; features: string[]; color: string }> = {
   classic: {
     name: 'Classic Template',
-    description: 'Traditional report card layout with clean, professional design. Best for formal schools.',
+    description: 'Traditional report card layout with clean, professional design. Best for formal secondary schools.',
     features: ['Header with school logo', 'Structured performance table', 'Clean typography', 'Formal layout'],
     color: 'bg-slate-100 border-slate-300',
   },
@@ -30,9 +30,15 @@ const templatePreviews = {
   },
   colorful: {
     name: 'Colorful Template',
-    description: 'Vibrant colors and engaging design. Ideal for primary schools.',
+    description: 'Vibrant colors and engaging design. Ideal for creative schools.',
     features: ['Vibrant colors', 'Fun illustrations', 'Engaging layout', 'Kid-friendly'],
     color: 'bg-purple-50 border-purple-200',
+  },
+  primary: {
+    name: 'Primary School Template',
+    description: 'Standard primary school report card with BOT, MOT, and EOT exam sections. Matches Uganda primary layout.',
+    features: ['Beginning/Mid/End of Term tables', 'Subject-based grid layout', 'Conduct & Behaviour section', 'Grading key at bottom'],
+    color: 'bg-green-50 border-green-200',
   },
 };
 

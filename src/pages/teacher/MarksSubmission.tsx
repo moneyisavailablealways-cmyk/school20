@@ -452,10 +452,6 @@ const MarksSubmission = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Button variant="outline" size="sm" onClick={() => navigate('/teacher/dashboard')}>
-        <ArrowLeft className="h-4 w-4 mr-1" />
-        Back to Dashboard
-      </Button>
 
       <h1 className="text-2xl font-bold tracking-tight">Mark Submission Form</h1>
 

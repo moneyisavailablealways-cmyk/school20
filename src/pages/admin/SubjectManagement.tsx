@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, BookOpen } from 'lucide-react';
+import { Plus, Pencil, Trash2, BookOpen, Info } from 'lucide-react';
+import { useSchoolLevel, SUGGESTED_SUBJECTS } from '@/hooks/useSchoolLevel';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Level {
   id: string;
@@ -28,6 +30,7 @@ interface Subject {
   sub_level: string | null;
   is_core: boolean;
   is_active: boolean;
+  education_level: string | null;
   created_at: string;
   updated_at: string;
   level?: Level;
@@ -49,6 +52,7 @@ const SubjectManagement = () => {
     is_active: true,
   });
   const { toast } = useToast();
+  const { schoolLevel } = useSchoolLevel();
 
   useEffect(() => {
     fetchSubjects();
@@ -111,6 +115,7 @@ const SubjectManagement = () => {
         sub_level: formData.sub_level || null,
         is_core: formData.is_core,
         is_active: formData.is_active,
+        education_level: schoolLevel || 'secondary',
       };
 
       if (editingSubject) {
@@ -279,6 +284,9 @@ const SubjectManagement = () => {
           <h1 className="text-3xl font-bold">Subject Management</h1>
           <p className="text-muted-foreground">
             Manage school subjects and curriculum
+            {schoolLevel && (
+              <Badge variant="outline" className="ml-2 capitalize">{schoolLevel.replace('_', ' ')} School</Badge>
+            )}
           </p>
         </div>
         <Button onClick={handleNewSubject} className="gap-2">
@@ -286,6 +294,17 @@ const SubjectManagement = () => {
           Add Subject
         </Button>
       </div>
+
+      {schoolLevel && subjects.length === 0 && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Your school is registered as a <strong className="capitalize">{schoolLevel.replace('_', ' ')}</strong> school. 
+            Suggested subjects for your level: {SUGGESTED_SUBJECTS[schoolLevel]?.map(s => s.name).join(', ')}.
+            Click "Add Subject" to get started.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>

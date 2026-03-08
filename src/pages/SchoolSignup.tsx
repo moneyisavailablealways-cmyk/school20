@@ -16,7 +16,7 @@ const schema = z.object({
   school_name: z.string().min(3, 'School name must be at least 3 characters'),
   school_code: z.string().min(2, 'School code required (e.g. KHS001)').max(10),
   country: z.string().min(2, 'Country required'),
-  school_level: z.enum(['primary', 'secondary']),
+  school_level: z.enum(['primary', 'secondary', 'higher_institution']),
   region: z.string().optional(),
   email: z.string().email('Valid school email required'),
   phone: z.string().optional(),
@@ -44,7 +44,7 @@ const SchoolSignup = () => {
       school_name: '',
       school_code: '',
       country: 'Uganda',
-      school_level: undefined as unknown as 'primary' | 'secondary',
+      school_level: undefined as unknown as 'primary' | 'secondary' | 'higher_institution',
       region: '',
       email: '',
       phone: '',
@@ -178,10 +178,11 @@ const SchoolSignup = () => {
                               <SelectValue placeholder="Select level" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="primary">Primary</SelectItem>
-                            <SelectItem value="secondary">Secondary</SelectItem>
-                          </SelectContent>
+          <SelectContent>
+            <SelectItem value="primary">Primary School</SelectItem>
+            <SelectItem value="secondary">Secondary School</SelectItem>
+            <SelectItem value="higher_institution">Higher Institution (Beta)</SelectItem>
+          </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>

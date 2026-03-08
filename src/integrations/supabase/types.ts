@@ -3738,6 +3738,7 @@ export type Database = {
           code: string | null
           created_at: string
           description: string | null
+          education_level: string | null
           id: string
           is_active: boolean | null
           is_core: boolean | null
@@ -3751,6 +3752,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           description?: string | null
+          education_level?: string | null
           id?: string
           is_active?: boolean | null
           is_core?: boolean | null
@@ -3764,6 +3766,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           description?: string | null
+          education_level?: string | null
           id?: string
           is_active?: boolean | null
           is_core?: boolean | null

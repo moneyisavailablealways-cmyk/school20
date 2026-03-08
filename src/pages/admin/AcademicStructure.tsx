@@ -1906,7 +1906,7 @@ const AcademicStructure = () => {
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete this {deleteType} "{itemToDelete?.name}"? 
+              Are you sure you want to delete this {deleteType} "{itemToDelete?.name || itemToDelete?.term_name}"? 
               This action cannot be undone.
             </p>
           </div>

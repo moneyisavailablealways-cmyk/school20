@@ -742,6 +742,7 @@ const AcademicStructure = () => {
     setIsTermDialogOpen(true);
   };
 
+  const openEditYear = (year: AcademicYear) => {
     setSelectedYear(year);
     setYearForm({
       name: year.name,

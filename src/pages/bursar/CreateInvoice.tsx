@@ -42,6 +42,7 @@ const CreateInvoice = () => {
   
   const [formData, setFormData] = useState({
     student_id: '',
+    academic_year_id: '',
     due_date: '',
     notes: '',
   });

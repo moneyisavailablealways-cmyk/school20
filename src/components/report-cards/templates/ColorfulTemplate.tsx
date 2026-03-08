@@ -133,18 +133,20 @@ const ColorfulTemplate = ({ data }: { data: ReportData }) => {
 
       {/* Signatures */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px', fontSize: '10px' }}>
-        <div style={{ textAlign: 'center', borderBottom: '2px dashed #c4b5fd', paddingBottom: '6px' }}>
+        <div style={{ textAlign: 'center', paddingBottom: '6px' }}>
           <p style={{ margin: 0, fontWeight: '700' }}>{signatures?.classTeacher?.name || summary.classTeacherName || 'Class Teacher'}</p>
           <p style={{ margin: '0 0 4px', fontSize: '9px', color: '#7c3aed' }}>✍️ Class Teacher</p>
           {signatures?.classTeacher && <div style={{ marginTop: '4px' }}><SignatureRenderer sig={signatures.classTeacher} /></div>}
+          <div style={{ borderBottom: '2px dashed #c4b5fd', marginTop: '4px' }} />
         </div>
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {stampUrl ? <img src={stampUrl} alt="Stamp" style={{ height: '55px', objectFit: 'contain' }} /> : <span style={{ fontSize: '20px' }}>🏫</span>}
         </div>
-        <div style={{ textAlign: 'center', borderBottom: '2px dashed #c4b5fd', paddingBottom: '6px' }}>
+        <div style={{ textAlign: 'center', paddingBottom: '6px' }}>
           <p style={{ margin: 0, fontWeight: '700' }}>{signatures?.headTeacher?.name || 'Head Teacher'}</p>
           <p style={{ margin: '0 0 4px', fontSize: '9px', color: '#7c3aed' }}>✍️ Head Teacher</p>
           {signatures?.headTeacher && <div style={{ marginTop: '4px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
+          <div style={{ borderBottom: '2px dashed #c4b5fd', marginTop: '4px' }} />
         </div>
       </div>
 

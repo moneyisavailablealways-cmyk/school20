@@ -627,7 +627,121 @@ const AcademicStructure = () => {
     setSelectedStream(null);
   };
 
-  const openEditYear = (year: AcademicYear) => {
+  const resetTermForm = () => {
+    setTermForm({
+      term_name: '',
+      term_number: '1',
+      academic_year_id: '',
+      start_date: '',
+      end_date: '',
+      opening_day: '',
+      closing_day: '',
+      holiday_start_date: '',
+      holiday_end_date: '',
+    });
+    setSelectedTerm(null);
+  };
+
+  const handleSaveTerm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!termForm.term_name || !termForm.academic_year_id || !termForm.start_date || !termForm.end_date) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const termData: any = {
+        term_name: termForm.term_name,
+        term_number: parseInt(termForm.term_number),
+        academic_year_id: termForm.academic_year_id,
+        start_date: termForm.start_date,
+        end_date: termForm.end_date,
+        opening_day: termForm.opening_day || null,
+        closing_day: termForm.closing_day || null,
+        holiday_start_date: termForm.holiday_start_date || null,
+        holiday_end_date: termForm.holiday_end_date || null,
+      };
+
+      if (selectedTerm) {
+        const { error } = await supabase
+          .from('academic_terms')
+          .update(termData)
+          .eq('id', selectedTerm.id);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Term updated successfully' });
+      } else {
+        const { error } = await supabase
+          .from('academic_terms')
+          .insert([termData]);
+
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Term created successfully' });
+      }
+
+      setIsTermDialogOpen(false);
+      resetTermForm();
+      fetchData();
+    } catch (error: any) {
+      console.error('Error saving term:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save term',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSetCurrentTerm = async (termId: string) => {
+    try {
+      await supabase
+        .from('academic_terms')
+        .update({ is_current: false })
+        .neq('id', '');
+
+      const { error } = await supabase
+        .from('academic_terms')
+        .update({ is_current: true })
+        .eq('id', termId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Current term updated successfully',
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update current term',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openEditTerm = (term: AcademicTerm) => {
+    setSelectedTerm(term);
+    setTermForm({
+      term_name: term.term_name,
+      term_number: term.term_number.toString(),
+      academic_year_id: term.academic_year_id,
+      start_date: term.start_date,
+      end_date: term.end_date,
+      opening_day: term.opening_day || '',
+      closing_day: term.closing_day || '',
+      holiday_start_date: term.holiday_start_date || '',
+      holiday_end_date: term.holiday_end_date || '',
+    });
+    setIsTermDialogOpen(true);
+  };
+
     setSelectedYear(year);
     setYearForm({
       name: year.name,

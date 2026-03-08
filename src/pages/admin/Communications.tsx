@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -56,6 +57,8 @@ interface Message {
 }
 
 const Communications = () => {
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id;
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,8 +109,8 @@ const Communications = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (schoolId) fetchData();
+  }, [schoolId]);
 
   const fetchData = async () => {
     try {
@@ -117,6 +120,7 @@ const Communications = () => {
       const { data: announcementsData, error: announcementsError } = await supabase
         .from('announcements')
         .select('*')
+        .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
 
       if (announcementsError) {
@@ -176,6 +180,7 @@ const Communications = () => {
         priority: announcementForm.priority,
         expiry_date: announcementForm.expiry_date || null,
         is_active: true,
+        school_id: schoolId,
       };
 
       if (selectedAnnouncement) {

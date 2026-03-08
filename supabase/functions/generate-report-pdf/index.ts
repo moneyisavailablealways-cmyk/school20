@@ -212,8 +212,25 @@ serve(async (req) => {
     const classTeacherId = enrollment?.classes?.class_teacher_id || null;
 
     // Fetch school-specific data in parallel
+    // Fetch school settings - try by school_id first, fall back to latest record with data
+    const fetchSchoolSettings = async () => {
+      const { data: bySchoolId } = await supabase.from('school_settings').select('*').eq('school_id', schoolId).maybeSingle();
+      // Check if the matched record has meaningful data
+      if (bySchoolId && (bySchoolId.address || bySchoolId.phone || bySchoolId.email || bySchoolId.logo_url)) {
+        return bySchoolId;
+      }
+      // Fall back to latest record that has actual data
+      const { data: allSettings } = await supabase.from('school_settings').select('*').order('created_at', { ascending: false });
+      if (allSettings && allSettings.length > 0) {
+        // Find the first one with meaningful data
+        const withData = allSettings.find((s: any) => s.address || s.phone || s.email || s.logo_url);
+        return withData || allSettings[0];
+      }
+      return bySchoolId;
+    };
+
     const [schoolSettings, termConfig, feesData, attendanceSummary, signatures, stampUrl, defaultTemplate] = await Promise.all([
-      supabase.from('school_settings').select('*').eq('school_id', schoolId).maybeSingle().then((r: any) => r.data),
+      fetchSchoolSettings(),
       supabase.from('term_configurations').select('*').eq('academic_year_id', academicYearId).eq('term_name', term).maybeSingle().then((r: any) => r.data),
       calculateFeesBalance(supabase, studentId, academicYearId, term),
       fetchAttendanceSummary(supabase, studentId, schoolId),

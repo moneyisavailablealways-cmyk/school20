@@ -281,9 +281,9 @@ serve(async (req) => {
         printedDate: new Date().toLocaleDateString('en-GB'),
         endDate: termConfig?.end_date || '',
         nextTermStart: termConfig?.next_term_start_date || '',
-        feesBalance: termConfig?.fees_balance_note || '',
-        feesNextTerm: termConfig?.fees_next_term || '',
-        otherRequirements: termConfig?.other_requirements || '',
+        feesBalance: reportCardFees?.fees_balance_note || termConfig?.fees_balance_note || '',
+        feesNextTerm: reportCardFees?.fees_next_term || termConfig?.fees_next_term || '',
+        otherRequirements: reportCardFees?.other_requirements || termConfig?.other_requirements || '',
       },
       subjects: processedSubjects,
       summary: {

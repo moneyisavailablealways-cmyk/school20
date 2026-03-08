@@ -123,6 +123,7 @@ const SubjectManagement = () => {
         is_core: formData.is_core,
         is_active: formData.is_active,
         education_level: schoolLevel || 'secondary',
+        school_id: schoolId,
       };
 
       if (editingSubject) {

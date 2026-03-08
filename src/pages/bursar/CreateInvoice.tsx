@@ -37,11 +37,13 @@ const CreateInvoice = () => {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     student_id: '',
+    academic_year_id: '',
     due_date: '',
     notes: '',
   });
@@ -72,12 +74,24 @@ const CreateInvoice = () => {
         .select('*')
         .eq('is_active', true);
 
-      if (studentsError || feeError) {
-        throw studentsError || feeError;
+      // Fetch academic years
+      const { data: yearData, error: yearError } = await supabase
+        .from('academic_years')
+        .select('*')
+        .order('start_date', { ascending: false });
+
+      if (studentsError || feeError || yearError) {
+        throw studentsError || feeError || yearError;
       }
 
       setStudents(studentsData || []);
       setFeeStructures(feeData || []);
+      setAcademicYears(yearData || []);
+      // Set current academic year as default
+      const currentYear = (yearData || []).find((y: any) => y.is_current);
+      if (currentYear) {
+        setFormData(prev => ({ ...prev, academic_year_id: currentYear.id }));
+      }
     } catch (error: any) {
       console.error('Error fetching data:', error);
       toast({
@@ -156,6 +170,7 @@ const CreateInvoice = () => {
         .insert({
           invoice_number: invoiceNumberData,
           student_id: formData.student_id,
+          academic_year_id: formData.academic_year_id || null,
           total_amount: totalAmount,
           balance_amount: totalAmount,
           due_date: formData.due_date,
@@ -298,6 +313,25 @@ const CreateInvoice = () => {
               </div>
 
               <div>
+                <Label htmlFor="academic_year">Academic Year *</Label>
+                <Select
+                  value={formData.academic_year_id}
+                  onValueChange={(value) => handleInputChange('academic_year_id', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select academic year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {academicYears.map((year: any) => (
+                      <SelectItem key={year.id} value={year.id}>
+                        {year.name} {year.is_current ? '(Current)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label htmlFor="due_date">Due Date *</Label>
                 <Input
                   id="due_date"
@@ -333,7 +367,7 @@ const CreateInvoice = () => {
                 </div>
                 <div className="flex justify-between text-lg font-semibold border-t pt-2">
                   <span>Total Amount:</span>
-                  <span>${getTotalAmount().toFixed(2)}</span>
+                  <span>UGX {getTotalAmount().toLocaleString()}</span>
                 </div>
               </div>
             </CardContent>
@@ -385,7 +419,7 @@ const CreateInvoice = () => {
                         <SelectContent>
                           {feeStructures.map((fee) => (
                             <SelectItem key={fee.id} value={fee.id}>
-                              {fee.name} - ${fee.amount}
+                              {fee.name} - UGX {fee.amount.toLocaleString()}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -402,7 +436,7 @@ const CreateInvoice = () => {
                     </div>
 
                     <div>
-                      <Label>Amount ($)</Label>
+                      <Label>Amount (UGX)</Label>
                       <Input
                         type="number"
                         step="0.01"

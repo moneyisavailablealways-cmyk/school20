@@ -161,7 +161,7 @@ const Payments = () => {
       }
 
       if (paymentAmount > invoiceBalance) {
-        throw new Error(`Payment amount ($${paymentAmount.toFixed(2)}) exceeds invoice balance ($${invoiceBalance.toFixed(2)})`);
+        throw new Error(`Payment amount (UGX ${paymentAmount.toLocaleString()}) exceeds invoice balance (UGX ${invoiceBalance.toLocaleString()})`);
       }
 
       const { error } = await supabase
@@ -206,10 +206,7 @@ const Payments = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return `UGX ${new Intl.NumberFormat('en-UG').format(amount)}`;
   };
 
   const totalPayments = payments.reduce((sum, payment: any) => sum + Number(payment.amount || 0), 0);
@@ -278,7 +275,7 @@ const Payments = () => {
                   }}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Payment Amount ($)</FormLabel>
+                      <FormLabel>Payment Amount (UGX)</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" placeholder="0.00" {...field} />
                       </FormControl>

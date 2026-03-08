@@ -178,11 +178,19 @@ const Scholarships = () => {
 
   const awardScholarshipMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Get current academic year
+      const { data: currentYear } = await supabase
+        .from('academic_years')
+        .select('id')
+        .eq('is_current', true)
+        .maybeSingle();
+
       const { error } = await supabase
         .from('student_scholarships')
         .insert({
           student_id: data.student_id,
           scholarship_id: data.scholarship_id,
+          academic_year_id: currentYear?.id || null,
           amount: parseFloat(data.amount),
           notes: data.notes || null
         });
@@ -242,10 +250,7 @@ const Scholarships = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return `UGX ${new Intl.NumberFormat('en-UG').format(amount)}`;
   };
 
   const totalScholarshipValue = studentScholarships
@@ -322,7 +327,7 @@ const Scholarships = () => {
                     rules={{ required: 'Value is required', min: { value: 0.01, message: 'Value must be positive' } }}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Scholarship Value ($)</FormLabel>
+                        <FormLabel>Scholarship Value (UGX)</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" placeholder="0.00" {...field} />
                         </FormControl>
@@ -469,7 +474,7 @@ const Scholarships = () => {
                     rules={{ required: 'Amount is required', min: { value: 0.01, message: 'Amount must be positive' } }}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Award Amount ($)</FormLabel>
+                        <FormLabel>Award Amount (UGX)</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" placeholder="0.00" {...field} />
                         </FormControl>

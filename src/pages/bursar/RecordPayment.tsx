@@ -128,7 +128,7 @@ const RecordPayment = () => {
       }
 
       if (selectedInvoice && paymentAmount > selectedInvoice.balance_amount) {
-        throw new Error(`Payment amount cannot exceed outstanding balance of $${selectedInvoice.balance_amount}`);
+        throw new Error(`Payment amount cannot exceed outstanding balance of UGX ${selectedInvoice.balance_amount.toLocaleString()}`);
       }
 
       // Create payment record
@@ -238,7 +238,7 @@ const RecordPayment = () => {
                     <SelectItem value="no-invoice">No specific invoice</SelectItem>
                     {invoices.map((invoice) => (
                       <SelectItem key={invoice.id} value={invoice.id}>
-                        {invoice.invoice_number} - Balance: ${invoice.balance_amount}
+                        {invoice.invoice_number} - Balance: UGX {invoice.balance_amount.toLocaleString()}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -246,7 +246,7 @@ const RecordPayment = () => {
               </div>
 
               <div>
-                <Label htmlFor="amount">Amount ($) *</Label>
+                <Label htmlFor="amount">Amount (UGX) *</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -330,21 +330,21 @@ const RecordPayment = () => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Total Amount:</span>
-                      <span>${selectedInvoice.total_amount}</span>
+                      <span>UGX {selectedInvoice.total_amount.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Outstanding Balance:</span>
-                      <span>${selectedInvoice.balance_amount}</span>
+                      <span>UGX {selectedInvoice.balance_amount.toLocaleString()}</span>
                     </div>
                     <div className="border-t pt-2">
                       <div className="flex justify-between text-sm">
                         <span>Payment Amount:</span>
-                        <span>${formData.amount || '0.00'}</span>
+                        <span>UGX {formData.amount || '0'}</span>
                       </div>
                       <div className="flex justify-between text-sm font-medium">
                         <span>New Balance:</span>
                         <span>
-                          ${Math.max(0, selectedInvoice.balance_amount - (parseFloat(formData.amount) || 0)).toFixed(2)}
+                          UGX {Math.max(0, selectedInvoice.balance_amount - (parseFloat(formData.amount) || 0)).toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -354,7 +354,7 @@ const RecordPayment = () => {
                 {!selectedInvoice && formData.amount && (
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Payment Amount:</span>
-                    <span>${formData.amount}</span>
+                    <span>UGX {formData.amount || '0'}</span>
                   </div>
                 )}
               </div>

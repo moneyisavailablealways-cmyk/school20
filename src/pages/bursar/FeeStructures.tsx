@@ -245,10 +245,7 @@ const FeeStructures = () => {
   });
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
+    return `UGX ${new Intl.NumberFormat('en-UG').format(amount)}`;
   };
 
   const getFeeTypeColor = (type: string) => {
@@ -333,7 +330,7 @@ const FeeStructures = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="amount">Amount ($)</Label>
+                  <Label htmlFor="amount">Amount (UGX)</Label>
                   <Input
                     id="amount"
                     type="number"

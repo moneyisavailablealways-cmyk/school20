@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import QuickSetupDialog from '@/components/QuickSetupDialog';
+import TermCountdownWidget from '@/components/academic-calendar/TermCountdownWidget';
 import {
   Users,
   GraduationCap,

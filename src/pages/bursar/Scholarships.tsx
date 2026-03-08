@@ -178,11 +178,19 @@ const Scholarships = () => {
 
   const awardScholarshipMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Get current academic year
+      const { data: currentYear } = await supabase
+        .from('academic_years')
+        .select('id')
+        .eq('is_current', true)
+        .maybeSingle();
+
       const { error } = await supabase
         .from('student_scholarships')
         .insert({
           student_id: data.student_id,
           scholarship_id: data.scholarship_id,
+          academic_year_id: currentYear?.id || null,
           amount: parseFloat(data.amount),
           notes: data.notes || null
         });

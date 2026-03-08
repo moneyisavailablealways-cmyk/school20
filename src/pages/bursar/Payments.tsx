@@ -161,7 +161,7 @@ const Payments = () => {
       }
 
       if (paymentAmount > invoiceBalance) {
-        throw new Error(`Payment amount ($${paymentAmount.toFixed(2)}) exceeds invoice balance ($${invoiceBalance.toFixed(2)})`);
+        throw new Error(`Payment amount (UGX ${paymentAmount.toLocaleString()}) exceeds invoice balance (UGX ${invoiceBalance.toLocaleString()})`);
       }
 
       const { error } = await supabase

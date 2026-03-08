@@ -289,12 +289,22 @@ serve(async (req) => {
       return rule?.comment_text || '';
     };
 
+    // Head teacher auto-comments use distinct administrative language
+    const getHeadTeacherAutoComment = (score: number): string => {
+      if (score >= 90) return 'An exceptional academic record this term. The school commends your exemplary dedication and encourages you to sustain this standard of excellence.';
+      if (score >= 75) return 'A commendable performance that reflects consistent effort. The school is pleased with your progress and expects continued commitment.';
+      if (score >= 60) return 'A satisfactory performance overall. With increased focus and determination, there is strong potential for higher achievement next term.';
+      if (score >= 45) return 'Performance is below expectations. The school advises more seriousness in studies and recommends closer supervision and support.';
+      return 'Academic performance requires urgent attention. The school strongly recommends remedial support and closer collaboration between parents and teachers.';
+    };
+
     const savedCtComment = comments?.find((c: any) => c.comment_type === 'class_teacher')?.comment || '';
     const savedHtComment = comments?.find((c: any) => c.comment_type === 'head_teacher')?.comment || '';
-    const autoComment = getAutoComment(overallAvg);
+    const classTeacherAutoComment = getAutoComment(overallAvg);
+    const headTeacherAutoComment = getHeadTeacherAutoComment(overallAvg);
 
-    const classTeacherComment = overrideCtComment || savedCtComment || autoComment;
-    const headTeacherComment = overrideHtComment || savedHtComment || autoComment;
+    const classTeacherComment = overrideCtComment || savedCtComment || classTeacherAutoComment;
+    const headTeacherComment = overrideHtComment || savedHtComment || headTeacherAutoComment;
 
     // Format fees balance for display
     const feesBalanceDisplay = feesData.finalBalance > 0

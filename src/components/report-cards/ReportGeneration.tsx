@@ -113,12 +113,9 @@ const ReportGeneration = () => {
     enabled: !!selectedAcademicYearId,
   });
 
-  const selectedTermData = terms?.find(t => t.id === selectedTerm);
   const termLabel = selectedTermData
     ? `${selectedTermData.term_name} ${(selectedTermData.academic_years as any)?.name || ''}`
     : '';
-
-  const eligibleStudentCount = selectedStudent !== 'all' ? 1 : (students?.length || 0);
 
   // Generate reports mutation
   const generateReports = useMutation({

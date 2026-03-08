@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { School, Save, Building2 } from 'lucide-react';
+import { Save, Building2, Upload, X, Image } from 'lucide-react';
 
 const SchoolSettings = () => {
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     school_name: '',
     motto: '',
@@ -21,7 +23,6 @@ const SchoolSettings = () => {
     logo_url: '',
   });
 
-  // Fetch school settings
   const { data: settings, isLoading } = useQuery({
     queryKey: ['school-settings'],
     queryFn: async () => {
@@ -34,7 +35,6 @@ const SchoolSettings = () => {
     },
   });
 
-  // Update form when data loads
   useEffect(() => {
     if (settings) {
       setFormData({
@@ -49,21 +49,58 @@ const SchoolSettings = () => {
     }
   }, [settings]);
 
-  // Save mutation
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be less than 2MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = `school-logo-${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('school-logos')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('school-logos')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, logo_url: urlData.publicUrl }));
+      toast.success('Logo uploaded successfully');
+    } catch (error: any) {
+      toast.error(`Upload failed: ${error.message}`);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeLogo = () => {
+    setFormData(prev => ({ ...prev, logo_url: '' }));
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (settings?.id) {
-        // Update existing
         const { error } = await supabase
           .from('school_settings')
-          .update({
-            ...formData,
-            updated_at: new Date().toISOString(),
-          })
+          .update({ ...formData, updated_at: new Date().toISOString() })
           .eq('id', settings.id);
         if (error) throw error;
       } else {
-        // Insert new
         const { error } = await supabase
           .from('school_settings')
           .insert([formData]);
@@ -147,16 +184,67 @@ const SchoolSettings = () => {
                 placeholder="+256 700 000 000"
               />
             </div>
+
+            {/* Logo Upload */}
             <div className="space-y-2">
-              <Label htmlFor="logo_url">Logo URL</Label>
-              <Input
-                id="logo_url"
-                value={formData.logo_url}
-                onChange={(e) => handleChange('logo_url', e.target.value)}
-                placeholder="https://example.com/logo.png"
+              <Label>School Logo</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
               />
+              {formData.logo_url ? (
+                <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/30">
+                  <img
+                    src={formData.logo_url}
+                    alt="School logo"
+                    className="h-12 w-12 object-contain rounded"
+                    onError={(e) => { e.currentTarget.src = ''; }}
+                  />
+                  <span className="text-sm text-muted-foreground truncate flex-1">Logo uploaded</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeLogo}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-20 border-dashed flex flex-col gap-1"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <span className="text-sm text-muted-foreground">Uploading...</span>
+                  ) : (
+                    <>
+                      <Image className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Click to upload logo</span>
+                      <span className="text-xs text-muted-foreground">PNG, JPG up to 2MB</span>
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="address">Address</Label>
             <Textarea
@@ -173,9 +261,9 @@ const SchoolSettings = () => {
             <p className="text-sm text-muted-foreground mb-3">Preview (as it will appear on report cards):</p>
             <div className="text-center space-y-1">
               {formData.logo_url && (
-                <img 
-                  src={formData.logo_url} 
-                  alt="School logo" 
+                <img
+                  src={formData.logo_url}
+                  alt="School logo"
                   className="h-16 w-16 mx-auto object-contain mb-2"
                   onError={(e) => (e.currentTarget.style.display = 'none')}
                 />

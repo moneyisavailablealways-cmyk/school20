@@ -271,7 +271,16 @@ const AcademicStructure = () => {
 
       if (streamsError) throw streamsError;
 
+      // Fetch academic terms
+      const { data: termsData, error: termsError } = await supabase
+        .from('academic_terms')
+        .select('*, academic_years(name)')
+        .order('term_number');
+
+      if (termsError) throw termsError;
+
       setAcademicYears(yearsData || []);
+      setAcademicTerms((termsData || []) as any);
       setLevels(buildLevelHierarchy(levelsData || []));
       setClasses(classesData || []);
       setStreams((streamsData || []).map(stream => ({

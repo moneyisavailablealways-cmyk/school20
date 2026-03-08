@@ -206,10 +206,7 @@ const Payments = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return `UGX ${new Intl.NumberFormat('en-UG').format(amount)}`;
   };
 
   const totalPayments = payments.reduce((sum, payment: any) => sum + Number(payment.amount || 0), 0);

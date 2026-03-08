@@ -3554,6 +3554,58 @@ export type Database = {
           },
         ]
       }
+      subject_period_config: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          periods_per_week: number
+          school_id: string | null
+          subject_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          periods_per_week?: number
+          school_id?: string | null
+          subject_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          periods_per_week?: number
+          school_id?: string | null
+          subject_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_period_config_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_period_config_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_period_config_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subject_submissions: {
         Row: {
           a1_score: number | null
@@ -4223,6 +4275,63 @@ export type Database = {
           },
         ]
       }
+      timetable_generation_config: {
+        Row: {
+          academic_year_id: string | null
+          break_after_period: number[]
+          break_duration: number[]
+          created_at: string
+          day_start_time: string
+          id: string
+          period_duration: number
+          periods_per_day: number
+          school_days: number[]
+          school_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          break_after_period?: number[]
+          break_duration?: number[]
+          created_at?: string
+          day_start_time?: string
+          id?: string
+          period_duration?: number
+          periods_per_day?: number
+          school_days?: number[]
+          school_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          break_after_period?: number[]
+          break_duration?: number[]
+          created_at?: string
+          day_start_time?: string
+          id?: string
+          period_duration?: number
+          periods_per_day?: number
+          school_days?: number[]
+          school_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timetable_generation_config_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timetable_generation_config_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       timetables: {
         Row: {
           academic_year_id: string | null
@@ -4231,6 +4340,7 @@ export type Database = {
           day_of_week: number
           end_time: string
           id: string
+          is_locked: boolean
           room_number: string | null
           school_id: string | null
           start_time: string
@@ -4245,6 +4355,7 @@ export type Database = {
           day_of_week: number
           end_time: string
           id?: string
+          is_locked?: boolean
           room_number?: string | null
           school_id?: string | null
           start_time: string
@@ -4259,6 +4370,7 @@ export type Database = {
           day_of_week?: number
           end_time?: string
           id?: string
+          is_locked?: boolean
           room_number?: string | null
           school_id?: string | null
           start_time?: string

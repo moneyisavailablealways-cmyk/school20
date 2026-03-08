@@ -333,7 +333,7 @@ const CreateInvoice = () => {
                 </div>
                 <div className="flex justify-between text-lg font-semibold border-t pt-2">
                   <span>Total Amount:</span>
-                  <span>${getTotalAmount().toFixed(2)}</span>
+                  <span>UGX {getTotalAmount().toLocaleString()}</span>
                 </div>
               </div>
             </CardContent>

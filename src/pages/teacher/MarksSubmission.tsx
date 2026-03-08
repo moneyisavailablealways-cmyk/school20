@@ -292,28 +292,33 @@ const MarksSubmission = () => {
     const initials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
 
     try {
-      await supabase.from('subject_submissions').upsert(
-        {
-          ...(card.existingId ? { id: card.existingId } : {}),
-          student_id: selectedStudent,
-          subject_id: card.subjectId,
-          academic_year_id: currentYear.id,
-          term: selectedTerm,
-          a1_score: a1,
-          a2_score: a2,
-          a3_score: a3,
-          exam_score: card.score80,
-          marks: card.score100,
-          grade: card.grade || null,
-          grade_points: card.score100 !== null ? (calculateGrade(card.score100).gradePoints) : null,
-          remark: card.achievementLevel || null,
-          identifier: parseInt(card.identifier) || 1,
-          teacher_initials: initials,
-          submitted_by: profile.id,
-          status: 'draft',
-        },
-        { onConflict: 'student_id,subject_id,academic_year_id,term' }
-      );
+      const record: any = {
+        student_id: selectedStudent,
+        subject_id: card.subjectId,
+        academic_year_id: currentYear.id,
+        term: selectedTerm,
+        a1_score: a1,
+        a2_score: a2,
+        a3_score: a3,
+        exam_score: card.score80,
+        marks: card.score100,
+        grade: card.grade || null,
+        grade_points: card.score100 !== null ? (calculateGrade(card.score100).gradePoints) : null,
+        remark: card.achievementLevel || null,
+        identifier: parseInt(card.identifier) || 1,
+        teacher_initials: initials,
+        submitted_by: profile.id,
+        status: 'draft',
+      };
+
+      if (card.existingId) {
+        await supabase.from('subject_submissions').update(record).eq('id', card.existingId);
+      } else {
+        const { data } = await supabase.from('subject_submissions').insert(record).select('id').maybeSingle();
+        if (data?.id) {
+          setSubjectCards(prev => prev.map(c => c.id === card.id ? { ...c, existingId: data.id } : c));
+        }
+      }
     } catch {
       // silent fail for auto-save
     }

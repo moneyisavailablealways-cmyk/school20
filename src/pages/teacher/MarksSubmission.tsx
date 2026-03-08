@@ -333,8 +333,12 @@ const MarksSubmission = () => {
       if (cardsWithMarks.length === 0) throw new Error('No marks entered for any subject');
 
       const initials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
-      const records = cardsWithMarks.map(card => ({
-        ...(card.existingId ? { id: card.existingId } : {}),
+      // Split into updates (existing records) and inserts (new records)
+      const updates = cardsWithMarks.filter(c => c.existingId);
+      const inserts = cardsWithMarks.filter(c => !c.existingId);
+
+      const buildRecord = (card: typeof cardsWithMarks[0], includeId: boolean) => ({
+        ...(includeId && card.existingId ? { id: card.existingId } : {}),
         student_id: selectedStudent,
         subject_id: card.subjectId,
         academic_year_id: currentYear!.id,

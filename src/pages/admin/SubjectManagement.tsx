@@ -207,11 +207,14 @@ const SubjectManagement = () => {
       setIsDialogOpen(false);
       resetForm();
       fetchSubjects();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving subject:', error);
+      const msg = error?.message?.includes('duplicate key') 
+        ? 'A subject with this code already exists in your school' 
+        : (error?.message || 'Failed to save subject');
       toast({
         title: 'Error',
-        description: 'Failed to save subject',
+        description: msg,
         variant: 'destructive',
       });
     } finally {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,18 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Calendar, Users } from 'lucide-react';
+import { Plus, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface Recipient {
   id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
   role: string;
 }
 
@@ -52,10 +48,7 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
   const { profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-  const [recipients, setRecipients] = useState<Recipient[]>([]);
-  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
-  
+  const [selectedRole, setSelectedRole] = useState<string>('');
   const [formData, setFormData] = useState({
     title: '',
     message: '',
@@ -65,49 +58,8 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
     meeting_type: 'in_person',
   });
 
-  // Fetch recipients whenever selected roles change
-  useEffect(() => {
-    if (open && selectedRoles.length > 0) {
-      fetchRecipientsByRoles();
-    } else {
-      setRecipients([]);
-      setSelectedRecipients([]);
-    }
-  }, [open, selectedRoles]);
-
-  const fetchRecipientsByRoles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email, role')
-        .eq('is_active', true)
-        .neq('id', profile?.id || '')
-        .in('role', selectedRoles as any)
-        .order('first_name');
-
-      if (error) throw error;
-      setRecipients(data || []);
-      // Auto-select all fetched recipients
-      setSelectedRecipients((data || []).map(r => r.id));
-    } catch (error) {
-      console.error('Error fetching recipients:', error);
-    }
-  };
-
-  const handleRoleToggle = (roleValue: string) => {
-    setSelectedRoles(prev =>
-      prev.includes(roleValue)
-        ? prev.filter(r => r !== roleValue)
-        : [...prev, roleValue]
-    );
-  };
-
-  const handleRecipientToggle = (recipientId: string) => {
-    setSelectedRecipients(prev =>
-      prev.includes(recipientId)
-        ? prev.filter(id => id !== recipientId)
-        : [...prev, recipientId]
-    );
+  const getRoleLabel = (roleValue: string) => {
+    return availableRoles.find((role) => role.value === roleValue)?.label || roleValue;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,8 +70,8 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
       return;
     }
 
-    if (selectedRecipients.length === 0) {
-      toast.error('Please select at least one recipient role and recipient.');
+    if (!selectedRole) {
+      toast.error('Please select a recipient role.');
       return;
     }
 
@@ -165,15 +117,29 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
         return;
       }
 
-      const recipientRecords = selectedRecipients.map(recipientId => {
-        const recipient = recipients.find(r => r.id === recipientId);
-        return {
-          appointment_id: appointment.id,
-          recipient_id: recipientId,
-          recipient_role: recipient?.role || 'unknown',
-          status: 'pending',
-        };
-      });
+      const { data: roleRecipients, error: roleRecipientsError } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('role', selectedRole as any)
+        .neq('id', profile.id);
+
+      if (roleRecipientsError) {
+        console.error('[Appointments] Recipients fetch error:', roleRecipientsError);
+        toast.error(`Failed to fetch role recipients: ${roleRecipientsError.message}`);
+        return;
+      }
+
+      if (!roleRecipients || roleRecipients.length === 0) {
+        toast.error(`No users found for ${getRoleLabel(selectedRole)}.`);
+        return;
+      }
+
+      const recipientRecords = (roleRecipients as Recipient[]).map((recipient) => ({
+        appointment_id: appointment.id,
+        recipient_id: recipient.id,
+        recipient_role: recipient.role,
+        status: 'pending',
+      }));
 
       const { error: recipientsError } = await supabase
         .from('appointment_recipients')
@@ -185,7 +151,7 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
         return;
       }
 
-      toast.success(`Appointment request sent to ${selectedRecipients.length} recipient(s)`);
+      toast.success(`Appointment sent to ${getRoleLabel(selectedRole)} dashboard (${roleRecipients.length} users)`);
       setOpen(false);
       resetForm();
       onSuccess?.();
@@ -205,8 +171,7 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
       duration_minutes: '30',
       meeting_type: 'in_person',
     });
-    setSelectedRecipients([]);
-    setSelectedRoles([]);
+    setSelectedRole('');
   };
 
   // Admin cannot create appointments
@@ -324,67 +289,27 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
                 </div>
               </div>
 
-              {/* Recipient Roles */}
+              {/* Recipient Role */}
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Select Recipient Roles *
-                </Label>
-                <div className="border rounded-lg p-3 space-y-2">
-                  {availableRoles
-                    .filter(r => r.value !== profile?.role)
-                    .map((role) => (
-                      <label
-                        key={role.value}
-                        className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
-                      >
-                        <Checkbox
-                          checked={selectedRoles.includes(role.value)}
-                          onCheckedChange={() => handleRoleToggle(role.value)}
-                        />
-                        <span className="text-sm font-medium">{role.label}</span>
-                      </label>
+                <Label htmlFor="recipientRole">Recipient Dashboard *</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger id="recipientRole">
+                    <SelectValue placeholder="Select role dashboard" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRoles.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
                     ))}
-                </div>
-                {selectedRoles.length > 0 && (
+                  </SelectContent>
+                </Select>
+                {selectedRole && (
                   <p className="text-sm text-muted-foreground">
-                    {selectedRoles.length} role(s) selected
+                    This appointment will be sent to all {getRoleLabel(selectedRole).toLowerCase()} dashboards.
                   </p>
                 )}
               </div>
-
-              {/* Individual Recipients from selected roles */}
-              {recipients.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Recipients ({recipients.length} found)</Label>
-                  <div className="border rounded-lg p-2 max-h-48 overflow-y-auto">
-                    <div className="space-y-2">
-                      {recipients.map((recipient) => (
-                        <label
-                          key={recipient.id}
-                          className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
-                        >
-                          <Checkbox
-                            checked={selectedRecipients.includes(recipient.id)}
-                            onCheckedChange={() => handleRecipientToggle(recipient.id)}
-                          />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">
-                              {recipient.first_name} {recipient.last_name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {recipient.role} • {recipient.email}
-                            </p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedRecipients.length} of {recipients.length} recipient(s) selected
-                  </p>
-                </div>
-              )}
             </div>
           </ScrollArea>
 

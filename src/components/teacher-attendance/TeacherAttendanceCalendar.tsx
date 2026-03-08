@@ -85,6 +85,24 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
     enabled: isTeacherView ? !!profile?.id : true,
   });
 
+  // Fetch school calendar events (holidays, public days)
+  const { data: calendarEvents } = useQuery({
+    queryKey: ['school-calendar-events', format(currentMonth, 'yyyy-MM')],
+    queryFn: async () => {
+      const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+      const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+
+      const { data, error } = await supabase
+        .from('school_calendar')
+        .select('*')
+        .gte('date', monthStart)
+        .lte('date', monthEnd);
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const days = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
@@ -94,6 +112,11 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
   const getAttendanceForDay = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return attendanceRecords?.filter(r => r.date === dateStr) || [];
+  };
+
+  const getCalendarEventForDay = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return calendarEvents?.filter(e => e.date === dateStr) || [];
   };
 
   const previousMonth = () => {

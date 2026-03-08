@@ -419,7 +419,7 @@ const CreateInvoice = () => {
                         <SelectContent>
                           {feeStructures.map((fee) => (
                             <SelectItem key={fee.id} value={fee.id}>
-                              {fee.name} - ${fee.amount}
+                              {fee.name} - UGX {fee.amount.toLocaleString()}
                             </SelectItem>
                           ))}
                         </SelectContent>

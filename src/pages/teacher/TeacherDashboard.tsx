@@ -165,6 +165,9 @@ const TeacherDashboard = () => {
         </p>
       </div>
 
+      {/* Term Countdown */}
+      {profile?.school_id && <TermCountdownWidget schoolId={profile.school_id} compact />}
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         {statsCards.map((stat) => (

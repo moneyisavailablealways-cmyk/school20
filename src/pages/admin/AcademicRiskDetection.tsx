@@ -112,7 +112,40 @@ const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProp
   const fetchAssessments = async () => {
     if (!profile?.school_id || !selectedYear) return;
     setLoading(true);
-    const { data, error } = await supabase
+
+    let studentIds: string[] | null = null;
+
+    // For teacher view, get only students in teacher's classes
+    if (viewMode === 'teacher' && profile?.id) {
+      const { data: classes } = await supabase
+        .from('classes')
+        .select('id')
+        .or(`class_teacher_id.eq.${profile.id}`);
+      
+      const classIds = classes?.map(c => c.id) || [];
+
+      // Also check streams where teacher is section teacher
+      const { data: streams } = await supabase
+        .from('streams')
+        .select('class_id')
+        .eq('section_teacher_id', profile.id);
+      
+      const streamClassIds = streams?.map(s => s.class_id) || [];
+      const allClassIds = [...new Set([...classIds, ...streamClassIds])];
+
+      if (allClassIds.length > 0) {
+        const { data: enrollments } = await supabase
+          .from('student_enrollments')
+          .select('student_id')
+          .in('class_id', allClassIds)
+          .eq('status', 'active');
+        studentIds = enrollments?.map(e => e.student_id) || [];
+      } else {
+        studentIds = [];
+      }
+    }
+
+    let query = supabase
       .from('student_risk_assessments')
       .select(`
         *,
@@ -122,6 +155,16 @@ const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProp
       .eq('academic_year_id', selectedYear)
       .eq('term', selectedTerm)
       .order('risk_score', { ascending: false });
+
+    if (studentIds !== null && studentIds.length > 0) {
+      query = query.in('student_id', studentIds);
+    } else if (studentIds !== null && studentIds.length === 0) {
+      setAssessments([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching assessments:', error);

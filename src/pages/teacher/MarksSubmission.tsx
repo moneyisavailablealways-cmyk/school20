@@ -295,6 +295,10 @@ const MarksSubmission = () => {
         const gc = calculateGrade(updated.score100);
         updated.grade = gc.grade;
         updated.achievementLevel = gc.remark;
+        // Auto-calculate identifier based on score
+        if (updated.score100 >= 80) updated.identifier = '1';
+        else if (updated.score100 >= 45) updated.identifier = '2';
+        else updated.identifier = '3';
       } else {
         updated.score100 = null;
         updated.grade = '';
@@ -733,21 +737,12 @@ const MarksSubmission = () => {
                       {/* Row: Identifier, Grade, Achievement Level */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-xs">Identifier</Label>
-                          <Select
-                            value={card.identifier}
-                            onValueChange={v => updateCardField(card.id, 'identifier', v)}
-                            disabled={isApproved}
-                          >
-                            <SelectTrigger className="bg-card border-border">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1">1 - Basic</SelectItem>
-                              <SelectItem value="2">2 - Standard</SelectItem>
-                              <SelectItem value="3">3 - Advanced</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Label className="text-xs">Identifier (Auto-calculated)</Label>
+                          <Input
+                            value={card.identifier ? `${card.identifier} - ${card.identifier === '1' ? 'Outstanding' : card.identifier === '2' ? 'Moderate' : 'Basic'}` : 'Auto'}
+                            disabled
+                            className="bg-muted border-border"
+                          />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Grade (Auto-calculated)</Label>

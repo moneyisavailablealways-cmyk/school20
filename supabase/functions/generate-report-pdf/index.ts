@@ -320,7 +320,7 @@ serve(async (req) => {
         website: schoolSettings?.website || '',
         logoUrl: schoolSettings?.logo_url || '',
         footerMotto: schoolSettings?.footer_motto || '',
-        badge: schoolSettings?.badge_url || '',
+        badge: '',
       },
       term: {
         name: term,

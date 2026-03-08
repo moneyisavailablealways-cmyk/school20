@@ -197,16 +197,7 @@ const AdminDashboard = () => {
       setRecentActivities(mappedActivities);
     } catch (error) {
       console.error('Error loading recent activities:', error);
-      // Fallback to static data if there's an error
-      setRecentActivities([
-        {
-          type: 'info',
-          message: 'System is ready for new activities',
-          time: 'Now',
-          icon: CheckCircle,
-          color: 'text-green-500',
-        }
-      ]);
+      setRecentActivities([]);
     }
   };
 

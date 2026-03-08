@@ -128,9 +128,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        const errorMessage = error.message?.includes('Invalid login credentials')
+          ? 'Incorrect email or password. Please check your credentials and try again.'
+          : error.message;
         toast({
           title: "Sign In Failed",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
         return { error };

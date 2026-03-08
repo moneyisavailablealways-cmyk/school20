@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Eye, Pencil, Trash2, Search, FileText } from 'lucide-react';
+import { Eye, Pencil, Trash2, Search, FileText, RotateCcw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MySubmissionsProps {
   teacherId: string;
@@ -21,12 +23,17 @@ interface MySubmissionsProps {
 }
 
 const MySubmissions = ({ teacherId, currentYearId, selectedTerm, onEditSubmission }: MySubmissionsProps) => {
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [viewSubmission, setViewSubmission] = useState<any | null>(null);
   const [editSubmission, setEditSubmission] = useState<any | null>(null);
   const [editValues, setEditValues] = useState({ a1: '', a2: '', a3: '', score20: '', score80: '' });
   const [saving, setSaving] = useState(false);
+  const [resetDialog, setResetDialog] = useState<{ isOpen: boolean; submission: any | null }>({ isOpen: false, submission: null });
+  const [resetReason, setResetReason] = useState('');
+
+  const canResetMarks = profile?.role && ['admin', 'principal', 'head_teacher', 'teacher'].includes(profile.role);
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['my-submissions', teacherId, currentYearId, selectedTerm],
@@ -136,6 +143,62 @@ const MySubmissions = ({ teacherId, currentYearId, selectedTerm, onEditSubmissio
     }
   };
 
+  // Reset approved marks mutation
+  const resetMarksMutation = useMutation({
+    mutationFn: async ({ submission, reason }: { submission: any; reason: string }) => {
+      const { data: enrollment } = await supabase
+        .from('student_enrollments')
+        .select('class_id')
+        .eq('student_id', submission.student_id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      const { error: logError } = await supabase
+        .from('marks_correction_logs')
+        .insert({
+          submission_id: submission.id,
+          student_id: submission.student_id,
+          subject_id: submission.subject_id,
+          class_id: enrollment?.class_id || null,
+          term: submission.term,
+          academic_year_id: submission.academic_year_id,
+          school_id: submission.school_id,
+          previous_marks: submission.marks,
+          previous_grade: submission.grade,
+          previous_a1: submission.a1_score,
+          previous_a2: submission.a2_score,
+          previous_a3: submission.a3_score,
+          previous_exam_score: submission.exam_score,
+          previous_status: submission.status,
+          reset_by: profile?.id,
+          reason: reason || null,
+        } as any);
+
+      if (logError) throw logError;
+
+      const { error: updateError } = await supabase
+        .from('subject_submissions')
+        .update({
+          status: 'draft',
+          approved_by: null,
+          approved_at: null,
+          rejection_reason: null,
+        })
+        .eq('id', submission.id);
+
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      toast.success('Marks have been reset successfully. You can now enter the correct marks.');
+      setResetDialog({ isOpen: false, submission: null });
+      setResetReason('');
+      queryClient.invalidateQueries({ queryKey: ['my-submissions'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to reset marks: ${error.message}`);
+    },
+  });
+
   const statusBadge = (status: string) => {
     switch (status) {
       case 'approved': return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Approved</Badge>;
@@ -229,6 +292,18 @@ const MySubmissions = ({ teacherId, currentYearId, selectedTerm, onEditSubmissio
                               </AlertDialog>
                             </>
                           )}
+                          {isApproved && canResetMarks && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => setResetDialog({ isOpen: true, submission: sub })}
+                              title="Reset approved marks for correction"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              Reset
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -320,6 +395,46 @@ const MySubmissions = ({ teacherId, currentYearId, selectedTerm, onEditSubmissio
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditSubmission(null)}>Cancel</Button>
               <Button onClick={handleSaveEdit} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Reset Marks Dialog */}
+        <Dialog open={resetDialog.isOpen} onOpenChange={(open) => { if (!open) { setResetDialog({ isOpen: false, submission: null }); setResetReason(''); } }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reset Approved Marks</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to reset the approved marks for this student? This will allow you to enter the correct marks again.
+              </DialogDescription>
+            </DialogHeader>
+            {resetDialog.submission && (
+              <div className="text-sm space-y-1 p-3 rounded-md bg-muted">
+                <p><span className="text-muted-foreground">Student:</span> <strong>{resetDialog.submission.student_name}</strong></p>
+                <p><span className="text-muted-foreground">Subject:</span> <strong>{resetDialog.submission.subject_name}</strong></p>
+                <p><span className="text-muted-foreground">Current Marks:</span> <strong>{resetDialog.submission.marks}</strong></p>
+                <p><span className="text-muted-foreground">Grade:</span> <strong>{resetDialog.submission.grade}</strong></p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Reason for correction (optional)</label>
+              <Textarea
+                value={resetReason}
+                onChange={(e) => setResetReason(e.target.value)}
+                placeholder="e.g., Entered incorrect exam score..."
+                rows={2}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setResetDialog({ isOpen: false, submission: null }); setResetReason(''); }}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => resetMarksMutation.mutate({ submission: resetDialog.submission, reason: resetReason })}
+                disabled={resetMarksMutation.isPending}
+              >
+                {resetMarksMutation.isPending ? 'Resetting...' : 'Confirm Reset'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

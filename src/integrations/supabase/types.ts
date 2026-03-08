@@ -1602,6 +1602,122 @@ export type Database = {
           },
         ]
       }
+      marks_correction_logs: {
+        Row: {
+          academic_year_id: string | null
+          class_id: string | null
+          created_at: string
+          id: string
+          previous_a1: number | null
+          previous_a2: number | null
+          previous_a3: number | null
+          previous_exam_score: number | null
+          previous_grade: string | null
+          previous_marks: number | null
+          previous_status: string
+          reason: string | null
+          reset_at: string
+          reset_by: string
+          school_id: string | null
+          student_id: string
+          subject_id: string
+          submission_id: string | null
+          term: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          previous_a1?: number | null
+          previous_a2?: number | null
+          previous_a3?: number | null
+          previous_exam_score?: number | null
+          previous_grade?: string | null
+          previous_marks?: number | null
+          previous_status: string
+          reason?: string | null
+          reset_at?: string
+          reset_by: string
+          school_id?: string | null
+          student_id: string
+          subject_id: string
+          submission_id?: string | null
+          term: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          previous_a1?: number | null
+          previous_a2?: number | null
+          previous_a3?: number | null
+          previous_exam_score?: number | null
+          previous_grade?: string | null
+          previous_marks?: number | null
+          previous_status?: string
+          reason?: string | null
+          reset_at?: string
+          reset_by?: string
+          school_id?: string | null
+          student_id?: string
+          subject_id?: string
+          submission_id?: string | null
+          term?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marks_correction_logs_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marks_correction_logs_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marks_correction_logs_reset_by_fkey"
+            columns: ["reset_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marks_correction_logs_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marks_correction_logs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marks_correction_logs_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marks_correction_logs_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "subject_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           category: string

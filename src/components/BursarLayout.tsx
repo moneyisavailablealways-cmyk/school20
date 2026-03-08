@@ -19,7 +19,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const navigation = [
   { name: 'Dashboard', href: '/bursar', icon: BarChart3 },
   { name: 'Fee Structures', href: '/bursar/fee-structures', icon: Settings },
-  { name: 'Report Card Fees', href: '/bursar/report-card-fees', icon: FileText },
+  { name: 'Report Card Fees', href: '/bursar/report-card-fees', icon: ClipboardList },
   { name: 'Invoices', href: '/bursar/invoices', icon: FileText },
   { name: 'Payments', href: '/bursar/payments', icon: CreditCard },
   { name: 'Scholarships', href: '/bursar/scholarships', icon: GraduationCap },

@@ -405,7 +405,7 @@ const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {(recentActivities.length > 0 ? recentActivities : recentActivitiesStatic).map((activity, index) => (
+            {recentActivities.length > 0 ? recentActivities.map((activity: any, index: number) => (
               <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                 <activity.icon className={`h-5 w-5 ${activity.color}`} />
                 <div className="flex-1">
@@ -413,7 +413,11 @@ const AdminDashboard = () => {
                   <p className="text-xs text-muted-foreground">{activity.time}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                No recent activity recorded yet.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -247,9 +247,14 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
                   <div key={`empty-${i}`} className="aspect-square" />
                 ))}
 
+                {/* Legend for holidays */}
+                
+
                 {/* Calendar days */}
                 {days.map(day => {
                   const dayAttendance = getAttendanceForDay(day);
+                  const dayEvents = getCalendarEventForDay(day);
+                  const isHoliday = dayEvents.length > 0;
                   const isWeekend = getDay(day) === 0 || getDay(day) === 6;
 
                   return (

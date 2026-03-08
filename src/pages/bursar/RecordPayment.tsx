@@ -330,7 +330,7 @@ const RecordPayment = () => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Total Amount:</span>
-                      <span>${selectedInvoice.total_amount}</span>
+                      <span>UGX {selectedInvoice.total_amount.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Outstanding Balance:</span>

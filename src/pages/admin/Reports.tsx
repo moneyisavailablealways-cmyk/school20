@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,57 +11,84 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  BarChart3, 
-  Download, 
-  FileText, 
-  TrendingUp, 
-  Users, 
-  GraduationCap, 
-  Calendar,
-  DollarSign,
-  BookOpen,
-  Award,
-  Activity
+  BarChart3, Download, FileText, TrendingUp, Users, GraduationCap, Calendar,
+  DollarSign, BookOpen, Award, Activity
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
-interface ReportData {
-  id: string;
-  name: string;
-  type: string;
-  generated_date: string;
-  generated_by: string;
-  status: 'ready' | 'generating' | 'error';
-  file_url?: string;
-}
-
-interface DashboardStats {
-  totalStudents: number;
-  totalTeachers: number;
-  totalClasses: number;
-  attendanceRate: number;
-  feeCollection: number;
-  libraryUsage: number;
-}
-
 const Reports = () => {
-  const [reports, setReports] = useState<ReportData[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalStudents: 0,
-    totalTeachers: 0,
-    totalClasses: 0,
-    attendanceRate: 0,
-    feeCollection: 0,
-    libraryUsage: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const { profile } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedDateRange, setSelectedDateRange] = useState('month');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const { toast } = useToast();
+  const schoolId = profile?.school_id;
+
+  // Real-time stats scoped to school
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['reports-stats', schoolId],
+    queryFn: async () => {
+      if (!schoolId) throw new Error('No school');
+
+      const [studentsRes, teachersRes, classesRes, attendanceRes, invoicesRes, libraryRes] = await Promise.all([
+        supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('role', 'teacher'),
+        supabase.from('classes').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
+        // Attendance rate this month
+        supabase.from('attendance_records').select('status').eq('school_id', schoolId)
+          .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]),
+        // Fee collection
+        supabase.from('invoices').select('total_amount, paid_amount').eq('school_id', schoolId),
+        // Library active borrowers
+        supabase.from('library_transactions').select('borrower_id', { count: 'exact', head: true })
+          .eq('school_id', schoolId).is('return_date', null),
+      ]);
+
+      const totalStudents = studentsRes.count || 0;
+      const totalTeachers = teachersRes.count || 0;
+      const totalClasses = classesRes.count || 0;
+
+      // Calculate attendance rate
+      const attendanceRecords = attendanceRes.data || [];
+      const totalAttendance = attendanceRecords.length;
+      const presentCount = attendanceRecords.filter(r => r.status === 'present').length;
+      const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 1000) / 10 : 0;
+
+      // Calculate fee collection percentage
+      const invoices = invoicesRes.data || [];
+      const totalFees = invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+      const totalPaid = invoices.reduce((sum, inv) => sum + (inv.paid_amount || 0), 0);
+      const feeCollection = totalFees > 0 ? Math.round((totalPaid / totalFees) * 1000) / 10 : 0;
+
+      const activeBorrowers = libraryRes.count || 0;
+      const libraryUsage = totalStudents > 0 ? Math.round((activeBorrowers / totalStudents) * 1000) / 10 : 0;
+
+      return { totalStudents, totalTeachers, totalClasses, attendanceRate, feeCollection, libraryUsage };
+    },
+    enabled: !!schoolId,
+  });
+
+  // Generated reports scoped to school
+  const { data: reports = [], isLoading: reportsLoading } = useQuery({
+    queryKey: ['generated-reports-history', schoolId],
+    queryFn: async () => {
+      if (!schoolId) return [];
+      const { data, error } = await supabase
+        .from('generated_reports')
+        .select('id, student_id, term, status, generated_at, generated_by, file_url, overall_average, overall_grade, students(first_name, last_name)')
+        .eq('school_id', schoolId)
+        .order('generated_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolId,
+  });
+
+  const loading = statsLoading || reportsLoading;
 
   const reportTypes = [
     { value: 'student_report', label: 'Student Report', icon: GraduationCap },
@@ -70,148 +99,17 @@ const Reports = () => {
     { value: 'library_report', label: 'Library Usage', icon: BookOpen },
   ];
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      
-      // Mock dashboard stats
-      const mockStats: DashboardStats = {
-        totalStudents: 450,
-        totalTeachers: 32,
-        totalClasses: 18,
-        attendanceRate: 94.5,
-        feeCollection: 87.2,
-        libraryUsage: 76.8,
-      };
-
-      // Mock reports data
-      const mockReports: ReportData[] = [
-        {
-          id: '1',
-          name: 'Monthly Student Report - January 2024',
-          type: 'student_report',
-          generated_date: '2024-01-28',
-          generated_by: 'Admin User',
-          status: 'ready',
-          file_url: '#',
-        },
-        {
-          id: '2',
-          name: 'Attendance Summary - Week 4',
-          type: 'attendance_report',
-          generated_date: '2024-01-25',
-          generated_by: 'Head Teacher',
-          status: 'ready',
-          file_url: '#',
-        },
-        {
-          id: '3',
-          name: 'Financial Report - Q1 2024',
-          type: 'financial_report',
-          generated_date: '2024-01-20',
-          generated_by: 'Bursar',
-          status: 'generating',
-        },
-        {
-          id: '4',
-          name: 'Academic Performance - Term 1',
-          type: 'academic_report',
-          generated_date: '2024-01-15',
-          generated_by: 'Principal',
-          status: 'ready',
-          file_url: '#',
-        },
-      ];
-
-      setStats(mockStats);
-      setReports(mockReports);
-    } catch (error: any) {
-      console.error('Error fetching data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch reports data',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateReport = async (reportType: string) => {
-    try {
-      const reportTypeLabel = reportTypes.find(r => r.value === reportType)?.label || reportType;
-      
-      const newReport: ReportData = {
-        id: Date.now().toString(),
-        name: `${reportTypeLabel} - ${format(new Date(), 'MMM dd, yyyy')}`,
-        type: reportType,
-        generated_date: new Date().toISOString().split('T')[0],
-        generated_by: 'Current User',
-        status: 'generating',
-      };
-
-      setReports(prev => [newReport, ...prev]);
-
-      toast({
-        title: 'Report Generation Started',
-        description: `${reportTypeLabel} is being generated...`,
-      });
-
-      // Simulate report generation
-      setTimeout(() => {
-        setReports(prev => 
-          prev.map(report => 
-            report.id === newReport.id 
-              ? { ...report, status: 'ready' as const, file_url: '#' }
-              : report
-          )
-        );
-
-        toast({
-          title: 'Report Ready',
-          description: `${reportTypeLabel} has been generated successfully`,
-        });
-      }, 3000);
-    } catch (error: any) {
-      console.error('Error generating report:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to generate report',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const downloadReport = (report: ReportData) => {
-    if (report.status === 'ready' && report.file_url) {
-      toast({
-        title: 'Download Started',
-        description: `Downloading ${report.name}...`,
-      });
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null) => {
     switch (status) {
-      case 'ready':
-        return <Badge className="bg-green-100 text-green-800">Ready</Badge>;
-      case 'generating':
-        return <Badge className="bg-yellow-100 text-yellow-800">Generating</Badge>;
-      case 'error':
-        return <Badge className="bg-red-100 text-red-800">Error</Badge>;
+      case 'finalized':
+        return <Badge className="bg-green-100 text-green-800">Finalized</Badge>;
+      case 'draft':
+        return <Badge className="bg-yellow-100 text-yellow-800">Draft</Badge>;
+      case 'approved':
+        return <Badge className="bg-blue-100 text-blue-800">Approved</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{status || 'Unknown'}</Badge>;
     }
-  };
-
-  const getReportTypeIcon = (type: string) => {
-    const reportType = reportTypes.find(r => r.value === type);
-    const Icon = reportType?.icon || FileText;
-    return <Icon className="h-4 w-4" />;
   };
 
   if (loading) {
@@ -221,6 +119,8 @@ const Reports = () => {
       </div>
     );
   }
+
+  const s = stats || { totalStudents: 0, totalTeachers: 0, totalClasses: 0, attendanceRate: 0, feeCollection: 0, libraryUsage: 0 };
 
   return (
     <div className="space-y-6">
@@ -239,7 +139,6 @@ const Reports = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -247,11 +146,8 @@ const Reports = () => {
                 <GraduationCap className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalStudents}</div>
-                <p className="text-xs text-muted-foreground">
-                  <TrendingUp className="inline h-3 w-3 mr-1" />
-                  +5.2% from last month
-                </p>
+                <div className="text-2xl font-bold">{s.totalStudents}</div>
+                <p className="text-xs text-muted-foreground">Enrolled students</p>
               </CardContent>
             </Card>
 
@@ -261,7 +157,7 @@ const Reports = () => {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalTeachers}</div>
+                <div className="text-2xl font-bold">{s.totalTeachers}</div>
                 <p className="text-xs text-muted-foreground">
                   <Activity className="inline h-3 w-3 mr-1" />
                   Active staff members
@@ -275,10 +171,8 @@ const Reports = () => {
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalClasses}</div>
-                <p className="text-xs text-muted-foreground">
-                  Across all grades
-                </p>
+                <div className="text-2xl font-bold">{s.totalClasses}</div>
+                <p className="text-xs text-muted-foreground">Across all grades</p>
               </CardContent>
             </Card>
 
@@ -288,7 +182,7 @@ const Reports = () => {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.attendanceRate}%</div>
+                <div className="text-2xl font-bold">{s.attendanceRate}%</div>
                 <p className="text-xs text-muted-foreground">
                   <TrendingUp className="inline h-3 w-3 mr-1" />
                   This month
@@ -302,10 +196,8 @@ const Reports = () => {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.feeCollection}%</div>
-                <p className="text-xs text-muted-foreground">
-                  Current term collection
-                </p>
+                <div className="text-2xl font-bold">{s.feeCollection}%</div>
+                <p className="text-xs text-muted-foreground">Current term collection</p>
               </CardContent>
             </Card>
 
@@ -315,15 +207,12 @@ const Reports = () => {
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.libraryUsage}%</div>
-                <p className="text-xs text-muted-foreground">
-                  Active borrowers
-                </p>
+                <div className="text-2xl font-bold">{s.libraryUsage}%</div>
+                <p className="text-xs text-muted-foreground">Active borrowers</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Quick Actions */}
           <Card>
             <CardHeader>
               <CardTitle>Quick Report Generation</CardTitle>
@@ -331,7 +220,7 @@ const Reports = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {reportTypes.slice(0, 6).map((reportType) => {
+                {reportTypes.map((reportType) => {
                   const Icon = reportType.icon;
                   return (
                     <Card key={reportType.value} className="cursor-pointer hover:shadow-md transition-shadow">
@@ -344,7 +233,9 @@ const Reports = () => {
                               variant="outline"
                               size="sm"
                               className="mt-2"
-                              onClick={() => generateReport(reportType.value)}
+                              onClick={() => {
+                                toast({ title: 'Info', description: `Use the Report Cards module to generate ${reportType.label}s` });
+                              }}
                             >
                               Generate
                             </Button>
@@ -407,27 +298,17 @@ const Reports = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="start_date">Start Date</Label>
-                    <Input
-                      id="start_date"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
+                    <Input id="start_date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                   </div>
                   <div>
                     <Label htmlFor="end_date">End Date</Label>
-                    <Input
-                      id="end_date"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
+                    <Input id="end_date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                   </div>
                 </div>
               )}
 
               <div className="flex justify-end">
-                <Button onClick={() => generateReport('custom_report')}>
+                <Button onClick={() => toast({ title: 'Info', description: 'Use the Report Cards module to generate reports' })}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Generate Report
                 </Button>
@@ -440,49 +321,48 @@ const Reports = () => {
           <Card>
             <CardHeader>
               <CardTitle>Report History</CardTitle>
-              <CardDescription>View and download previously generated reports</CardDescription>
+              <CardDescription>View previously generated report cards for your school</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Report Name</TableHead>
-                      <TableHead>Type</TableHead>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Term</TableHead>
+                      <TableHead>Average</TableHead>
+                      <TableHead>Grade</TableHead>
                       <TableHead>Generated Date</TableHead>
-                      <TableHead>Generated By</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {reports.map((report) => (
+                    {reports.map((report: any) => (
                       <TableRow key={report.id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            {getReportTypeIcon(report.type)}
-                            <span className="font-medium">{report.name}</span>
-                          </div>
+                        <TableCell className="font-medium">
+                          {report.students?.first_name} {report.students?.last_name}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">
-                            {reportTypes.find(r => r.value === report.type)?.label || report.type}
-                          </Badge>
+                          <Badge variant="outline">{report.term}</Badge>
                         </TableCell>
-                        <TableCell>{format(new Date(report.generated_date), 'MMM dd, yyyy')}</TableCell>
-                        <TableCell>{report.generated_by}</TableCell>
+                        <TableCell>{report.overall_average ? `${report.overall_average}%` : '-'}</TableCell>
+                        <TableCell>{report.overall_grade || '-'}</TableCell>
+                        <TableCell>
+                          {report.generated_at ? format(new Date(report.generated_at), 'MMM dd, yyyy') : '-'}
+                        </TableCell>
                         <TableCell>{getStatusBadge(report.status)}</TableCell>
                         <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={report.status !== 'ready'}
-                              onClick={() => downloadReport(report)}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!report.file_url}
+                            onClick={() => {
+                              if (report.file_url) window.open(report.file_url, '_blank');
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -493,9 +373,9 @@ const Reports = () => {
               {reports.length === 0 && (
                 <div className="text-center py-8">
                   <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-2 text-sm font-medium">No reports generated</h3>
+                  <h3 className="mt-2 text-sm font-medium">No reports generated yet</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Start by generating your first report from the Generate tab.
+                    Generate report cards from the Report Cards module.
                   </p>
                 </div>
               )}

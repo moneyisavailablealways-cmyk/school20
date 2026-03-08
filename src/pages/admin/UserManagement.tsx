@@ -300,6 +300,8 @@ const UserManagement = () => {
       role: user.role,
       is_active: user.is_active,
     });
+    setEditAvatarFile(null);
+    setEditAvatarPreview(user.avatar_url || null);
     setIsEditDialogOpen(true);
   };
 
@@ -307,6 +309,23 @@ const UserManagement = () => {
     if (!editingUser) return;
 
     try {
+      // Upload new avatar if selected
+      let avatarUrl = editingUser.avatar_url;
+      if (editAvatarFile) {
+        setUploadingAvatar(true);
+        const fileExt = editAvatarFile.name.split('.').pop();
+        const filePath = `${editingUser.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, editAvatarFile);
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+          avatarUrl = urlData.publicUrl;
+        }
+        setUploadingAvatar(false);
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -315,6 +334,7 @@ const UserManagement = () => {
           phone: data.phone || null,
           role: data.role,
           is_active: data.is_active,
+          avatar_url: avatarUrl,
         })
         .eq('id', editingUser.id);
 

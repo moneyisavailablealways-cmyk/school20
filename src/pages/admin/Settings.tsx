@@ -29,10 +29,17 @@ import {
   Key,
   Lock,
   Moon,
-  Sun
+  Sun,
+  WifiOff,
+  RefreshCw,
+  HardDrive,
+  Trash2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
+import { getOfflineSetting, setOfflineSetting, getRecentSyncLogs, type SyncLog } from '@/lib/offline/db';
+import { preCacheAllData } from '@/lib/offline/cacheManager';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SchoolSettings {
   school_name: string;

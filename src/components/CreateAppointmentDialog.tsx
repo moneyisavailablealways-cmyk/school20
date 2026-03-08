@@ -290,67 +290,27 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
                 </div>
               </div>
 
-              {/* Recipient Roles */}
+              {/* Recipient Role */}
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Select Recipient Roles *
-                </Label>
-                <div className="border rounded-lg p-3 space-y-2">
-                  {availableRoles
-                    .filter(r => r.value !== profile?.role)
-                    .map((role) => (
-                      <label
-                        key={role.value}
-                        className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
-                      >
-                        <Checkbox
-                          checked={selectedRoles.includes(role.value)}
-                          onCheckedChange={() => handleRoleToggle(role.value)}
-                        />
-                        <span className="text-sm font-medium">{role.label}</span>
-                      </label>
+                <Label htmlFor="recipientRole">Recipient Dashboard *</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger id="recipientRole">
+                    <SelectValue placeholder="Select role dashboard" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRoles.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
                     ))}
-                </div>
-                {selectedRoles.length > 0 && (
+                  </SelectContent>
+                </Select>
+                {selectedRole && (
                   <p className="text-sm text-muted-foreground">
-                    {selectedRoles.length} role(s) selected
+                    This appointment will be sent to all {getRoleLabel(selectedRole).toLowerCase()} dashboards.
                   </p>
                 )}
               </div>
-
-              {/* Individual Recipients from selected roles */}
-              {recipients.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Recipients ({recipients.length} found)</Label>
-                  <div className="border rounded-lg p-2 max-h-48 overflow-y-auto">
-                    <div className="space-y-2">
-                      {recipients.map((recipient) => (
-                        <label
-                          key={recipient.id}
-                          className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
-                        >
-                          <Checkbox
-                            checked={selectedRecipients.includes(recipient.id)}
-                            onCheckedChange={() => handleRecipientToggle(recipient.id)}
-                          />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">
-                              {recipient.first_name} {recipient.last_name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {recipient.role} • {recipient.email}
-                            </p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedRecipients.length} of {recipients.length} recipient(s) selected
-                  </p>
-                </div>
-              )}
             </div>
           </ScrollArea>
 

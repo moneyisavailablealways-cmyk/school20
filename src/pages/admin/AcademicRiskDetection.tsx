@@ -363,13 +363,18 @@ const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProp
       </div>
 
       <Tabs defaultValue="students" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="students">
             <Users className="h-4 w-4 mr-2" /> At-Risk Students
           </TabsTrigger>
           <TabsTrigger value="analytics">
-            <TrendingDown className="h-4 w-4 mr-2" /> Analytics
+            <TrendingDown className="h-4 w-4 mr-2" /> Risk Analytics
           </TabsTrigger>
+          {viewMode === 'admin' && (
+            <TabsTrigger value="school-analytics">
+              <BarChart3 className="h-4 w-4 mr-2" /> School Analytics
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="students" className="space-y-4">

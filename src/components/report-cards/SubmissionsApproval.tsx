@@ -31,36 +31,42 @@ const SubmissionsApproval = () => {
 
   const canResetMarks = profile?.role && ['admin', 'principal', 'head_teacher'].includes(profile.role);
 
+  const schoolId = profile?.school_id;
+
   // Fetch classes
   const { data: classes } = useQuery({
-    queryKey: ['classes-for-filter'],
+    queryKey: ['classes-for-filter', schoolId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('classes').select('id, name').order('name');
+      const { data, error } = await supabase.from('classes').select('id, name').eq('school_id', schoolId).order('name');
       if (error) throw error;
       return data;
     },
+    enabled: !!schoolId,
   });
 
   // Fetch subjects
   const { data: subjects } = useQuery({
-    queryKey: ['subjects-for-filter'],
+    queryKey: ['subjects-for-filter', schoolId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('subjects').select('id, name, code').eq('is_active', true).order('name');
+      const { data, error } = await supabase.from('subjects').select('id, name, code').eq('is_active', true).eq('school_id', schoolId).order('name');
       if (error) throw error;
       return data;
     },
+    enabled: !!schoolId,
   });
 
   // Fetch all submission counts for stats
   const { data: allSubmissions } = useQuery({
-    queryKey: ['submissions-stats-counts'],
+    queryKey: ['submissions-stats-counts', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subject_submissions')
-        .select('id, status');
+        .select('id, status')
+        .eq('school_id', schoolId);
       if (error) throw error;
       return data;
     },
+    enabled: !!schoolId,
   });
 
   // Fetch submissions

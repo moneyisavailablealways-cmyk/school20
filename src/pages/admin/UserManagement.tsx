@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,6 +27,8 @@ import {
   Library,
   Users2,
   Heart,
+  Camera,
+  X,
 } from 'lucide-react';
 
 type UserRole = 'admin' | 'principal' | 'head_teacher' | 'teacher' | 'bursar' | 'librarian' | 'student' | 'parent' | 'super_admin';
@@ -98,6 +100,10 @@ const UserManagement = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const form = useForm<CreateUserForm>({
@@ -151,6 +157,23 @@ const UserManagement = () => {
     }
   };
 
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Error', description: 'Image must be under 2MB', variant: 'destructive' });
+      return;
+    }
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const clearAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
+
   const createUser = async (data: CreateUserForm) => {
     try {
       const { data: result, error } = await supabase.functions.invoke('create-user', {
@@ -174,6 +197,25 @@ const UserManagement = () => {
         throw new Error(result.error);
       }
 
+      // Upload avatar if provided
+      if (avatarFile && result?.profile_id) {
+        setUploadingAvatar(true);
+        const fileExt = avatarFile.name.split('.').pop();
+        const filePath = `${result.profile_id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, avatarFile);
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+          await supabase
+            .from('profiles')
+            .update({ avatar_url: urlData.publicUrl })
+            .eq('id', result.profile_id);
+        }
+        setUploadingAvatar(false);
+      }
+
       toast({
         title: 'Success',
         description: 'User created successfully with login credentials',
@@ -181,6 +223,7 @@ const UserManagement = () => {
 
       setIsCreateDialogOpen(false);
       form.reset();
+      clearAvatar();
       loadUsers();
     } catch (error: any) {
       console.error('Error creating user:', error);
@@ -321,6 +364,38 @@ const UserManagement = () => {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(createUser)} className="space-y-4">
+                {/* Avatar Upload */}
+                <div className="flex flex-col items-center gap-2">
+                  <div className="relative">
+                    <div
+                      className="w-20 h-20 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center cursor-pointer hover:border-primary transition-colors overflow-hidden bg-muted"
+                      onClick={() => avatarInputRef.current?.click()}
+                    >
+                      {avatarPreview ? (
+                        <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera className="h-6 w-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    {avatarPreview && (
+                      <button
+                        type="button"
+                        onClick={clearAvatar}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarSelect}
+                  />
+                  <p className="text-xs text-muted-foreground">Upload photo (max 2MB)</p>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -443,7 +518,9 @@ const UserManagement = () => {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">Create User</Button>
+                  <Button type="submit" disabled={uploadingAvatar}>
+                    {uploadingAvatar ? 'Uploading...' : 'Create User'}
+                  </Button>
                 </div>
               </form>
             </Form>

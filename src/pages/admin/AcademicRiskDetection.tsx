@@ -25,8 +25,14 @@ import {
   Minus,
   Info,
   Lightbulb,
+  BarChart3,
+  Sparkles,
+  Target,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import AIInsightsPanel from '@/components/risk-detection/AIInsightsPanel';
+import StudentProgressDashboard from '@/components/risk-detection/StudentProgressDashboard';
+import SchoolWideAnalytics from '@/components/risk-detection/SchoolWideAnalytics';
 
 interface RiskAssessment {
   id: string;
@@ -357,13 +363,18 @@ const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProp
       </div>
 
       <Tabs defaultValue="students" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="students">
             <Users className="h-4 w-4 mr-2" /> At-Risk Students
           </TabsTrigger>
           <TabsTrigger value="analytics">
-            <TrendingDown className="h-4 w-4 mr-2" /> Analytics
+            <TrendingDown className="h-4 w-4 mr-2" /> Risk Analytics
           </TabsTrigger>
+          {viewMode === 'admin' && (
+            <TabsTrigger value="school-analytics">
+              <BarChart3 className="h-4 w-4 mr-2" /> School Analytics
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="students" className="space-y-4">
@@ -462,7 +473,17 @@ const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProp
                           ))}
                         </ul>
                       </div>
-                    )}
+               )}
+
+                    {/* AI Insights Panel */}
+                    <AIInsightsPanel student={selectedStudent} />
+
+                    {/* Student Progress Dashboard */}
+                    <StudentProgressDashboard
+                      studentId={selectedStudent.student_id}
+                      academicYearId={selectedYear}
+                      studentName={`${selectedStudent.students.profiles.first_name} ${selectedStudent.students.profiles.last_name}`}
+                    />
                   </CardContent>
                 </Card>
               )}
@@ -629,6 +650,13 @@ const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProp
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* School-Wide Analytics Tab (Admin only) */}
+        {viewMode === 'admin' && (
+          <TabsContent value="school-analytics" className="space-y-4">
+            <SchoolWideAnalytics academicYearId={selectedYear} term={selectedTerm} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

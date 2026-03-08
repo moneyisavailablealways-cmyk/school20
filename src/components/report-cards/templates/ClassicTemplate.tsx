@@ -6,7 +6,7 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
   return (
     <div
       className="bg-white text-black mx-auto"
-      style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '11px', maxWidth: '210mm', padding: '8mm 10mm' }}
+      style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '11px', maxWidth: '210mm', padding: '8mm 10mm', position: 'relative' }}
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Check, X, Clock, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, Clock, AlertCircle, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -85,6 +85,24 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
     enabled: isTeacherView ? !!profile?.id : true,
   });
 
+  // Fetch school calendar events (holidays, public days)
+  const { data: calendarEvents } = useQuery({
+    queryKey: ['school-calendar-events', format(currentMonth, 'yyyy-MM')],
+    queryFn: async () => {
+      const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+      const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+
+      const { data, error } = await supabase
+        .from('school_calendar')
+        .select('*')
+        .gte('date', monthStart)
+        .lte('date', monthEnd);
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const days = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
@@ -94,6 +112,11 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
   const getAttendanceForDay = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return attendanceRecords?.filter(r => r.date === dateStr) || [];
+  };
+
+  const getCalendarEventForDay = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return calendarEvents?.filter(e => e.date === dateStr) || [];
   };
 
   const previousMonth = () => {
@@ -208,6 +231,10 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
                     <span className="text-xs text-muted-foreground">{label}</span>
                   </div>
                 ))}
+                <div className="flex items-center gap-1.5">
+                  <Flag className="w-3 h-3 text-destructive" />
+                  <span className="text-xs text-muted-foreground">Public Holiday</span>
+                </div>
               </div>
 
               {/* Calendar Grid */}
@@ -227,6 +254,8 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
                 {/* Calendar days */}
                 {days.map(day => {
                   const dayAttendance = getAttendanceForDay(day);
+                  const dayEvents = getCalendarEventForDay(day);
+                  const isHoliday = dayEvents.length > 0;
                   const isWeekend = getDay(day) === 0 || getDay(day) === 6;
 
                   return (
@@ -235,20 +264,31 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
                       className={cn(
                         "aspect-square p-1 border rounded-lg flex flex-col items-center justify-start gap-1",
                         isToday(day) && "border-primary border-2",
-                        isWeekend && "bg-muted/50"
+                        isWeekend && "bg-muted/50",
+                        isHoliday && "bg-destructive/10 border-destructive/30"
                       )}
+                      title={isHoliday ? dayEvents.map(e => e.name).join(', ') : undefined}
                     >
                       <span className={cn(
                         "text-sm font-medium",
-                        isWeekend && "text-muted-foreground"
+                        isWeekend && "text-muted-foreground",
+                        isHoliday && "text-destructive"
                       )}>
                         {format(day, 'd')}
                       </span>
+                      {isHoliday && (
+                        <div className="flex items-center gap-0.5">
+                          <Flag className="h-2.5 w-2.5 text-destructive" />
+                          <span className="text-[9px] text-destructive font-medium truncate max-w-[50px]">
+                            {dayEvents[0]?.name}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex flex-wrap justify-center gap-0.5">
-                        {dayAttendance.slice(0, 4).map((record, i) => (
+                        {dayAttendance.slice(0, 4).map((record) => (
                           <div
                             key={record.id}
-                          className={cn(
+                            className={cn(
                               "w-2 h-2 rounded-full",
                               statusColors[record.status as AttendanceStatus]
                             )}

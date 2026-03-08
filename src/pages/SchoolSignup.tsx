@@ -65,6 +65,7 @@ const SchoolSignup = () => {
           school_name: data.school_name,
           school_code: data.school_code,
           country: data.country,
+          school_level: data.school_level,
           region: data.region,
           email: data.email,
           phone: data.phone,

@@ -68,6 +68,23 @@ interface Class {
   streams?: Stream[];
 }
 
+interface AcademicTerm {
+  id: string;
+  term_name: string;
+  term_number: number;
+  academic_year_id: string;
+  start_date: string;
+  end_date: string;
+  is_current: boolean;
+  opening_day: string | null;
+  closing_day: string | null;
+  holiday_start_date: string | null;
+  holiday_end_date: string | null;
+  school_id: string;
+  created_at: string;
+  academic_years?: { name: string };
+}
+
 interface Stream {
   id: string;
   name: string;

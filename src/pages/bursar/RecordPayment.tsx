@@ -238,7 +238,7 @@ const RecordPayment = () => {
                     <SelectItem value="no-invoice">No specific invoice</SelectItem>
                     {invoices.map((invoice) => (
                       <SelectItem key={invoice.id} value={invoice.id}>
-                        {invoice.invoice_number} - Balance: ${invoice.balance_amount}
+                        {invoice.invoice_number} - Balance: UGX {invoice.balance_amount.toLocaleString()}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -71,7 +71,7 @@ const SubmissionsApproval = () => {
 
   // Fetch submissions
   const { data: submissions, isLoading } = useQuery({
-    queryKey: ['submissions-for-approval', filterStatus, filterClass, filterSubject],
+    queryKey: ['submissions-for-approval', filterStatus, filterClass, filterSubject, schoolId],
     queryFn: async () => {
       let query = supabase
         .from('subject_submissions')
@@ -88,6 +88,7 @@ const SubmissionsApproval = () => {
           approver:profiles!subject_submissions_approved_by_fkey(first_name, last_name),
           academic_year:academic_years(name)
         `)
+        .eq('school_id', schoolId)
         .order('submitted_at', { ascending: false });
 
       if (filterStatus !== 'all') {

@@ -295,6 +295,10 @@ const MarksSubmission = () => {
         const gc = calculateGrade(updated.score100);
         updated.grade = gc.grade;
         updated.achievementLevel = gc.remark;
+        // Auto-calculate identifier based on score
+        if (updated.score100 >= 80) updated.identifier = '1';
+        else if (updated.score100 >= 45) updated.identifier = '2';
+        else updated.identifier = '3';
       } else {
         updated.score100 = null;
         updated.grade = '';

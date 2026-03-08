@@ -73,8 +73,14 @@ const CreateInvoice = () => {
         .select('*')
         .eq('is_active', true);
 
-      if (studentsError || feeError) {
-        throw studentsError || feeError;
+      // Fetch academic years
+      const { data: yearData, error: yearError } = await supabase
+        .from('academic_years')
+        .select('*')
+        .order('start_date', { ascending: false });
+
+      if (studentsError || feeError || yearError) {
+        throw studentsError || feeError || yearError;
       }
 
       setStudents(studentsData || []);

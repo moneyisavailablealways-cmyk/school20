@@ -971,6 +971,7 @@ export type Database = {
           overall_average: number | null
           overall_grade: string | null
           promotion_status: string | null
+          report_data: Json | null
           school_id: string | null
           status: string | null
           stream_position: number | null
@@ -999,6 +1000,7 @@ export type Database = {
           overall_average?: number | null
           overall_grade?: string | null
           promotion_status?: string | null
+          report_data?: Json | null
           school_id?: string | null
           status?: string | null
           stream_position?: number | null
@@ -1027,6 +1029,7 @@ export type Database = {
           overall_average?: number | null
           overall_grade?: string | null
           promotion_status?: string | null
+          report_data?: Json | null
           school_id?: string | null
           status?: string | null
           stream_position?: number | null

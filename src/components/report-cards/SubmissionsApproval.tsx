@@ -153,6 +153,7 @@ const SubmissionsApproval = () => {
       setRejectDialog({ isOpen: false, ids: [] });
       setRejectionReason('');
       queryClient.invalidateQueries({ queryKey: ['submissions-for-approval'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions-stats-counts'] });
     },
     onError: (error) => {
       toast.error(`Failed to reject: ${error.message}`);

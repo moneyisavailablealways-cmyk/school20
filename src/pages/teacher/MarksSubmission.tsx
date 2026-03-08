@@ -507,8 +507,14 @@ const MarksSubmission = () => {
                   <SelectContent>
                     {loadingStudents ? (
                       <div className="p-2"><Skeleton className="h-8 w-full" /></div>
+                    ) : !currentYear?.id ? (
+                      <div className="p-3 text-sm text-muted-foreground">
+                        ⚠ No active academic year set. Please contact your administrator.
+                      </div>
                     ) : students?.length === 0 ? (
-                      <div className="p-2 text-sm text-muted-foreground">No students enrolled</div>
+                      <div className="p-3 text-sm text-muted-foreground">
+                        ⚠ No students assigned to this subject in this class.
+                      </div>
                     ) : (
                       students?.map(student => (
                         <SelectItem key={student.id} value={student.id}>

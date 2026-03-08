@@ -167,16 +167,35 @@ const GeneratedReportCards = () => {
   const handleShare = async (report: any) => {
     const studentName = getStudentName(report);
     const text = `Report Card for ${studentName} - ${report.term}`;
+    const verificationCode = report.verification_code as string | null;
+    const shareUrl = verificationCode
+      ? `${window.location.origin}/admin/report-cards?verify=${encodeURIComponent(verificationCode)}`
+      : window.location.href;
 
-    if (navigator.share) {
+    const fallbackCopy = async () => {
+      const fallbackText = verificationCode
+        ? `${text}\nVerification Code: ${verificationCode}\n${shareUrl}`
+        : `${text}\n${shareUrl}`;
+
       try {
-        await navigator.share({ title: text, text, url: window.location.href });
-      } catch { /* cancelled */ }
-    } else if (report.verification_code) {
-      await navigator.clipboard.writeText(report.verification_code);
-      toast.success('Verification code copied to clipboard: ' + report.verification_code);
-    } else {
-      toast.info('Share not available');
+        await navigator.clipboard.writeText(fallbackText);
+        toast.success('Share info copied to clipboard');
+      } catch {
+        toast.error('Unable to share on this device. Copy failed too.');
+      }
+    };
+
+    if (!navigator.share) {
+      await fallbackCopy();
+      return;
+    }
+
+    try {
+      await navigator.share({ title: text, text, url: shareUrl });
+      toast.success('Shared successfully');
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return;
+      await fallbackCopy();
     }
   };
 

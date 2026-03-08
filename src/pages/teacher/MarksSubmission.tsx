@@ -178,13 +178,21 @@ const MarksSubmission = () => {
     enabled: !!selectedClass && !!currentYear?.id,
   });
 
+  const getAchievementLevel = (score: number | null): string => {
+    if (score === null) return '';
+    if (score >= 80) return 'Outstanding';
+    if (score >= 45) return 'Moderate';
+    return 'Basic';
+  };
+
   const calculateGrade = useCallback(
     (total: number | null) => {
       if (total === null || !gradingConfig?.length) return { grade: '', gradePoints: null, remark: '' };
       const config = gradingConfig.find(g => total >= g.min_marks && total <= g.max_marks);
+      const achievement = getAchievementLevel(total);
       return config
-        ? { grade: config.grade, gradePoints: config.grade_points, remark: config.remark || '' }
-        : { grade: '', gradePoints: null, remark: '' };
+        ? { grade: config.grade, gradePoints: config.grade_points, remark: achievement }
+        : { grade: '', gradePoints: null, remark: achievement };
     },
     [gradingConfig]
   );

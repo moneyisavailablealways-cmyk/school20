@@ -58,6 +58,10 @@ const ReportCards = () => {
             <Layout className="h-4 w-4" />
             <span className="hidden sm:inline">Templates</span>
           </TabsTrigger>
+          <TabsTrigger value="generated" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            <span className="hidden sm:inline">Generated</span>
+          </TabsTrigger>
           <TabsTrigger value="school" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">School</span>

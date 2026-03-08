@@ -196,124 +196,13 @@ const ReportTemplates = () => {
         </CardContent>
       </Card>
 
-      {/* Template Preview */}
-      {selectedTemplate && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
-              Template Preview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-lg p-8 bg-white">
-              {/* Mock Report Card Preview */}
-              <div className="space-y-6">
-                {/* Header */}
-                <div className="text-center border-b pb-4">
-                  {schoolSettings?.logo_url ? (
-                    <img 
-                      src={schoolSettings.logo_url} 
-                      alt="School logo" 
-                      className="h-16 w-16 mx-auto mb-2 object-contain"
-                      onError={(e) => (e.currentTarget.style.display = 'none')}
-                    />
-                  ) : (
-                    <div className="w-16 h-16 bg-muted rounded-full mx-auto mb-2 flex items-center justify-center">
-                      <Building2 className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  )}
-                  <h2 className="text-xl font-bold">{schoolSettings?.school_name || 'School Name'}</h2>
-                  {schoolSettings?.motto && (
-                    <p className="text-sm text-muted-foreground italic">"{schoolSettings.motto}"</p>
-                  )}
-                  <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                    {schoolSettings?.address && <p>{schoolSettings.address}</p>}
-                    <div className="flex justify-center gap-3">
-                      {schoolSettings?.phone && <span>Tel: {schoolSettings.phone}</span>}
-                      {schoolSettings?.email && <span>Email: {schoolSettings.email}</span>}
-                    </div>
-                    {schoolSettings?.website && <p>Website: {schoolSettings.website}</p>}
-                  </div>
-                  <p className="text-lg font-semibold mt-3">STUDENT REPORT CARD</p>
-                </div>
-
-                {/* Student Info */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p><strong>Student Name:</strong> John Doe</p>
-                    <p><strong>Admission No:</strong> STU001</p>
-                  </div>
-                  <div>
-                    <p><strong>Class:</strong> Form 4</p>
-                    <p><strong>Term:</strong> Term 1, 2024</p>
-                  </div>
-                </div>
-
-                {/* Performance Table */}
-                <div className="border rounded">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="p-2 text-left">Subject</th>
-                        <th className="p-2 text-center">Marks</th>
-                        <th className="p-2 text-center">Grade</th>
-                        <th className="p-2 text-left">Remark</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-t">
-                        <td className="p-2">Mathematics</td>
-                        <td className="p-2 text-center">85</td>
-                        <td className="p-2 text-center"><Badge>D2</Badge></td>
-                        <td className="p-2">Very Good</td>
-                      </tr>
-                      <tr className="border-t">
-                        <td className="p-2">English</td>
-                        <td className="p-2 text-center">78</td>
-                        <td className="p-2 text-center"><Badge>C3</Badge></td>
-                        <td className="p-2">Good</td>
-                      </tr>
-                      <tr className="border-t">
-                        <td className="p-2">Physics</td>
-                        <td className="p-2 text-center">92</td>
-                        <td className="p-2 text-center"><Badge className="bg-green-500">D1</Badge></td>
-                        <td className="p-2">Excellent</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Summary */}
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="p-3 bg-muted rounded">
-                    <p className="text-2xl font-bold">85.0</p>
-                    <p className="text-xs text-muted-foreground">Average</p>
-                  </div>
-                  <div className="p-3 bg-muted rounded">
-                    <p className="text-2xl font-bold">D2</p>
-                    <p className="text-xs text-muted-foreground">Grade</p>
-                  </div>
-                  <div className="p-3 bg-muted rounded">
-                    <p className="text-2xl font-bold">I</p>
-                    <p className="text-xs text-muted-foreground">Division</p>
-                  </div>
-                </div>
-
-                {/* Comments */}
-                <div className="space-y-2 text-sm">
-                  <div className="p-3 bg-muted rounded">
-                    <p><strong>Class Teacher:</strong> Keep up the excellent work!</p>
-                  </div>
-                  <div className="p-3 bg-muted rounded">
-                    <p><strong>Head Teacher:</strong> Outstanding performance.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <TemplatePreviewDialog
+        open={!!previewTemplate}
+        onOpenChange={(open) => !open && setPreviewTemplate(null)}
+        templateType={previewTemplate?.type || 'classic'}
+        templateName={previewTemplate?.name || ''}
+        schoolSettings={schoolSettings}
+      />
     </div>
   );
 };

@@ -102,6 +102,7 @@ interface Stream {
 
 const AcademicStructure = () => {
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [academicTerms, setAcademicTerms] = useState<AcademicTerm[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [streams, setStreams] = useState<Stream[]>([]);

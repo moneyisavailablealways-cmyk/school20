@@ -101,6 +101,7 @@ serve(async (req) => {
         admin_name: `${admin_first_name} ${admin_last_name}`,
         admin_email,
         status: 'active',
+        school_level: school_level || 'secondary',
       })
       .select()
       .single()

@@ -37,7 +37,7 @@ const SchoolSignup = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const form = useForm<SchoolSignupForm>({
     resolver: zodResolver(schema),
     defaultValues: {

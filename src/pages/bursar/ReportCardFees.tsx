@@ -283,8 +283,12 @@ const ReportCardFees = () => {
                           </CommandItem>
                           {classes
                             .filter((cls) => {
-                              const levelName = cls.levels?.name?.toLowerCase() || '';
-                              return !levelName.includes('s5') && !levelName.includes('s6') && !levelName.includes('s.5') && !levelName.includes('s.6') && !levelName.includes('senior 5') && !levelName.includes('senior 6');
+                              const levelName = (cls.levels?.name || '').toLowerCase();
+                              const className = (cls.name || '').toLowerCase();
+                              const combined = `${className} ${levelName}`;
+                              // Exclude A-Level classes (S5, S6, Form 5, Form 6, F5, F6, Senior 5, Senior 6, A-Level)
+                              const aLevelPatterns = /\b(s\.?5|s\.?6|senior\s*5|senior\s*6|form\s*5|form\s*6|f\.?5|f\.?6|a[\s-]?level)\b/;
+                              return !aLevelPatterns.test(combined);
                             })
                             .map((cls) => (
                             <CommandItem

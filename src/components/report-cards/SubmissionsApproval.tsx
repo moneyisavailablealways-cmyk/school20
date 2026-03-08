@@ -178,9 +178,9 @@ const SubmissionsApproval = () => {
   });
 
   const stats = {
-    pending: submissions?.filter(s => s.status === 'pending').length || 0,
-    approved: submissions?.filter(s => s.status === 'approved').length || 0,
-    rejected: submissions?.filter(s => s.status === 'rejected').length || 0,
+    pending: allSubmissions?.filter(s => s.status === 'pending').length || 0,
+    approved: allSubmissions?.filter(s => s.status === 'approved').length || 0,
+    rejected: allSubmissions?.filter(s => s.status === 'rejected').length || 0,
   };
 
   return (

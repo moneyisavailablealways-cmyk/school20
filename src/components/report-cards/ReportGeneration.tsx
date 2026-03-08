@@ -117,6 +117,8 @@ const ReportGeneration = () => {
     ? `${selectedTermData.term_name} ${(selectedTermData.academic_years as any)?.name || ''}`
     : '';
 
+  const eligibleStudentCount = selectedStudent !== 'all' ? 1 : (students?.length || 0);
+
   // Generate reports mutation
   const generateReports = useMutation({
     mutationFn: async (studentIds: string[]) => {
@@ -136,7 +138,7 @@ const ReportGeneration = () => {
         const { error } = await supabase.functions.invoke('generate-report-pdf', {
           body: {
             studentId,
-            academicYearId: currentYear?.id,
+            academicYearId: selectedAcademicYearId,
             term: termName,
             generatedBy: profile?.id,
             classTeacherComment: classTeacherComment || undefined,

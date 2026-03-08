@@ -33,27 +33,28 @@ interface Recipient {
   role: string;
 }
 
+const availableRoles = [
+  { value: 'teacher', label: 'Teachers' },
+  { value: 'parent', label: 'Parents' },
+  { value: 'student', label: 'Students' },
+  { value: 'head_teacher', label: 'Head Teachers' },
+  { value: 'principal', label: 'Principals' },
+  { value: 'bursar', label: 'Bursars' },
+  { value: 'librarian', label: 'Librarians' },
+  { value: 'admin', label: 'Admins' },
+];
+
 interface CreateAppointmentDialogProps {
   onSuccess?: () => void;
 }
-
-const roleLabels: Record<string, string> = {
-  teacher: 'Teacher',
-  parent: 'Parent',
-  student: 'Student',
-  head_teacher: 'Head Teacher',
-  principal: 'Principal',
-  bursar: 'Bursar',
-  librarian: 'Librarian',
-};
 
 const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuccess }) => {
   const { profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
-  const [filterRole, setFilterRole] = useState<string>('all');
   
   const [formData, setFormData] = useState({
     title: '',
@@ -64,31 +65,41 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
     meeting_type: 'in_person',
   });
 
+  // Fetch recipients whenever selected roles change
   useEffect(() => {
-    if (open) {
-      fetchRecipients();
+    if (open && selectedRoles.length > 0) {
+      fetchRecipientsByRoles();
+    } else {
+      setRecipients([]);
+      setSelectedRecipients([]);
     }
-  }, [open, filterRole]);
+  }, [open, selectedRoles]);
 
-  const fetchRecipients = async () => {
+  const fetchRecipientsByRoles = async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email, role')
         .eq('is_active', true)
-        .neq('id', profile?.id || ''); // Exclude self
-
-      if (filterRole !== 'all') {
-        query = query.eq('role', filterRole as 'admin' | 'bursar' | 'head_teacher' | 'librarian' | 'parent' | 'principal' | 'student' | 'teacher');
-      }
-
-      const { data, error } = await query.order('first_name');
+        .neq('id', profile?.id || '')
+        .in('role', selectedRoles as any)
+        .order('first_name');
 
       if (error) throw error;
       setRecipients(data || []);
+      // Auto-select all fetched recipients
+      setSelectedRecipients((data || []).map(r => r.id));
     } catch (error) {
       console.error('Error fetching recipients:', error);
     }
+  };
+
+  const handleRoleToggle = (roleValue: string) => {
+    setSelectedRoles(prev =>
+      prev.includes(roleValue)
+        ? prev.filter(r => r !== roleValue)
+        : [...prev, roleValue]
+    );
   };
 
   const handleRecipientToggle = (recipientId: string) => {
@@ -99,57 +110,32 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
     );
   };
 
-  const handleSelectAll = () => {
-    if (selectedRecipients.length === recipients.length) {
-      setSelectedRecipients([]);
-    } else {
-      setSelectedRecipients(recipients.map(r => r.id));
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('[Appointments] Starting appointment creation...');
-    console.log('[Appointments] Sender ID:', profile?.id);
-    console.log('[Appointments] Sender Role:', profile?.role);
-    console.log('[Appointments] Selected Recipients:', selectedRecipients);
-    
-    // Validation with specific error messages
     if (!profile?.id || !profile?.role) {
-      const errorMsg = 'User profile not found. Please log in again.';
-      console.error('[Appointments] Error:', errorMsg);
-      toast.error(errorMsg);
+      toast.error('User profile not found. Please log in again.');
       return;
     }
 
     if (selectedRecipients.length === 0) {
-      const errorMsg = 'Missing required field: Please select at least one recipient.';
-      console.error('[Appointments] Error:', errorMsg);
-      toast.error(errorMsg);
+      toast.error('Please select at least one recipient role and recipient.');
       return;
     }
 
     if (!formData.title.trim()) {
-      const errorMsg = 'Missing required field: Title is required.';
-      console.error('[Appointments] Error:', errorMsg);
-      toast.error(errorMsg);
+      toast.error('Title is required.');
       return;
     }
 
     if (!formData.appointment_date || !formData.appointment_time) {
-      const errorMsg = 'Missing required field: Date and time are required.';
-      console.error('[Appointments] Error:', errorMsg);
-      toast.error(errorMsg);
+      toast.error('Date and time are required.');
       return;
     }
 
-    // Validate date is not in the past
     const appointmentDateTime = new Date(`${formData.appointment_date}T${formData.appointment_time}`);
     if (appointmentDateTime < new Date()) {
-      const errorMsg = 'Appointment date and time cannot be in the past.';
-      console.error('[Appointments] Error:', errorMsg);
-      toast.error(errorMsg);
+      toast.error('Appointment date and time cannot be in the past.');
       return;
     }
 
@@ -157,19 +143,7 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
 
     try {
       const appointmentDate = appointmentDateTime.toISOString();
-      
-      console.log('[Appointments] Inserting appointment request...');
-      console.log('[Appointments] Appointment data:', {
-        title: formData.title.trim(),
-        appointment_date: appointmentDate,
-        duration_minutes: parseInt(formData.duration_minutes),
-        meeting_type: formData.meeting_type,
-        sender_id: profile.id,
-        sender_role: profile.role,
-        status: 'pending',
-      });
 
-      // Create the appointment request
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointment_requests')
         .insert({
@@ -186,28 +160,11 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
         .single();
 
       if (appointmentError) {
-        console.error('[Appointments] Database error creating appointment:', appointmentError);
-        
-        // Provide specific error messages based on error code
-        let userMessage = 'Failed to create appointment: ';
-        if (appointmentError.code === '42501') {
-          userMessage += 'Permission denied. RLS policy may be blocking the insert.';
-        } else if (appointmentError.code === '23502') {
-          userMessage += 'Missing required field in database.';
-        } else if (appointmentError.code === '42P17') {
-          userMessage += 'Database policy configuration error. Please contact support.';
-        } else {
-          userMessage += appointmentError.message || 'Unknown database error.';
-        }
-        
-        toast.error(userMessage);
+        console.error('[Appointments] Database error:', appointmentError);
+        toast.error(`Failed to create appointment: ${appointmentError.message}`);
         return;
       }
 
-      console.log('[Appointments] Appointment created successfully:', appointment.id);
-      console.log('[Appointments] Adding recipients...');
-
-      // Add recipients
       const recipientRecords = selectedRecipients.map(recipientId => {
         const recipient = recipients.find(r => r.id === recipientId);
         return {
@@ -218,40 +175,22 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
         };
       });
 
-      console.log('[Appointments] Recipient records to insert:', recipientRecords);
-
       const { error: recipientsError } = await supabase
         .from('appointment_recipients')
         .insert(recipientRecords);
 
       if (recipientsError) {
-        console.error('[Appointments] Database error adding recipients:', recipientsError);
-        
-        let userMessage = 'Appointment created but failed to add recipients: ';
-        if (recipientsError.code === '42501') {
-          userMessage += 'Permission denied for adding recipients.';
-        } else if (recipientsError.code === '23503') {
-          userMessage += 'Invalid recipient reference.';
-        } else {
-          userMessage += recipientsError.message || 'Unknown error.';
-        }
-        
-        toast.error(userMessage);
+        console.error('[Appointments] Recipients error:', recipientsError);
+        toast.error(`Appointment created but failed to add recipients: ${recipientsError.message}`);
         return;
       }
 
-      console.log('[Appointments] Recipients added successfully');
-      console.log('[Appointments] Appointment creation completed successfully');
-      
       toast.success(`Appointment request sent to ${selectedRecipients.length} recipient(s)`);
       setOpen(false);
       resetForm();
       onSuccess?.();
     } catch (error: any) {
-      console.error('[Appointments] Unexpected error:', error);
-      
-      const errorMessage = error?.message || 'An unexpected error occurred';
-      toast.error(`Failed to create appointment: ${errorMessage}`);
+      toast.error(`Failed to create appointment: ${error?.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -267,7 +206,7 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
       meeting_type: 'in_person',
     });
     setSelectedRecipients([]);
-    setFilterRole('all');
+    setSelectedRoles([]);
   };
 
   // Admin cannot create appointments
@@ -385,46 +324,40 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
                 </div>
               </div>
 
-              {/* Recipients Section */}
+              {/* Recipient Roles */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Select Recipients *
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSelectAll}
-                      disabled={recipients.length === 0}
-                    >
-                      {selectedRecipients.length === recipients.length && recipients.length > 0 ? 'Deselect All' : 'Select All'}
-                    </Button>
-                    <Select value={filterRole} onValueChange={setFilterRole}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Filter by role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="teacher">Teachers</SelectItem>
-                        <SelectItem value="parent">Parents</SelectItem>
-                        <SelectItem value="head_teacher">Head Teachers</SelectItem>
-                        <SelectItem value="principal">Principals</SelectItem>
-                        <SelectItem value="bursar">Bursars</SelectItem>
-                        <SelectItem value="librarian">Librarians</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <Label className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Select Recipient Roles *
+                </Label>
+                <div className="border rounded-lg p-3 space-y-2">
+                  {availableRoles
+                    .filter(r => r.value !== profile?.role)
+                    .map((role) => (
+                      <label
+                        key={role.value}
+                        className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={selectedRoles.includes(role.value)}
+                          onCheckedChange={() => handleRoleToggle(role.value)}
+                        />
+                        <span className="text-sm font-medium">{role.label}</span>
+                      </label>
+                    ))}
                 </div>
-                
-                <div className="border rounded-lg p-2 max-h-48 overflow-y-auto">
-                  {recipients.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No recipients found
-                    </p>
-                  ) : (
+                {selectedRoles.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {selectedRoles.length} role(s) selected
+                  </p>
+                )}
+              </div>
+
+              {/* Individual Recipients from selected roles */}
+              {recipients.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Recipients ({recipients.length} found)</Label>
+                  <div className="border rounded-lg p-2 max-h-48 overflow-y-auto">
                     <div className="space-y-2">
                       {recipients.map((recipient) => (
                         <label
@@ -440,20 +373,18 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
                               {recipient.first_name} {recipient.last_name}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {roleLabels[recipient.role] || recipient.role} • {recipient.email}
+                              {recipient.role} • {recipient.email}
                             </p>
                           </div>
                         </label>
                       ))}
                     </div>
-                  )}
-                </div>
-                {selectedRecipients.length > 0 && (
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    {selectedRecipients.length} recipient(s) selected
+                    {selectedRecipients.length} of {recipients.length} recipient(s) selected
                   </p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </ScrollArea>
 

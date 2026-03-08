@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,18 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Calendar, Users } from 'lucide-react';
+import { Plus, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface Recipient {
   id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
   role: string;
 }
 
@@ -52,10 +48,7 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
   const { profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-  const [recipients, setRecipients] = useState<Recipient[]>([]);
-  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
-  
+  const [selectedRole, setSelectedRole] = useState<string>('');
   const [formData, setFormData] = useState({
     title: '',
     message: '',

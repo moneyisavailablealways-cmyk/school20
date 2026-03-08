@@ -101,39 +101,67 @@ const GeneratedReportCards = () => {
       : 'Unknown';
   };
 
-  const handlePreview = (report: any) => {
-    const reportData = (report as any).report_data;
+  const fetchReportData = async (report: any): Promise<any> => {
+    // If report_data is already stored, use it
+    const existing = (report as any).report_data;
+    if (existing) return existing;
+
+    // Otherwise, re-generate by calling the edge function
+    setLoadingReportId(report.id);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const profileId = sessionData?.session?.user?.id;
+
+      // Get profile id for generatedBy
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', profileId || '')
+        .maybeSingle();
+
+      const { data, error } = await supabase.functions.invoke('generate-report-pdf', {
+        body: {
+          studentId: report.student_id,
+          academicYearId: report.academic_year_id,
+          term: report.term,
+          generatedBy: profile?.id || null,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to generate report data');
+
+      // Invalidate cache so the stored report_data is picked up next time
+      queryClient.invalidateQueries({ queryKey: ['generated-report-cards'] });
+
+      return data.reportData;
+    } catch (err: any) {
+      toast.error('Failed to load report data: ' + err.message);
+      return null;
+    } finally {
+      setLoadingReportId(null);
+    }
+  };
+
+  const openPreview = async (report: any) => {
+    const reportData = await fetchReportData(report);
     if (reportData) {
       setPreviewData(reportData);
       setPreviewStudentName(getStudentName(report));
       setPreviewOpen(true);
-    } else {
-      toast.info('No report data available. Please regenerate the report from the Generate tab.');
     }
+  };
+
+  const handlePreview = (report: any) => {
+    openPreview(report);
   };
 
   const handlePrint = (report: any) => {
-    const reportData = (report as any).report_data;
-    if (reportData) {
-      setPreviewData(reportData);
-      setPreviewStudentName(getStudentName(report));
-      setPreviewOpen(true);
-      toast.info('Use the Print button in the preview dialog.');
-    } else {
-      toast.info('No report data available. Please regenerate the report.');
-    }
+    openPreview(report);
   };
 
   const handleDownload = (report: any) => {
-    const reportData = (report as any).report_data;
-    if (reportData) {
-      setPreviewData(reportData);
-      setPreviewStudentName(getStudentName(report));
-      setPreviewOpen(true);
-      toast.info('Use the Download button in the preview dialog to save as PDF.');
-    } else {
-      toast.info('No report data available. Please regenerate the report.');
-    }
+    openPreview(report);
   };
 
   const handleShare = async (report: any) => {

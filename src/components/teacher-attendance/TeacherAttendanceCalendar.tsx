@@ -263,15 +263,26 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
                       className={cn(
                         "aspect-square p-1 border rounded-lg flex flex-col items-center justify-start gap-1",
                         isToday(day) && "border-primary border-2",
-                        isWeekend && "bg-muted/50"
+                        isWeekend && "bg-muted/50",
+                        isHoliday && "bg-destructive/10 border-destructive/30"
                       )}
+                      title={isHoliday ? dayEvents.map(e => e.name).join(', ') : undefined}
                     >
                       <span className={cn(
                         "text-sm font-medium",
-                        isWeekend && "text-muted-foreground"
+                        isWeekend && "text-muted-foreground",
+                        isHoliday && "text-destructive"
                       )}>
                         {format(day, 'd')}
                       </span>
+                      {isHoliday && (
+                        <div className="flex items-center gap-0.5">
+                          <Flag className="h-2.5 w-2.5 text-destructive" />
+                          <span className="text-[9px] text-destructive font-medium truncate max-w-[50px]">
+                            {dayEvents[0]?.name}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex flex-wrap justify-center gap-0.5">
                         {dayAttendance.slice(0, 4).map((record, i) => (
                           <div

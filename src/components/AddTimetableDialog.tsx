@@ -37,7 +37,7 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
 }) => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [autoTeacher, setAutoTeacher] = useState<Teacher | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     class_id: '',
@@ -66,37 +66,28 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
     }
   }, [open]);
 
+  // Auto-fill teacher when class and subject are both selected
+  useEffect(() => {
+    if (formData.class_id && formData.subject_id) {
+      fetchTeacherForClassSubject(formData.class_id, formData.subject_id);
+    } else {
+      setAutoTeacher(null);
+      setFormData(prev => ({ ...prev, teacher_id: '' }));
+    }
+  }, [formData.class_id, formData.subject_id]);
+
   const fetchData = async () => {
     try {
-      // Fetch classes
-      const { data: classData, error: classError } = await supabase
-        .from('classes')
-        .select('id, name')
-        .order('name');
+      const [{ data: classData, error: classError }, { data: subjectData, error: subjectError }] = await Promise.all([
+        supabase.from('classes').select('id, name').order('name'),
+        supabase.from('subjects').select('id, name, code').eq('is_active', true).order('name'),
+      ]);
 
       if (classError) throw classError;
-      setClasses(classData || []);
-
-      // Fetch subjects
-      const { data: subjectData, error: subjectError } = await supabase
-        .from('subjects')
-        .select('id, name, code')
-        .eq('is_active', true)
-        .order('name');
-
       if (subjectError) throw subjectError;
+
+      setClasses(classData || []);
       setSubjects(subjectData || []);
-
-      // Fetch teachers
-      const { data: teacherData, error: teacherError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .eq('role', 'teacher')
-        .eq('is_active', true)
-        .order('first_name');
-
-      if (teacherError) throw teacherError;
-      setTeachers(teacherData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -104,6 +95,40 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
         description: 'Failed to load form data',
         variant: 'destructive'
       });
+    }
+  };
+
+  const fetchTeacherForClassSubject = async (classId: string, subjectId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('teacher_enrollments')
+        .select('teacher_id, teacher:profiles!fk_teacher_enrollments_teacher_id(id, first_name, last_name)')
+        .eq('class_id', classId)
+        .eq('subject_id', subjectId)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data?.teacher && !Array.isArray(data.teacher)) {
+        const teacher = data.teacher as Teacher;
+        setAutoTeacher(teacher);
+        setFormData(prev => ({ ...prev, teacher_id: teacher.id }));
+      } else {
+        setAutoTeacher(null);
+        setFormData(prev => ({ ...prev, teacher_id: '' }));
+        if (formData.class_id && formData.subject_id) {
+          toast({
+            title: 'No teacher assigned',
+            description: 'No teacher is assigned to this class and subject combination. Please assign a teacher first.',
+            variant: 'destructive'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching teacher:', error);
+      setAutoTeacher(null);
     }
   };
 
@@ -119,7 +144,6 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
       return;
     }
 
-    // Validate time
     if (formData.start_time >= formData.end_time) {
       toast({
         title: 'Error',
@@ -132,7 +156,6 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
     setIsLoading(true);
 
     try {
-      // Check for conflicts
       const { data: conflicts } = await supabase
         .from('timetables')
         .select('id')
@@ -147,22 +170,21 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
           description: 'Teacher has a conflicting schedule at this time',
           variant: 'destructive'
         });
+        setIsLoading(false);
         return;
       }
 
-      const timetableData = {
-        class_id: formData.class_id,
-        subject_id: formData.subject_id,
-        teacher_id: formData.teacher_id,
-        day_of_week: parseInt(formData.day_of_week),
-        start_time: formData.start_time,
-        end_time: formData.end_time,
-        room_number: formData.room_number || null
-      };
-
       const { error } = await supabase
         .from('timetables')
-        .insert([timetableData]);
+        .insert([{
+          class_id: formData.class_id,
+          subject_id: formData.subject_id,
+          teacher_id: formData.teacher_id,
+          day_of_week: parseInt(formData.day_of_week),
+          start_time: formData.start_time,
+          end_time: formData.end_time,
+          room_number: formData.room_number || null
+        }]);
 
       if (error) throw error;
 
@@ -171,7 +193,6 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
         description: 'Schedule added successfully'
       });
 
-      // Reset form
       setFormData({
         class_id: '',
         subject_id: '',
@@ -181,6 +202,7 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
         end_time: '',
         room_number: ''
       });
+      setAutoTeacher(null);
 
       onOpenChange(false);
       onSuccess();
@@ -237,18 +259,15 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="teacher">Teacher *</Label>
-            <Select value={formData.teacher_id} onValueChange={(value) => setFormData(prev => ({ ...prev, teacher_id: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select teacher" />
-              </SelectTrigger>
-              <SelectContent>
-                {teachers.map((teacher) => (
-                  <SelectItem key={teacher.id} value={teacher.id}>
-                    {teacher.first_name} {teacher.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              id="teacher"
+              value={autoTeacher ? `${autoTeacher.first_name} ${autoTeacher.last_name}` : 'Select class & subject first'}
+              readOnly
+              className="bg-muted cursor-not-allowed"
+            />
+            {formData.class_id && formData.subject_id && !autoTeacher && (
+              <p className="text-xs text-destructive">No teacher assigned to this class/subject combination.</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -292,7 +311,7 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="room_number">Room Number</Label>
+            <Label htmlFor="room_number">Room Number <span className="text-muted-foreground text-xs">(optional)</span></Label>
             <Input
               id="room_number"
               value={formData.room_number}
@@ -305,7 +324,7 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || !autoTeacher}>
               {isLoading ? 'Adding...' : 'Add Schedule'}
             </Button>
           </div>

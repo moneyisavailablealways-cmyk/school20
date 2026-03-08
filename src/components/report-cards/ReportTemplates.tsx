@@ -40,7 +40,7 @@ const templatePreviews = {
 const ReportTemplates = () => {
   const queryClient = useQueryClient();
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
-
+  const [previewTemplate, setPreviewTemplate] = useState<{ type: string; name: string } | null>(null);
   // Fetch templates
   const { data: templates, isLoading } = useQuery({
     queryKey: ['report-templates'],

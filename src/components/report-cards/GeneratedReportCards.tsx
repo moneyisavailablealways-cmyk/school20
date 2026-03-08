@@ -102,9 +102,69 @@ const GeneratedReportCards = () => {
   };
 
   const fetchReportData = async (report: any): Promise<any> => {
-    // If report_data is already stored, use it
+    // If report_data is already stored, use it but refresh signatures
     const existing = (report as any).report_data;
-    if (existing) return existing;
+    if (existing) {
+      // Always refresh signatures from the database to pick up newly added ones
+      try {
+        const refreshedData = { ...existing };
+        
+        // Get the student's enrollment to find class_teacher_id
+        const { data: enrollment } = await supabase
+          .from('student_enrollments')
+          .select('class_id, classes(class_teacher_id, school_id)')
+          .eq('student_id', report.student_id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        const classTeacherId = (enrollment?.classes as any)?.class_teacher_id;
+        const schoolId = (enrollment?.classes as any)?.school_id || existing?.school?.id;
+
+        if (schoolId) {
+          const { data: allSigs } = await supabase
+            .from('digital_signatures')
+            .select('signature_data, signature_type, font_family, user_id, profiles:user_id(first_name, last_name, role)')
+            .eq('school_id', schoolId)
+            .eq('is_active', true);
+
+          if (allSigs) {
+            const signatures: any = { classTeacher: null, headTeacher: null };
+            
+            // Head teacher signature
+            const headSig = allSigs.find((s: any) => 
+              ['head_teacher', 'principal', 'admin'].includes(s.profiles?.role)
+            );
+            if (headSig) {
+              signatures.headTeacher = {
+                signatureData: headSig.signature_data,
+                signatureType: headSig.signature_type,
+                fontFamily: headSig.font_family,
+                name: `${headSig.profiles?.first_name || ''} ${headSig.profiles?.last_name || ''}`.trim(),
+              };
+            }
+
+            // Class teacher signature
+            if (classTeacherId) {
+              const ctSig = allSigs.find((s: any) => s.user_id === classTeacherId);
+              if (ctSig) {
+                signatures.classTeacher = {
+                  signatureData: ctSig.signature_data,
+                  signatureType: ctSig.signature_type,
+                  fontFamily: ctSig.font_family,
+                  name: `${ctSig.profiles?.first_name || ''} ${ctSig.profiles?.last_name || ''}`.trim(),
+                };
+              }
+            }
+
+            refreshedData.signatures = signatures;
+          }
+        }
+        
+        return refreshedData;
+      } catch {
+        return existing;
+      }
+    }
 
     // Otherwise, re-generate by calling the edge function
     setLoadingReportId(report.id);

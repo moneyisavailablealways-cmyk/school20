@@ -133,6 +133,33 @@ serve(async (req) => {
       .eq('term_name', term)
       .maybeSingle();
 
+    // Fetch report card fees from bursar (class-specific first, then fallback to all-classes)
+    const classId = enrollment?.class_id;
+    let reportCardFees: any = null;
+
+    if (classId) {
+      const { data: classFees } = await supabase
+        .from('report_card_fees')
+        .select('*')
+        .eq('academic_year_id', academicYearId)
+        .eq('term', term)
+        .eq('class_id', classId)
+        .maybeSingle();
+      reportCardFees = classFees;
+    }
+
+    // Fallback: fees entry with no class_id (applies to all classes)
+    if (!reportCardFees) {
+      const { data: allClassFees } = await supabase
+        .from('report_card_fees')
+        .select('*')
+        .eq('academic_year_id', academicYearId)
+        .eq('term', term)
+        .is('class_id', null)
+        .maybeSingle();
+      reportCardFees = allClassFees;
+    }
+
     // Fetch academic year
     const { data: academicYear } = await supabase
       .from('academic_years')
@@ -254,9 +281,9 @@ serve(async (req) => {
         printedDate: new Date().toLocaleDateString('en-GB'),
         endDate: termConfig?.end_date || '',
         nextTermStart: termConfig?.next_term_start_date || '',
-        feesBalance: termConfig?.fees_balance_note || '',
-        feesNextTerm: termConfig?.fees_next_term || '',
-        otherRequirements: termConfig?.other_requirements || '',
+        feesBalance: reportCardFees?.fees_balance_note || termConfig?.fees_balance_note || '',
+        feesNextTerm: reportCardFees?.fees_next_term || termConfig?.fees_next_term || '',
+        otherRequirements: reportCardFees?.other_requirements || termConfig?.other_requirements || '',
       },
       subjects: processedSubjects,
       summary: {

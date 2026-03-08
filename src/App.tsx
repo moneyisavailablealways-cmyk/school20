@@ -85,6 +85,7 @@ import Scholarships from "./pages/bursar/Scholarships";
 import BursarReports from "./pages/bursar/Reports";
 import BursarProfile from "./pages/bursar/BursarProfile";
 import BursarAppointments from "./pages/bursar/Appointments";
+import ReportCardFees from "./pages/bursar/ReportCardFees";
 import ParentDashboard from './pages/parent/ParentDashboard';
 import MyChildren from './pages/parent/MyChildren';
 import Attendance from './pages/parent/Attendance';
@@ -247,6 +248,7 @@ const App = () => (
             >
               <Route index element={<BursarDashboard />} />
               <Route path="fee-structures" element={<FeeStructures />} />
+              <Route path="report-card-fees" element={<ReportCardFees />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="invoices/create" element={<CreateInvoice />} />
               <Route path="payments" element={<Payments />} />

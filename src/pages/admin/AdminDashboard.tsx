@@ -67,34 +67,40 @@ const AdminDashboard = () => {
   };
 
   const loadDashboardStats = async () => {
+    if (!profile?.school_id) return;
     try {
-      // Get total users
+      // Get total users in this school
       const { count: totalUsers } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('school_id', profile.school_id);
 
-      // Get students count
+      // Get students count in this school
       const { count: totalStudents } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
+        .eq('school_id', profile.school_id)
         .eq('role', 'student');
 
-      // Get teachers count
+      // Get teachers count in this school
       const { count: totalTeachers } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
+        .eq('school_id', profile.school_id)
         .eq('role', 'teacher');
 
-      // Get classes count
+      // Get classes count in this school
       const { count: totalClasses } = await supabase
         .from('classes')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('school_id', profile.school_id);
 
-      // Get active enrollments
+      // Get active enrollments in this school
       const { count: activeEnrollments } = await supabase
         .from('student_enrollments')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
+        .select('*, classes!inner(school_id)', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .eq('classes.school_id', profile.school_id);
 
       setStats({
         totalUsers: totalUsers || 0,

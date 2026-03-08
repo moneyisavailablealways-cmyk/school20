@@ -172,8 +172,7 @@ const CreateAppointmentDialog: React.FC<CreateAppointmentDialogProps> = ({ onSuc
       duration_minutes: '30',
       meeting_type: 'in_person',
     });
-    setSelectedRecipients([]);
-    setSelectedRoles([]);
+    setSelectedRole('');
   };
 
   // Admin cannot create appointments

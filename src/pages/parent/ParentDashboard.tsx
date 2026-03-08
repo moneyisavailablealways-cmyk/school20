@@ -16,6 +16,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import TermCountdownWidget from '@/components/academic-calendar/TermCountdownWidget';
 
 interface Student {
   id: string;

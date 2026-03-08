@@ -85,6 +85,12 @@ const CreateInvoice = () => {
 
       setStudents(studentsData || []);
       setFeeStructures(feeData || []);
+      setAcademicYears(yearData || []);
+      // Set current academic year as default
+      const currentYear = (yearData || []).find((y: any) => y.is_current);
+      if (currentYear) {
+        setFormData(prev => ({ ...prev, academic_year_id: currentYear.id }));
+      }
     } catch (error: any) {
       console.error('Error fetching data:', error);
       toast({

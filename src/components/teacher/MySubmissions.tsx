@@ -292,6 +292,18 @@ const MySubmissions = ({ teacherId, currentYearId, selectedTerm, onEditSubmissio
                               </AlertDialog>
                             </>
                           )}
+                          {isApproved && canResetMarks && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => setResetDialog({ isOpen: true, submission: sub })}
+                              title="Reset approved marks for correction"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              Reset
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

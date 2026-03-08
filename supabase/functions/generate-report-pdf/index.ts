@@ -103,16 +103,16 @@ async function fetchAttendanceSummary(supabase: any, studentId: string, schoolId
 async function fetchSignatures(supabase: any, schoolId: string, classTeacherId: string | null) {
   const result: any = { classTeacher: null, headTeacher: null };
 
-  // Head teacher signature - any admin/principal/head_teacher with active signature
-  const { data: htSigs } = await supabase
+  const { data: allSigs } = await supabase
     .from('digital_signatures')
     .select('signature_data, signature_type, font_family, user_id, profiles:user_id(first_name, last_name, role)')
     .eq('school_id', schoolId)
     .eq('is_active', true);
 
-  if (htSigs) {
-    const headSig = htSigs.find((s: any) => 
-      s.profiles?.role === 'head_teacher' || s.profiles?.role === 'principal'
+  if (allSigs) {
+    // Head teacher signature - match head_teacher, principal, OR admin
+    const headSig = allSigs.find((s: any) => 
+      ['head_teacher', 'principal', 'admin'].includes(s.profiles?.role)
     );
     if (headSig) {
       result.headTeacher = {
@@ -122,18 +122,18 @@ async function fetchSignatures(supabase: any, schoolId: string, classTeacherId: 
         name: `${headSig.profiles?.first_name || ''} ${headSig.profiles?.last_name || ''}`.trim(),
       };
     }
-  }
 
-  // Class teacher signature
-  if (classTeacherId && htSigs) {
-    const ctSig = htSigs.find((s: any) => s.user_id === classTeacherId);
-    if (ctSig) {
-      result.classTeacher = {
-        signatureData: ctSig.signature_data,
-        signatureType: ctSig.signature_type,
-        fontFamily: ctSig.font_family,
-        name: `${ctSig.profiles?.first_name || ''} ${ctSig.profiles?.last_name || ''}`.trim(),
-      };
+    // Class teacher signature
+    if (classTeacherId) {
+      const ctSig = allSigs.find((s: any) => s.user_id === classTeacherId);
+      if (ctSig) {
+        result.classTeacher = {
+          signatureData: ctSig.signature_data,
+          signatureType: ctSig.signature_type,
+          fontFamily: ctSig.font_family,
+          name: `${ctSig.profiles?.first_name || ''} ${ctSig.profiles?.last_name || ''}`.trim(),
+        };
+      }
     }
   }
 
@@ -198,13 +198,14 @@ serve(async (req) => {
     console.log(`Generating report for student: ${studentId}, year: ${academicYearId}, term: ${term}`);
 
     // Fetch core data in parallel
-    const [studentData, enrollment, academicYear, submissions, gradingConfig, comments] = await Promise.all([
+    const [studentData, enrollment, academicYear, submissions, gradingConfig, comments, autoCommentRules] = await Promise.all([
       fetchStudentData(supabase, studentId),
       fetchEnrollment(supabase, studentId, academicYearId),
       supabase.from('academic_years').select('name').eq('id', academicYearId).single().then((r: any) => r.data),
       supabase.from('subject_submissions').select(`*, subjects(id, name, code)`).eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', term).eq('status', 'approved').then((r: any) => { if (r.error) throw new Error(`Submissions fetch error: ${r.error.message}`); return r.data; }),
       supabase.from('grading_config').select('*').eq('is_active', true).order('max_marks', { ascending: false }).then((r: any) => r.data),
       supabase.from('report_comments').select('*').eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', term).then((r: any) => r.data),
+      supabase.from('auto_comment_rules').select('*').eq('is_active', true).order('priority', { ascending: false }).then((r: any) => r.data),
     ]);
 
     const schoolId = studentData.school_id;
@@ -264,8 +265,19 @@ serve(async (req) => {
       ? Math.round(processedSubjects.reduce((sum, s) => sum + (s.identifier || 2), 0) / processedSubjects.length)
       : 2;
 
-    const classTeacherComment = overrideCtComment || comments?.find((c: any) => c.comment_type === 'class_teacher')?.comment || '';
-    const headTeacherComment = overrideHtComment || comments?.find((c: any) => c.comment_type === 'head_teacher')?.comment || '';
+    // Auto-generate comment from auto_comment_rules if no manual comment exists
+    const getAutoComment = (score: number): string => {
+      if (!autoCommentRules || autoCommentRules.length === 0) return '';
+      const rule = autoCommentRules.find((r: any) => score >= r.min_score && score <= r.max_score);
+      return rule?.comment_text || '';
+    };
+
+    const savedCtComment = comments?.find((c: any) => c.comment_type === 'class_teacher')?.comment || '';
+    const savedHtComment = comments?.find((c: any) => c.comment_type === 'head_teacher')?.comment || '';
+    const autoComment = getAutoComment(overallAvg);
+
+    const classTeacherComment = overrideCtComment || savedCtComment || autoComment;
+    const headTeacherComment = overrideHtComment || savedHtComment || autoComment;
 
     // Format fees balance for display
     const feesBalanceDisplay = feesData.finalBalance > 0
@@ -308,7 +320,7 @@ serve(async (req) => {
         website: schoolSettings?.website || '',
         logoUrl: schoolSettings?.logo_url || '',
         footerMotto: schoolSettings?.footer_motto || '',
-        badge: schoolSettings?.badge_url || '',
+        badge: '',
       },
       term: {
         name: term,

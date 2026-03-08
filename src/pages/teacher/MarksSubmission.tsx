@@ -168,14 +168,13 @@ const MarksSubmission = () => {
     },
   });
 
-  // Fetch students and existing submissions using sequential pattern to avoid RLS join issues
+  // Fetch students and existing submissions
   const { data: students, isLoading: loadingStudents } = useQuery({
     queryKey: ['class-students-marks', selectedClass, selectedSubject, selectedTerm, currentYear?.id],
     queryFn: async () => {
       if (!selectedClass || !selectedSubject || !currentYear?.id) return [];
 
       // Step 1: Fetch student IDs enrolled in the class
-      // NOTE: Some existing data may have academic_year_id = NULL; include both to avoid empty dropdowns.
       const { data: classEnrollments, error: enrollError } = await supabase
         .from('student_enrollments')
         .select('student_id')
@@ -188,23 +187,39 @@ const MarksSubmission = () => {
 
       const classStudentIds = classEnrollments.map((e) => e.student_id);
 
-      // Step 2: Fetch students enrolled in the selected subject (filter by class students)
-      // NOTE: Include academic_year_id NULL rows as well for legacy/older data.
-      const { data: subjectEnrollments, error: subjectEnrollError } = await supabase
-        .from('student_subject_enrollments')
-        .select('student_id')
-        .eq('subject_id', selectedSubject)
-        .eq('status', 'active')
-        .in('student_id', classStudentIds)
-        .or(`academic_year_id.eq.${currentYear.id},academic_year_id.is.null`);
+      // Step 2: Check if the subject is core
+      const { data: subjectData } = await supabase
+        .from('subjects')
+        .select('is_core')
+        .eq('id', selectedSubject)
+        .maybeSingle();
 
-      if (subjectEnrollError) throw subjectEnrollError;
-      if (!subjectEnrollments || subjectEnrollments.length === 0) return [];
+      const isCore = subjectData?.is_core === true;
 
-      // Get student IDs that have BOTH class AND subject enrollment
-      const validStudentIds = subjectEnrollments.map(e => e.student_id);
+      let validStudentIds: string[];
 
-      // Step 3: Fetch student details separately
+      if (isCore) {
+        // Core subjects: ALL students in the class automatically qualify
+        validStudentIds = classStudentIds;
+      } else {
+        // Elective subjects: only students with explicit subject enrollment
+        const { data: subjectEnrollments, error: subjectEnrollError } = await supabase
+          .from('student_subject_enrollments')
+          .select('student_id')
+          .eq('subject_id', selectedSubject)
+          .eq('status', 'active')
+          .in('student_id', classStudentIds)
+          .or(`academic_year_id.eq.${currentYear.id},academic_year_id.is.null`);
+
+        if (subjectEnrollError) throw subjectEnrollError;
+        if (!subjectEnrollments || subjectEnrollments.length === 0) return [];
+
+        validStudentIds = subjectEnrollments.map(e => e.student_id);
+      }
+
+      if (validStudentIds.length === 0) return [];
+
+      // Step 3: Fetch student details
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('id, student_id, profile_id')
@@ -213,7 +228,7 @@ const MarksSubmission = () => {
       if (studentsError) throw studentsError;
       if (!studentsData || studentsData.length === 0) return [];
 
-      // Step 4: Fetch profiles separately
+      // Step 4: Fetch profiles
       const profileIds = studentsData.map(s => s.profile_id).filter(Boolean);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
@@ -222,7 +237,6 @@ const MarksSubmission = () => {
 
       if (profilesError) throw profilesError;
 
-      // Create profile lookup map
       const profileMap = new Map(profilesData?.map(p => [p.id, p]) || []);
 
       // Step 5: Fetch existing submissions
@@ -261,6 +275,9 @@ const MarksSubmission = () => {
           } : undefined,
         };
       });
+
+      // Sort by name
+      studentList.sort((a, b) => a.name.localeCompare(b.name));
 
       return studentList;
     },

@@ -280,7 +280,7 @@ serve(async (req) => {
     // Map overall average to achievement levels
     if (overallAvg >= 80) {
       overallRemark = 'Outstanding';
-    } else if (overallAvg >= 50) {
+    } else if (overallAvg >= 45) {
       overallRemark = 'Moderate';
     } else {
       overallRemark = 'Basic';

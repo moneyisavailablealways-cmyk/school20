@@ -47,6 +47,18 @@ const SubmissionsApproval = () => {
     },
   });
 
+  // Fetch all submission counts for stats
+  const { data: allSubmissions } = useQuery({
+    queryKey: ['submissions-stats-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subject_submissions')
+        .select('id, status');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Fetch submissions
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['submissions-for-approval', filterStatus, filterClass, filterSubject],
@@ -113,6 +125,7 @@ const SubmissionsApproval = () => {
       toast.success('Submissions approved');
       setSelectedIds([]);
       queryClient.invalidateQueries({ queryKey: ['submissions-for-approval'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions-stats-counts'] });
     },
     onError: (error) => {
       toast.error(`Failed to approve: ${error.message}`);
@@ -140,6 +153,7 @@ const SubmissionsApproval = () => {
       setRejectDialog({ isOpen: false, ids: [] });
       setRejectionReason('');
       queryClient.invalidateQueries({ queryKey: ['submissions-for-approval'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions-stats-counts'] });
     },
     onError: (error) => {
       toast.error(`Failed to reject: ${error.message}`);
@@ -166,9 +180,9 @@ const SubmissionsApproval = () => {
   });
 
   const stats = {
-    pending: submissions?.filter(s => s.status === 'pending').length || 0,
-    approved: submissions?.filter(s => s.status === 'approved').length || 0,
-    rejected: submissions?.filter(s => s.status === 'rejected').length || 0,
+    pending: allSubmissions?.filter(s => s.status === 'pending').length || 0,
+    approved: allSubmissions?.filter(s => s.status === 'approved').length || 0,
+    rejected: allSubmissions?.filter(s => s.status === 'rejected').length || 0,
   };
 
   return (

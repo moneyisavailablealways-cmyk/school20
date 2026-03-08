@@ -123,11 +123,12 @@ const AdminDashboard = () => {
   };
 
   const loadRecentActivities = async () => {
+    if (!profile?.school_id) return;
     try {
-      // Get activities from the activity_log table
       const { data: activities, error } = await supabase
         .from('activity_log')
         .select('*')
+        .eq('school_id', profile.school_id)
         .order('created_at', { ascending: false })
         .limit(8);
 

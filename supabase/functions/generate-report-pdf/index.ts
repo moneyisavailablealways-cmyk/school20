@@ -37,6 +37,16 @@ interface ReportData {
     feesNextTerm: string;
     otherRequirements: string;
   };
+  fees: {
+    totalRequired: number;
+    totalScholarship: number;
+    adjustedFees: number;
+    totalPaid: number;
+    calculatedBalance: number;
+    hasOverride: boolean;
+    overrideAmount: number;
+    finalBalance: number;
+  };
   subjects: Array<{
     code: string;
     name: string;
@@ -67,8 +77,119 @@ interface ReportData {
   }>;
 }
 
+// Helper: fetch student data
+async function fetchStudentData(supabase: any, studentId: string) {
+  const { data, error } = await supabase
+    .from('students')
+    .select(`
+      id, student_id, gender, date_of_birth, section, house, photo_url, profile_id,
+      profiles:profile_id(first_name, last_name)
+    `)
+    .eq('id', studentId)
+    .single();
+  if (error) throw new Error(`Student fetch error: ${error.message}`);
+  return data;
+}
+
+// Helper: fetch enrollment
+async function fetchEnrollment(supabase: any, studentId: string, academicYearId: string) {
+  const { data } = await supabase
+    .from('student_enrollments')
+    .select(`class_id, stream_id, classes(name, level_id, levels(name)), streams(name)`)
+    .eq('student_id', studentId)
+    .eq('academic_year_id', academicYearId)
+    .eq('status', 'active')
+    .single();
+  return data;
+}
+
+// Helper: calculate fees balance automatically
+async function calculateFeesBalance(supabase: any, studentId: string, academicYearId: string, term: string) {
+  // Get total fees from invoices
+  const { data: invoices } = await supabase
+    .from('invoices')
+    .select('total_amount')
+    .eq('student_id', studentId)
+    .eq('academic_year_id', academicYearId)
+    .neq('status', 'cancelled');
+
+  const totalRequired = (invoices || []).reduce((sum: number, inv: any) => sum + Number(inv.total_amount || 0), 0);
+
+  // Get scholarship amounts
+  const { data: scholarships } = await supabase
+    .from('student_scholarships')
+    .select('amount')
+    .eq('student_id', studentId)
+    .eq('academic_year_id', academicYearId)
+    .eq('status', 'active');
+
+  const totalScholarship = (scholarships || []).reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
+  const adjustedFees = Math.max(totalRequired - totalScholarship, 0);
+
+  // Get total payments
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('amount')
+    .eq('student_id', studentId)
+    .eq('status', 'completed');
+
+  const totalPaid = (payments || []).reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+  const calculatedBalance = Math.max(adjustedFees - totalPaid, 0);
+
+  // Check for manual override
+  const { data: override } = await supabase
+    .from('student_fee_overrides')
+    .select('override_amount')
+    .eq('student_id', studentId)
+    .eq('academic_year_id', academicYearId)
+    .eq('term', term)
+    .maybeSingle();
+
+  const hasOverride = !!override;
+  const overrideAmount = override ? Number(override.override_amount) : 0;
+  const finalBalance = hasOverride ? overrideAmount : calculatedBalance;
+
+  return {
+    totalRequired,
+    totalScholarship,
+    adjustedFees,
+    totalPaid,
+    calculatedBalance,
+    hasOverride,
+    overrideAmount,
+    finalBalance,
+  };
+}
+
+// Helper: process subjects
+function processSubjects(submissions: any[]) {
+  return (submissions || []).map((sub: any) => {
+    const a1 = sub.a1_score;
+    const a2 = sub.a2_score;
+    const a3 = sub.a3_score;
+    const validScores = [a1, a2, a3].filter((s) => s !== null && s !== undefined);
+    const avg = validScores.length > 0 ? validScores.reduce((a: number, b: number) => a + b, 0) / validScores.length : null;
+    const ca20 = avg !== null ? (avg / 3) * 0.2 * 100 : null;
+    const exam80 = sub.exam_score !== null ? sub.exam_score * 0.8 : null;
+    const total100 = ca20 !== null && exam80 !== null ? ca20 + exam80 : sub.marks;
+
+    return {
+      code: sub.subjects?.code || '',
+      name: sub.subjects?.name || '',
+      a1, a2, a3,
+      avg: avg !== null ? Math.round(avg * 10) / 10 : null,
+      ca20: ca20 !== null ? Math.round(ca20 * 10) / 10 : null,
+      exam80: exam80 !== null ? Math.round(exam80 * 10) / 10 : null,
+      total100: total100 !== null ? Math.round(total100 * 10) / 10 : null,
+      identifier: sub.identifier || 2,
+      grade: sub.grade || '',
+      remark: sub.remark || '',
+      teacherInitials: sub.teacher_initials || '',
+    };
+  });
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -86,154 +207,48 @@ serve(async (req) => {
 
     console.log(`Generating report for student: ${studentId}, year: ${academicYearId}, term: ${term}`);
 
-    // Fetch student data with enrollment
-    const { data: studentData, error: studentError } = await supabase
-      .from('students')
-      .select(`
-        id,
-        student_id,
-        gender,
-        date_of_birth,
-        section,
-        house,
-        photo_url,
-        profile_id,
-        profiles:profile_id(first_name, last_name)
-      `)
-      .eq('id', studentId)
-      .single();
+    // Fetch all data in parallel
+    const [studentData, enrollment, schoolSettings, termConfig, academicYear, submissions, gradingConfig, comments, feesData] = await Promise.all([
+      fetchStudentData(supabase, studentId),
+      fetchEnrollment(supabase, studentId, academicYearId),
+      supabase.from('school_settings').select('*').maybeSingle().then((r: any) => r.data),
+      supabase.from('term_configurations').select('*').eq('academic_year_id', academicYearId).eq('term_name', term).maybeSingle().then((r: any) => r.data),
+      supabase.from('academic_years').select('name').eq('id', academicYearId).single().then((r: any) => r.data),
+      supabase.from('subject_submissions').select(`*, subjects(id, name, code)`).eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', term).eq('status', 'approved').then((r: any) => { if (r.error) throw new Error(`Submissions fetch error: ${r.error.message}`); return r.data; }),
+      supabase.from('grading_config').select('*').eq('is_active', true).order('max_marks', { ascending: false }).then((r: any) => r.data),
+      supabase.from('report_comments').select('*').eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', term).then((r: any) => r.data),
+      calculateFeesBalance(supabase, studentId, academicYearId, term),
+    ]);
 
-    if (studentError) throw new Error(`Student fetch error: ${studentError.message}`);
-
-    // Fetch enrollment for class info
-    const { data: enrollment } = await supabase
-      .from('student_enrollments')
-      .select(`
-        class_id,
-        stream_id,
-        classes(name, level_id, levels(name)),
-        streams(name)
-      `)
-      .eq('student_id', studentId)
-      .eq('academic_year_id', academicYearId)
-      .eq('status', 'active')
-      .single();
-
-    // Fetch school settings
-    const { data: schoolSettings } = await supabase
-      .from('school_settings')
-      .select('*')
-      .maybeSingle();
-
-    // Fetch term configuration
-    const { data: termConfig } = await supabase
-      .from('term_configurations')
-      .select('*')
-      .eq('academic_year_id', academicYearId)
-      .eq('term_name', term)
-      .maybeSingle();
-
-    // Fetch report card fees from bursar (class-specific first, then fallback to all-classes)
+    // Fetch report_card_fees for next term fees and other requirements (still from bursar manual config)
     const classId = enrollment?.class_id;
     let reportCardFees: any = null;
-
     if (classId) {
-      const { data: classFees } = await supabase
-        .from('report_card_fees')
-        .select('*')
-        .eq('academic_year_id', academicYearId)
-        .eq('term', term)
-        .eq('class_id', classId)
+      const { data } = await supabase
+        .from('report_card_fees').select('*')
+        .eq('academic_year_id', academicYearId).eq('term', term).eq('class_id', classId)
         .maybeSingle();
-      reportCardFees = classFees;
+      reportCardFees = data;
     }
-
-    // Fallback: fees entry with no class_id (applies to all classes)
     if (!reportCardFees) {
-      const { data: allClassFees } = await supabase
-        .from('report_card_fees')
-        .select('*')
-        .eq('academic_year_id', academicYearId)
-        .eq('term', term)
-        .is('class_id', null)
+      const { data } = await supabase
+        .from('report_card_fees').select('*')
+        .eq('academic_year_id', academicYearId).eq('term', term).is('class_id', null)
         .maybeSingle();
-      reportCardFees = allClassFees;
+      reportCardFees = data;
     }
-
-    // Fetch academic year
-    const { data: academicYear } = await supabase
-      .from('academic_years')
-      .select('name')
-      .eq('id', academicYearId)
-      .single();
-
-    // Fetch subject submissions with grades
-    const { data: submissions, error: subError } = await supabase
-      .from('subject_submissions')
-      .select(`
-        *,
-        subjects(id, name, code)
-      `)
-      .eq('student_id', studentId)
-      .eq('academic_year_id', academicYearId)
-      .eq('term', term)
-      .eq('status', 'approved');
-
-    if (subError) throw new Error(`Submissions fetch error: ${subError.message}`);
-
-    // Fetch grading config
-    const { data: gradingConfig } = await supabase
-      .from('grading_config')
-      .select('*')
-      .eq('is_active', true)
-      .order('max_marks', { ascending: false });
-
-    // Fetch comments
-    const { data: comments } = await supabase
-      .from('report_comments')
-      .select('*')
-      .eq('student_id', studentId)
-      .eq('academic_year_id', academicYearId)
-      .eq('term', term);
 
     // Calculate age
     const dob = new Date(studentData.date_of_birth);
-    const today = new Date();
-    const age = today.getFullYear() - dob.getFullYear();
+    const age = new Date().getFullYear() - dob.getFullYear();
 
     // Process subjects
-    const processedSubjects = submissions?.map((sub: any) => {
-      const a1 = sub.a1_score;
-      const a2 = sub.a2_score;
-      const a3 = sub.a3_score;
-      const validScores = [a1, a2, a3].filter((s) => s !== null && s !== undefined);
-      const avg = validScores.length > 0 ? validScores.reduce((a, b) => a + b, 0) / validScores.length : null;
-      const ca20 = avg !== null ? (avg / 3) * 0.2 * 100 : null; // 20% of average
-      const exam80 = sub.exam_score !== null ? sub.exam_score * 0.8 : null; // 80% of exam
-      const total100 = ca20 !== null && exam80 !== null ? ca20 + exam80 : sub.marks;
-
-      return {
-        code: sub.subjects?.code || '',
-        name: sub.subjects?.name || '',
-        a1,
-        a2,
-        a3,
-        avg: avg !== null ? Math.round(avg * 10) / 10 : null,
-        ca20: ca20 !== null ? Math.round(ca20 * 10) / 10 : null,
-        exam80: exam80 !== null ? Math.round(exam80 * 10) / 10 : null,
-        total100: total100 !== null ? Math.round(total100 * 10) / 10 : null,
-        identifier: sub.identifier || 2,
-        grade: sub.grade || '',
-        remark: sub.remark || '',
-        teacherInitials: sub.teacher_initials || '',
-      };
-    }) || [];
+    const processedSubjects = processSubjects(submissions);
 
     // Calculate overall averages
     const validTotals = processedSubjects.filter(s => s.total100 !== null).map(s => s.total100 as number);
     const overallAvg = validTotals.length > 0 ? validTotals.reduce((a, b) => a + b, 0) / validTotals.length : 0;
-    
-    // Determine overall grade
+
     let overallGrade = 'F';
     let overallRemark = 'Basic';
     for (const gc of gradingConfig || []) {
@@ -244,14 +259,17 @@ serve(async (req) => {
       }
     }
 
-    // Calculate average identifier
     const avgIdentifier = processedSubjects.length > 0
       ? Math.round(processedSubjects.reduce((sum, s) => sum + (s.identifier || 2), 0) / processedSubjects.length)
       : 2;
 
-    // Get comments
-    const classTeacherComment = comments?.find(c => c.comment_type === 'class_teacher')?.comment || '';
-    const headTeacherComment = comments?.find(c => c.comment_type === 'head_teacher')?.comment || '';
+    const classTeacherComment = comments?.find((c: any) => c.comment_type === 'class_teacher')?.comment || '';
+    const headTeacherComment = comments?.find((c: any) => c.comment_type === 'head_teacher')?.comment || '';
+
+    // Format fees balance for display
+    const feesBalanceDisplay = feesData.finalBalance > 0
+      ? `UGX ${feesData.finalBalance.toLocaleString()}`
+      : 'Fully Paid';
 
     // Build report data
     const reportData: ReportData = {
@@ -281,9 +299,19 @@ serve(async (req) => {
         printedDate: new Date().toLocaleDateString('en-GB'),
         endDate: termConfig?.end_date || '',
         nextTermStart: termConfig?.next_term_start_date || '',
-        feesBalance: reportCardFees?.fees_balance_note || termConfig?.fees_balance_note || '',
+        feesBalance: feesBalanceDisplay,
         feesNextTerm: reportCardFees?.fees_next_term || termConfig?.fees_next_term || '',
         otherRequirements: reportCardFees?.other_requirements || termConfig?.other_requirements || '',
+      },
+      fees: {
+        totalRequired: feesData.totalRequired,
+        totalScholarship: feesData.totalScholarship,
+        adjustedFees: feesData.adjustedFees,
+        totalPaid: feesData.totalPaid,
+        calculatedBalance: feesData.calculatedBalance,
+        hasOverride: feesData.hasOverride,
+        overrideAmount: feesData.overrideAmount,
+        finalBalance: feesData.finalBalance,
       },
       subjects: processedSubjects,
       summary: {
@@ -294,7 +322,7 @@ serve(async (req) => {
         classTeacherComment,
         headTeacherComment,
       },
-      gradingScale: gradingConfig?.map(gc => ({
+      gradingScale: gradingConfig?.map((gc: any) => ({
         grade: gc.grade,
         minScore: gc.min_marks,
         maxScore: gc.max_marks,
@@ -333,7 +361,7 @@ serve(async (req) => {
       action: 'generate_report',
       target_type: 'report',
       target_id: report?.id || studentId,
-      details: { term, academicYearId, verificationCode },
+      details: { term, academicYearId, verificationCode, feesBalance: feesData },
     });
 
     console.log('Report generated successfully:', verificationCode);

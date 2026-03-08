@@ -133,6 +133,33 @@ serve(async (req) => {
       .eq('term_name', term)
       .maybeSingle();
 
+    // Fetch report card fees from bursar (class-specific first, then fallback to all-classes)
+    const classId = enrollment?.class_id;
+    let reportCardFees: any = null;
+
+    if (classId) {
+      const { data: classFees } = await supabase
+        .from('report_card_fees')
+        .select('*')
+        .eq('academic_year_id', academicYearId)
+        .eq('term', term)
+        .eq('class_id', classId)
+        .maybeSingle();
+      reportCardFees = classFees;
+    }
+
+    // Fallback: fees entry with no class_id (applies to all classes)
+    if (!reportCardFees) {
+      const { data: allClassFees } = await supabase
+        .from('report_card_fees')
+        .select('*')
+        .eq('academic_year_id', academicYearId)
+        .eq('term', term)
+        .is('class_id', null)
+        .maybeSingle();
+      reportCardFees = allClassFees;
+    }
+
     // Fetch academic year
     const { data: academicYear } = await supabase
       .from('academic_years')

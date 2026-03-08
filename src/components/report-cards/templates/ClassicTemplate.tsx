@@ -137,12 +137,6 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
         </div>
       </div>
 
-      {/* Stamp centered */}
-      {stampUrl && (
-        <div style={{ textAlign: 'center', marginBottom: '6px' }}>
-          <img src={stampUrl} alt="Stamp" style={{ height: '50px', objectFit: 'contain', opacity: 0.8 }} />
-        </div>
-      )}
 
       {/* Key */}
       <div style={{ border: '1px solid #000', padding: '4px 6px', fontSize: '9px', marginBottom: '6px', backgroundColor: '#fafafa' }}>

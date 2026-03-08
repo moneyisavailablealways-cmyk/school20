@@ -16,12 +16,16 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Eye, Pencil, Printer, Download, Share2, Trash2, FileText, Search } from 'lucide-react';
+import ReportCardPreviewDialog from './ReportCardPreviewDialog';
 
 const GeneratedReportCards = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [termFilter, setTermFilter] = useState('all');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [previewStudentName, setPreviewStudentName] = useState('');
 
   // Fetch generated reports with student info
   const { data: reports = [], isLoading } = useQuery({
@@ -90,54 +94,65 @@ const GeneratedReportCards = () => {
     }
   };
 
+  const getStudentName = (report: any) => {
+    return report.students?.profiles
+      ? `${report.students.profiles.first_name} ${report.students.profiles.last_name}`
+      : 'Unknown';
+  };
+
   const handlePreview = (report: any) => {
-    if (report.file_url) {
-      window.open(report.file_url, '_blank');
+    const reportData = (report as any).report_data;
+    if (reportData) {
+      setPreviewData(reportData);
+      setPreviewStudentName(getStudentName(report));
+      setPreviewOpen(true);
     } else {
-      toast.info('No PDF available yet. Generate the report first.');
+      toast.info('No report data available. Please regenerate the report from the Generate tab.');
     }
   };
 
   const handlePrint = (report: any) => {
-    if (report.file_url) {
-      const printWindow = window.open(report.file_url, '_blank');
-      printWindow?.addEventListener('load', () => printWindow.print());
+    const reportData = (report as any).report_data;
+    if (reportData) {
+      setPreviewData(reportData);
+      setPreviewStudentName(getStudentName(report));
+      setPreviewOpen(true);
+      toast.info('Use the Print button in the preview dialog.');
     } else {
-      toast.info('No PDF available to print');
+      toast.info('No report data available. Please regenerate the report.');
     }
   };
 
   const handleDownload = (report: any) => {
-    if (report.file_url) {
-      const link = document.createElement('a');
-      link.href = report.file_url;
-      link.download = `report-card-${report.students?.student_id || 'unknown'}.pdf`;
-      link.click();
+    const reportData = (report as any).report_data;
+    if (reportData) {
+      setPreviewData(reportData);
+      setPreviewStudentName(getStudentName(report));
+      setPreviewOpen(true);
+      toast.info('Use the Download button in the preview dialog to save as PDF.');
     } else {
-      toast.info('No PDF available to download');
+      toast.info('No report data available. Please regenerate the report.');
     }
   };
 
   const handleShare = async (report: any) => {
-    const studentName = report.students?.profiles
-      ? `${report.students.profiles.first_name} ${report.students.profiles.last_name}`
-      : 'Student';
+    const studentName = getStudentName(report);
     const text = `Report Card for ${studentName} - ${report.term}`;
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: text, text, url: report.file_url || window.location.href });
+        await navigator.share({ title: text, text, url: window.location.href });
       } catch { /* cancelled */ }
     } else if (report.verification_code) {
       await navigator.clipboard.writeText(report.verification_code);
-      toast.success('Verification code copied to clipboard');
+      toast.success('Verification code copied to clipboard: ' + report.verification_code);
     } else {
       toast.info('Share not available');
     }
   };
 
   const handleEdit = (report: any) => {
-    toast.info(`Edit report for ${report.students?.profiles?.first_name || 'student'} — regenerate from the Generate tab`);
+    toast.info(`To edit this report, go to the Generate tab and regenerate the report for ${getStudentName(report)}.`);
   };
 
   // Get unique terms for filter
@@ -231,9 +246,7 @@ const GeneratedReportCards = () => {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((report: any) => {
-                    const studentName = report.students?.profiles
-                      ? `${report.students.profiles.first_name} ${report.students.profiles.last_name}`
-                      : 'Unknown';
+                    const studentName = getStudentName(report);
                     const studentNumber = report.students?.student_id || 'N/A';
 
                     return (
@@ -306,6 +319,14 @@ const GeneratedReportCards = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Preview Dialog */}
+      <ReportCardPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        reportData={previewData}
+        studentName={previewStudentName}
+      />
     </div>
   );
 };

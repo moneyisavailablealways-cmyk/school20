@@ -41,6 +41,7 @@ const ReportCardFees = () => {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [classComboOpen, setClassComboOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterYear, setFilterYear] = useState<string>('all');
   const [filterTerm, setFilterTerm] = useState<string>('all');

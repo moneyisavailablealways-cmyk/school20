@@ -187,6 +187,40 @@ const MySubmissions = ({ teacherId, currentYearId, selectedTerm, onEditSubmissio
         .eq('id', submission.id);
 
       if (updateError) throw updateError;
+
+      // Notify admin and head teacher about the reset
+      const teacherName = profile?.first_name && profile?.last_name
+        ? `${profile.first_name} ${profile.last_name}`
+        : 'A teacher';
+
+      const notificationTitle = '🔄 Marks Reset for Correction';
+      const notificationMessage = `${teacherName} has reset approved marks for ${submission.student_name} – ${submission.subject_name} (Previous: ${submission.marks ?? 'N/A'}, Grade: ${submission.grade ?? 'N/A'}).${reason ? ` Reason: ${reason}` : ''}`;
+
+      const { data: staffUsers } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('school_id', submission.school_id)
+        .in('role', ['admin', 'head_teacher', 'principal'])
+        .eq('is_active', true);
+
+      if (staffUsers && staffUsers.length > 0) {
+        const notifications = staffUsers
+          .filter(u => u.id !== profile?.id)
+          .map(u => ({
+            user_id: u.id,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: 'warning' as const,
+            category: 'marks_correction',
+            reference_id: submission.id,
+            reference_type: 'marks_reset',
+            school_id: submission.school_id,
+          }));
+
+        if (notifications.length > 0) {
+          await supabase.from('notifications').insert(notifications);
+        }
+      }
     },
     onSuccess: () => {
       toast.success('Marks have been reset successfully. You can now enter the correct marks.');

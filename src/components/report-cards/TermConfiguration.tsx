@@ -289,7 +289,7 @@ const TermConfiguration = () => {
                     </TableCell>
                     <TableCell>
                       {term.is_current && (
-                        <Badge className="bg-green-600">Current</Badge>
+                        <Badge className="bg-primary">Current</Badge>
                       )}
                     </TableCell>
                     <TableCell>

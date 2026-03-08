@@ -6,83 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface ReportData {
-  student: {
-    name: string;
-    gender: string;
-    section: string;
-    class: string;
-    house: string;
-    age: number;
-    photoUrl: string;
-    admissionNo: string;
-  };
-  school: {
-    name: string;
-    motto: string;
-    address: string;
-    phone: string;
-    email: string;
-    website: string;
-    logoUrl: string;
-    footerMotto: string;
-  };
-  term: {
-    name: string;
-    year: string;
-    printedDate: string;
-    endDate: string;
-    nextTermStart: string;
-    feesBalance: string;
-    feesNextTerm: string;
-    otherRequirements: string;
-  };
-  fees: {
-    totalRequired: number;
-    totalScholarship: number;
-    adjustedFees: number;
-    totalPaid: number;
-    calculatedBalance: number;
-    hasOverride: boolean;
-    overrideAmount: number;
-    finalBalance: number;
-  };
-  subjects: Array<{
-    code: string;
-    name: string;
-    a1: number | null;
-    a2: number | null;
-    a3: number | null;
-    avg: number | null;
-    ca20: number | null;
-    exam80: number | null;
-    total100: number | null;
-    identifier: number;
-    grade: string;
-    remark: string;
-    teacherInitials: string;
-  }>;
-  summary: {
-    overallAvg: number;
-    overallGrade: string;
-    overallIdentifier: number;
-    overallAchievement: string;
-    classTeacherComment: string;
-    headTeacherComment: string;
-  };
-  gradingScale: Array<{
-    grade: string;
-    minScore: number;
-    maxScore: number;
-  }>;
-}
-
 // Helper: fetch student data
 async function fetchStudentData(supabase: any, studentId: string) {
   const { data, error } = await supabase
     .from('students')
     .select(`
-      id, student_id, gender, date_of_birth, section, house, photo_url, profile_id,
+      id, student_id, gender, date_of_birth, section, house, photo_url, profile_id, school_id,
       profiles:profile_id(first_name, last_name)
     `)
     .eq('id', studentId)
@@ -95,7 +24,7 @@ async function fetchStudentData(supabase: any, studentId: string) {
 async function fetchEnrollment(supabase: any, studentId: string, academicYearId: string) {
   const { data } = await supabase
     .from('student_enrollments')
-    .select(`class_id, stream_id, classes(name, level_id, levels(name)), streams(name)`)
+    .select(`class_id, stream_id, classes(id, name, level_id, class_teacher_id, levels(name)), streams(name)`)
     .eq('student_id', studentId)
     .eq('academic_year_id', academicYearId)
     .eq('status', 'active')
@@ -103,9 +32,8 @@ async function fetchEnrollment(supabase: any, studentId: string, academicYearId:
   return data;
 }
 
-// Helper: calculate fees balance automatically
+// Helper: calculate fees balance
 async function calculateFeesBalance(supabase: any, studentId: string, academicYearId: string, term: string) {
-  // Get total fees from invoices
   const { data: invoices } = await supabase
     .from('invoices')
     .select('total_amount')
@@ -115,7 +43,6 @@ async function calculateFeesBalance(supabase: any, studentId: string, academicYe
 
   const totalRequired = (invoices || []).reduce((sum: number, inv: any) => sum + Number(inv.total_amount || 0), 0);
 
-  // Get scholarship amounts
   const { data: scholarships } = await supabase
     .from('student_scholarships')
     .select('amount')
@@ -126,7 +53,6 @@ async function calculateFeesBalance(supabase: any, studentId: string, academicYe
   const totalScholarship = (scholarships || []).reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
   const adjustedFees = Math.max(totalRequired - totalScholarship, 0);
 
-  // Get total payments
   const { data: payments } = await supabase
     .from('payments')
     .select('amount')
@@ -136,7 +62,6 @@ async function calculateFeesBalance(supabase: any, studentId: string, academicYe
   const totalPaid = (payments || []).reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
   const calculatedBalance = Math.max(adjustedFees - totalPaid, 0);
 
-  // Check for manual override
   const { data: override } = await supabase
     .from('student_fee_overrides')
     .select('override_amount')
@@ -149,16 +74,81 @@ async function calculateFeesBalance(supabase: any, studentId: string, academicYe
   const overrideAmount = override ? Number(override.override_amount) : 0;
   const finalBalance = hasOverride ? overrideAmount : calculatedBalance;
 
-  return {
-    totalRequired,
-    totalScholarship,
-    adjustedFees,
-    totalPaid,
-    calculatedBalance,
-    hasOverride,
-    overrideAmount,
-    finalBalance,
-  };
+  return { totalRequired, totalScholarship, adjustedFees, totalPaid, calculatedBalance, hasOverride, overrideAmount, finalBalance };
+}
+
+// Helper: fetch attendance summary
+async function fetchAttendanceSummary(supabase: any, studentId: string, schoolId: string) {
+  const { data: records } = await supabase
+    .from('attendance_records')
+    .select('status')
+    .eq('student_id', studentId)
+    .eq('school_id', schoolId);
+
+  if (!records || records.length === 0) {
+    return { totalDays: 0, present: 0, absent: 0, late: 0, excused: 0, percentage: 0 };
+  }
+
+  const totalDays = records.length;
+  const present = records.filter((r: any) => r.status === 'present').length;
+  const absent = records.filter((r: any) => r.status === 'absent').length;
+  const late = records.filter((r: any) => r.status === 'late').length;
+  const excused = records.filter((r: any) => r.status === 'excused').length;
+  const percentage = totalDays > 0 ? Math.round((present + late) / totalDays * 100 * 10) / 10 : 0;
+
+  return { totalDays, present, absent, late, excused, percentage };
+}
+
+// Helper: fetch digital signatures
+async function fetchSignatures(supabase: any, schoolId: string, classTeacherId: string | null) {
+  const result: any = { classTeacher: null, headTeacher: null };
+
+  // Head teacher signature - any admin/principal/head_teacher with active signature
+  const { data: htSigs } = await supabase
+    .from('digital_signatures')
+    .select('signature_data, signature_type, font_family, user_id, profiles:user_id(first_name, last_name, role)')
+    .eq('school_id', schoolId)
+    .eq('is_active', true);
+
+  if (htSigs) {
+    const headSig = htSigs.find((s: any) => 
+      s.profiles?.role === 'head_teacher' || s.profiles?.role === 'principal'
+    );
+    if (headSig) {
+      result.headTeacher = {
+        signatureData: headSig.signature_data,
+        signatureType: headSig.signature_type,
+        fontFamily: headSig.font_family,
+        name: `${headSig.profiles?.first_name || ''} ${headSig.profiles?.last_name || ''}`.trim(),
+      };
+    }
+  }
+
+  // Class teacher signature
+  if (classTeacherId && htSigs) {
+    const ctSig = htSigs.find((s: any) => s.user_id === classTeacherId);
+    if (ctSig) {
+      result.classTeacher = {
+        signatureData: ctSig.signature_data,
+        signatureType: ctSig.signature_type,
+        fontFamily: ctSig.font_family,
+        name: `${ctSig.profiles?.first_name || ''} ${ctSig.profiles?.last_name || ''}`.trim(),
+      };
+    }
+  }
+
+  return result;
+}
+
+// Helper: fetch school stamp
+async function fetchSchoolStamp(supabase: any, schoolId: string) {
+  const { data } = await supabase
+    .from('school_stamps')
+    .select('stamp_url')
+    .eq('school_id', schoolId)
+    .eq('is_active', true)
+    .maybeSingle();
+  return data?.stamp_url || null;
 }
 
 // Helper: process subjects
@@ -199,7 +189,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { studentId, academicYearId, term, generatedBy } = await req.json();
+    const { studentId, academicYearId, term, generatedBy, classTeacherComment: overrideCtComment, headTeacherComment: overrideHtComment } = await req.json();
 
     if (!studentId || !academicYearId || !term) {
       throw new Error('Missing required parameters: studentId, academicYearId, term');
@@ -207,20 +197,30 @@ serve(async (req) => {
 
     console.log(`Generating report for student: ${studentId}, year: ${academicYearId}, term: ${term}`);
 
-    // Fetch all data in parallel
-    const [studentData, enrollment, schoolSettings, termConfig, academicYear, submissions, gradingConfig, comments, feesData] = await Promise.all([
+    // Fetch core data in parallel
+    const [studentData, enrollment, academicYear, submissions, gradingConfig, comments] = await Promise.all([
       fetchStudentData(supabase, studentId),
       fetchEnrollment(supabase, studentId, academicYearId),
-      supabase.from('school_settings').select('*').maybeSingle().then((r: any) => r.data),
-      supabase.from('term_configurations').select('*').eq('academic_year_id', academicYearId).eq('term_name', term).maybeSingle().then((r: any) => r.data),
       supabase.from('academic_years').select('name').eq('id', academicYearId).single().then((r: any) => r.data),
       supabase.from('subject_submissions').select(`*, subjects(id, name, code)`).eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', term).eq('status', 'approved').then((r: any) => { if (r.error) throw new Error(`Submissions fetch error: ${r.error.message}`); return r.data; }),
       supabase.from('grading_config').select('*').eq('is_active', true).order('max_marks', { ascending: false }).then((r: any) => r.data),
       supabase.from('report_comments').select('*').eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', term).then((r: any) => r.data),
-      calculateFeesBalance(supabase, studentId, academicYearId, term),
     ]);
 
-    // Fetch report_card_fees for next term fees and other requirements (still from bursar manual config)
+    const schoolId = studentData.school_id;
+    const classTeacherId = enrollment?.classes?.class_teacher_id || null;
+
+    // Fetch school-specific data in parallel
+    const [schoolSettings, termConfig, feesData, attendanceSummary, signatures, stampUrl] = await Promise.all([
+      supabase.from('school_settings').select('*').eq('school_id', schoolId).maybeSingle().then((r: any) => r.data),
+      supabase.from('term_configurations').select('*').eq('academic_year_id', academicYearId).eq('term_name', term).maybeSingle().then((r: any) => r.data),
+      calculateFeesBalance(supabase, studentId, academicYearId, term),
+      fetchAttendanceSummary(supabase, studentId, schoolId),
+      fetchSignatures(supabase, schoolId, classTeacherId),
+      fetchSchoolStamp(supabase, schoolId),
+    ]);
+
+    // Fetch report_card_fees
     const classId = enrollment?.class_id;
     let reportCardFees: any = null;
     if (classId) {
@@ -239,8 +239,8 @@ serve(async (req) => {
     }
 
     // Calculate age
-    const dob = new Date(studentData.date_of_birth);
-    const age = new Date().getFullYear() - dob.getFullYear();
+    const dob = studentData.date_of_birth ? new Date(studentData.date_of_birth) : null;
+    const age = dob ? Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
 
     // Process subjects
     const processedSubjects = processSubjects(submissions);
@@ -263,21 +263,36 @@ serve(async (req) => {
       ? Math.round(processedSubjects.reduce((sum, s) => sum + (s.identifier || 2), 0) / processedSubjects.length)
       : 2;
 
-    const classTeacherComment = comments?.find((c: any) => c.comment_type === 'class_teacher')?.comment || '';
-    const headTeacherComment = comments?.find((c: any) => c.comment_type === 'head_teacher')?.comment || '';
+    const classTeacherComment = overrideCtComment || comments?.find((c: any) => c.comment_type === 'class_teacher')?.comment || '';
+    const headTeacherComment = overrideHtComment || comments?.find((c: any) => c.comment_type === 'head_teacher')?.comment || '';
 
     // Format fees balance for display
     const feesBalanceDisplay = feesData.finalBalance > 0
       ? `UGX ${feesData.finalBalance.toLocaleString()}`
       : 'Fully Paid';
 
+    // Get class teacher name
+    let classTeacherName = '';
+    if (classTeacherId) {
+      const { data: ctProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', classTeacherId)
+        .single();
+      if (ctProfile) {
+        classTeacherName = `${ctProfile.first_name} ${ctProfile.last_name}`;
+      }
+    }
+
     // Build report data
-    const reportData: ReportData = {
+    const reportData = {
       student: {
-        name: `${studentData.profiles?.first_name || ''} ${studentData.profiles?.last_name || ''}`.toUpperCase(),
-        gender: (studentData.gender || 'Not specified').toUpperCase(),
+        name: `${studentData.profiles?.first_name || ''} ${studentData.profiles?.last_name || ''}`.trim(),
+        gender: studentData.gender || 'Not specified',
         section: studentData.section || 'Day',
         class: (enrollment?.classes as any)?.name || '',
+        stream: (enrollment?.streams as any)?.name || '',
+        level: (enrollment?.classes as any)?.levels?.name || '',
         house: studentData.house || '',
         age,
         photoUrl: studentData.photo_url || '',
@@ -291,12 +306,13 @@ serve(async (req) => {
         email: schoolSettings?.email || '',
         website: schoolSettings?.website || '',
         logoUrl: schoolSettings?.logo_url || '',
-        footerMotto: schoolSettings?.footer_motto || 'Work hard to excel',
+        footerMotto: schoolSettings?.footer_motto || '',
+        badge: schoolSettings?.badge_url || '',
       },
       term: {
         name: term,
         year: academicYear?.name || '',
-        printedDate: new Date().toLocaleDateString('en-GB'),
+        printedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         endDate: termConfig?.end_date || '',
         nextTermStart: termConfig?.next_term_start_date || '',
         feesBalance: feesBalanceDisplay,
@@ -313,6 +329,7 @@ serve(async (req) => {
         overrideAmount: feesData.overrideAmount,
         finalBalance: feesData.finalBalance,
       },
+      attendance: attendanceSummary,
       subjects: processedSubjects,
       summary: {
         overallAvg: Math.round(overallAvg * 10) / 10,
@@ -321,7 +338,13 @@ serve(async (req) => {
         overallAchievement: overallRemark,
         classTeacherComment,
         headTeacherComment,
+        classTeacherName,
       },
+      signatures: {
+        classTeacher: signatures.classTeacher,
+        headTeacher: signatures.headTeacher,
+      },
+      stampUrl,
       gradingScale: gradingConfig?.map((gc: any) => ({
         grade: gc.grade,
         minScore: gc.min_marks,
@@ -332,15 +355,17 @@ serve(async (req) => {
     // Generate verification code
     const verificationCode = `${studentId.substring(0, 8)}-${Date.now().toString(36).toUpperCase()}`;
 
-    // Store generated report record with full report data
+    // Store generated report
     const { data: report, error: reportError } = await supabase
       .from('generated_reports')
       .upsert({
         student_id: studentId,
         academic_year_id: academicYearId,
         term: term,
+        school_id: schoolId,
         overall_average: reportData.summary.overallAvg,
         overall_grade: reportData.summary.overallGrade,
+        attendance_percentage: attendanceSummary.percentage,
         status: 'draft',
         generated_by: generatedBy,
         generated_at: new Date().toISOString(),
@@ -362,7 +387,7 @@ serve(async (req) => {
       action: 'generate_report',
       target_type: 'report',
       target_id: report?.id || studentId,
-      details: { term, academicYearId, verificationCode, feesBalance: feesData },
+      details: { term, academicYearId, verificationCode },
     });
 
     console.log('Report generated successfully:', verificationCode);

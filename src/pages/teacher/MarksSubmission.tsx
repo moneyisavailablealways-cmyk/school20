@@ -763,6 +763,15 @@ const MarksSubmission = () => {
           </div>
         </>
       )}
+
+      {/* My Submissions Section */}
+      {selectedTerm && currentYear?.id && profile?.id && (
+        <MySubmissions
+          teacherId={profile.id}
+          currentYearId={currentYear.id}
+          selectedTerm={selectedTerm}
+        />
+      )}
     </div>
   );
 };

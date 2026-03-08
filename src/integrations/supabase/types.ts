@@ -515,6 +515,50 @@ export type Database = {
           },
         ]
       }
+      auto_comment_rules: {
+        Row: {
+          comment_text: string
+          created_at: string
+          id: string
+          is_active: boolean
+          max_score: number
+          min_score: number
+          priority: number
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          comment_text: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_score: number
+          min_score: number
+          priority?: number
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          comment_text?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_score?: number
+          min_score?: number
+          priority?: number
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_comment_rules_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       behavior_notes: {
         Row: {
           category: string
@@ -640,6 +684,57 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_signatures: {
+        Row: {
+          created_at: string
+          font_family: string | null
+          id: string
+          is_active: boolean
+          school_id: string | null
+          signature_data: string
+          signature_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          font_family?: string | null
+          id?: string
+          is_active?: boolean
+          school_id?: string | null
+          signature_data: string
+          signature_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          font_family?: string | null
+          id?: string
+          is_active?: boolean
+          school_id?: string | null
+          signature_data?: string
+          signature_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_signatures_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_signatures_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1738,6 +1833,101 @@ export type Database = {
           },
         ]
       }
+      promotion_records: {
+        Row: {
+          created_at: string
+          from_academic_year_id: string
+          from_class_id: string | null
+          id: string
+          notes: string | null
+          promoted_at: string
+          promoted_by: string | null
+          promotion_type: string
+          school_id: string
+          student_id: string
+          to_academic_year_id: string | null
+          to_class_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_academic_year_id: string
+          from_class_id?: string | null
+          id?: string
+          notes?: string | null
+          promoted_at?: string
+          promoted_by?: string | null
+          promotion_type?: string
+          school_id: string
+          student_id: string
+          to_academic_year_id?: string | null
+          to_class_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_academic_year_id?: string
+          from_class_id?: string | null
+          id?: string
+          notes?: string | null
+          promoted_at?: string
+          promoted_by?: string | null
+          promotion_type?: string
+          school_id?: string
+          student_id?: string
+          to_academic_year_id?: string | null
+          to_class_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_records_from_academic_year_id_fkey"
+            columns: ["from_academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_records_from_class_id_fkey"
+            columns: ["from_class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_records_promoted_by_fkey"
+            columns: ["promoted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_records_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_records_to_academic_year_id_fkey"
+            columns: ["to_academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_records_to_class_id_fkey"
+            columns: ["to_class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_audit_log: {
         Row: {
           action: string
@@ -1776,6 +1966,77 @@ export type Database = {
           {
             foreignKeyName: "report_audit_log_actor_id_fkey"
             columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_card_fees: {
+        Row: {
+          academic_year_id: string
+          class_id: string | null
+          created_at: string
+          fees_balance_note: string | null
+          fees_next_term: string | null
+          id: string
+          other_requirements: string | null
+          school_id: string
+          term: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          class_id?: string | null
+          created_at?: string
+          fees_balance_note?: string | null
+          fees_next_term?: string | null
+          id?: string
+          other_requirements?: string | null
+          school_id: string
+          term: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          class_id?: string | null
+          created_at?: string
+          fees_balance_note?: string | null
+          fees_next_term?: string | null
+          id?: string
+          other_requirements?: string | null
+          school_id?: string
+          term?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_card_fees_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_card_fees_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_card_fees_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_card_fees_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2223,6 +2484,51 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_stamps: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          school_id: string
+          stamp_url: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          school_id: string
+          stamp_url: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          school_id?: string
+          stamp_url?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_stamps_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: true
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_stamps_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3554,6 +3860,10 @@ export type Database = {
         Returns: Json
       }
       generate_invoice_number: { Args: never; Returns: string }
+      get_auto_comment: {
+        Args: { p_school_id: string; p_score: number }
+        Returns: string
+      }
       get_current_profile_id: { Args: never; Returns: string }
       get_current_school_id: { Args: never; Returns: string }
       get_next_queue_position: {

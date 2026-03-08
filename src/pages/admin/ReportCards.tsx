@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, CheckCircle, Settings, BarChart3, Layout, Building2, Calendar } from 'lucide-react';
+import { FileText, CheckCircle, Settings, BarChart3, Layout, Building2, Calendar, PenTool, MessageSquareText } from 'lucide-react';
 import SubmissionsApproval from '@/components/report-cards/SubmissionsApproval';
 import ReportGeneration from '@/components/report-cards/ReportGeneration';
 import GradingConfig from '@/components/report-cards/GradingConfig';
@@ -8,6 +8,8 @@ import ReportTemplates from '@/components/report-cards/ReportTemplates';
 import ReportAnalytics from '@/components/report-cards/ReportAnalytics';
 import SchoolSettings from '@/components/report-cards/SchoolSettings';
 import TermConfiguration from '@/components/report-cards/TermConfiguration';
+import SignaturesStamps from '@/components/report-cards/SignaturesStamps';
+import AutoCommentRules from '@/components/report-cards/AutoCommentRules';
 
 const ReportCards = () => {
   const [activeTab, setActiveTab] = useState('approvals');
@@ -22,7 +24,7 @@ const ReportCards = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
+        <TabsList className="flex flex-wrap gap-1 h-auto p-1">
           <TabsTrigger value="approvals" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
             <span className="hidden sm:inline">Approvals</span>
@@ -43,6 +45,14 @@ const ReportCards = () => {
             <Calendar className="h-4 w-4" />
             <span className="hidden sm:inline">Terms</span>
           </TabsTrigger>
+          <TabsTrigger value="comments" className="flex items-center gap-2">
+            <MessageSquareText className="h-4 w-4" />
+            <span className="hidden sm:inline">Comments</span>
+          </TabsTrigger>
+          <TabsTrigger value="signatures" className="flex items-center gap-2">
+            <PenTool className="h-4 w-4" />
+            <span className="hidden sm:inline">Signatures</span>
+          </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <Layout className="h-4 w-4" />
             <span className="hidden sm:inline">Templates</span>
@@ -56,27 +66,27 @@ const ReportCards = () => {
         <TabsContent value="approvals">
           <SubmissionsApproval />
         </TabsContent>
-
         <TabsContent value="generate">
           <ReportGeneration />
         </TabsContent>
-
         <TabsContent value="analytics">
           <ReportAnalytics />
         </TabsContent>
-
         <TabsContent value="grading">
           <GradingConfig />
         </TabsContent>
-
         <TabsContent value="terms">
           <TermConfiguration />
         </TabsContent>
-
+        <TabsContent value="comments">
+          <AutoCommentRules />
+        </TabsContent>
+        <TabsContent value="signatures">
+          <SignaturesStamps />
+        </TabsContent>
         <TabsContent value="templates">
           <ReportTemplates />
         </TabsContent>
-
         <TabsContent value="school">
           <SchoolSettings />
         </TabsContent>

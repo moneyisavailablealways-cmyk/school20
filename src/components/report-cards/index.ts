@@ -6,3 +6,5 @@ export { default as ReportAnalytics } from './ReportAnalytics';
 export { default as SchoolSettings } from './SchoolSettings';
 export { default as TermConfiguration } from './TermConfiguration';
 export { default as ReportCardPreview } from './ReportCardPreview';
+export { default as SignaturesStamps } from './SignaturesStamps';
+export { default as AutoCommentRules } from './AutoCommentRules';

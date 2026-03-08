@@ -788,6 +788,16 @@ const MarksSubmission = () => {
         </>
       )}
 
+      {/* Class Teacher Signature Section */}
+      {isClassTeacher && selectedClass && (
+        <ClassTeacherSignature
+          profileId={profile!.id}
+          schoolId={profile!.school_id}
+          existingSignature={existingSignature}
+          onSaved={() => refetchSignature()}
+        />
+      )}
+
       {/* My Submissions Section */}
       {selectedTerm && currentYear?.id && profile?.id && (
         <MySubmissions
@@ -797,6 +807,139 @@ const MarksSubmission = () => {
         />
       )}
     </div>
+  );
+};
+
+// Class Teacher Signature sub-component
+interface ClassTeacherSignatureProps {
+  profileId: string;
+  schoolId: string | null;
+  existingSignature: any;
+  onSaved: () => void;
+}
+
+const ClassTeacherSignature = ({ profileId, schoolId, existingSignature, onSaved }: ClassTeacherSignatureProps) => {
+  const [signatureTab, setSignatureTab] = useState<string>('draw');
+  const [saving, setSaving] = useState(false);
+
+  const saveSignature = async (signatureData: string, signatureType: string, fontFamily?: string) => {
+    setSaving(true);
+    try {
+      // Deactivate any existing signatures
+      await supabase
+        .from('digital_signatures')
+        .update({ is_active: false })
+        .eq('user_id', profileId);
+
+      // Insert new signature
+      const { error } = await supabase.from('digital_signatures').insert({
+        user_id: profileId,
+        school_id: schoolId,
+        signature_data: signatureData,
+        signature_type: signatureType,
+        font_family: fontFamily || null,
+        is_active: true,
+      });
+
+      if (error) throw error;
+      toast.success('Signature saved successfully');
+      onSaved();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save signature');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteSignature = async () => {
+    if (!existingSignature?.id) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('digital_signatures')
+        .delete()
+        .eq('id', existingSignature.id);
+      if (error) throw error;
+      toast.success('Signature removed');
+      onSaved();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete signature');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <PenTool className="h-5 w-5" />
+          Class Teacher Signature
+        </CardTitle>
+        <CardDescription>
+          As a class teacher, set your digital signature for report cards. This signature will appear on all student report cards for your class.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Current signature preview */}
+        {existingSignature && (
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Current Signature</Label>
+            <div className="flex items-center gap-4">
+              <div className="border rounded-lg p-3 bg-card">
+                <img
+                  src={existingSignature.signature_data}
+                  alt="Current signature"
+                  className="max-h-16 w-auto"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="default" className="gap-1">
+                  <Check className="h-3 w-3" />
+                  Active
+                </Badge>
+                <Badge variant="secondary">
+                  {existingSignature.signature_type === 'drawn' ? 'Hand-drawn' : 'Typed'}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={deleteSignature}
+                  disabled={saving}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  Remove
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Signature input */}
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">
+            {existingSignature ? 'Update Signature' : 'Create Signature'}
+          </Label>
+          <Tabs value={signatureTab} onValueChange={setSignatureTab}>
+            <TabsList className="grid w-full grid-cols-2 max-w-xs">
+              <TabsTrigger value="draw">Draw</TabsTrigger>
+              <TabsTrigger value="type">Type</TabsTrigger>
+            </TabsList>
+            <TabsContent value="draw" className="mt-3">
+              <SignaturePad
+                onSave={(data) => saveSignature(data, 'drawn')}
+              />
+            </TabsContent>
+            <TabsContent value="type" className="mt-3">
+              <TypeToSign
+                onSave={(text, fontFamily, imageData) => saveSignature(imageData, 'typed', fontFamily)}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

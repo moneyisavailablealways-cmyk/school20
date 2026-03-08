@@ -284,6 +284,9 @@ const SubjectManagement = () => {
           <h1 className="text-3xl font-bold">Subject Management</h1>
           <p className="text-muted-foreground">
             Manage school subjects and curriculum
+            {schoolLevel && (
+              <Badge variant="outline" className="ml-2 capitalize">{schoolLevel.replace('_', ' ')} School</Badge>
+            )}
           </p>
         </div>
         <Button onClick={handleNewSubject} className="gap-2">
@@ -291,6 +294,17 @@ const SubjectManagement = () => {
           Add Subject
         </Button>
       </div>
+
+      {schoolLevel && subjects.length === 0 && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Your school is registered as a <strong className="capitalize">{schoolLevel.replace('_', ' ')}</strong> school. 
+            Suggested subjects for your level: {SUGGESTED_SUBJECTS[schoolLevel]?.map(s => s.name).join(', ')}.
+            Click "Add Subject" to get started.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>

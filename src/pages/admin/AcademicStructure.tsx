@@ -112,10 +112,12 @@ const AcademicStructure = () => {
   const [isLevelDialogOpen, setIsLevelDialogOpen] = useState(false);
   const [isClassDialogOpen, setIsClassDialogOpen] = useState(false);
   const [isStreamDialogOpen, setIsStreamDialogOpen] = useState(false);
+  const [isTermDialogOpen, setIsTermDialogOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<AcademicYear | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<Level | null>(null);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [selectedStream, setSelectedStream] = useState<Stream | null>(null);
+  const [selectedTerm, setSelectedTerm] = useState<AcademicTerm | null>(null);
   
   const [yearForm, setYearForm] = useState({
     name: '',

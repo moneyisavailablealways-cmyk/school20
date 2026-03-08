@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { FileText, Check, Eye, Layout, Building2 } from 'lucide-react';
+import TemplatePreviewDialog from './TemplatePreviewDialog';
 
 const templatePreviews = {
   classic: {

@@ -124,7 +124,7 @@ const DigitalSignatureManager = () => {
         {existingSignature?.signature_data && (
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle className="h-4 w-4 text-green-600" />
+              <CheckCircle className="h-4 w-4 text-accent" />
               <span>Current signature ({existingSignature.signature_type === 'drawn' ? 'Hand-drawn' : 'Typed'})</span>
             </div>
             <div className="border rounded-lg p-4 bg-card flex items-center justify-between">

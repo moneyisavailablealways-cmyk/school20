@@ -21,8 +21,13 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
           <p style={{ fontSize: '9.5px', margin: '1px 0' }}>Email: {school.email}{school.website ? ` | Website: ${school.website}` : ''}</p>
         </div>
         <div style={{ width: '80px', flexShrink: 0, textAlign: 'right' }}>
-          {school.badge ? <img src={school.badge} alt="Badge" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
-            : student.photoUrl ? <img src={student.photoUrl} alt="Student" style={{ width: '65px', height: '80px', objectFit: 'cover', border: '1px solid #999' }} /> : null}
+          {student.photoUrl ? (
+            <img src={student.photoUrl} alt="Student" style={{ width: '70px', height: '85px', objectFit: 'cover', border: '1.5px solid #000', borderRadius: '2px' }} />
+          ) : (
+            <div style={{ width: '70px', height: '85px', border: '1.5px solid #000', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#999', textAlign: 'center' }}>
+              Student<br />Photo
+            </div>
+          )}
         </div>
       </div>
 

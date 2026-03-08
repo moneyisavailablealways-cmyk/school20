@@ -2886,6 +2886,7 @@ export type Database = {
           phone: string | null
           region: string | null
           school_code: string
+          school_level: string
           school_name: string
           slug: string
           status: string
@@ -2908,6 +2909,7 @@ export type Database = {
           phone?: string | null
           region?: string | null
           school_code: string
+          school_level?: string
           school_name: string
           slug: string
           status?: string
@@ -2930,6 +2932,7 @@ export type Database = {
           phone?: string | null
           region?: string | null
           school_code?: string
+          school_level?: string
           school_name?: string
           slug?: string
           status?: string

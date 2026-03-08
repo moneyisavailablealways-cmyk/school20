@@ -1,0 +1,1 @@
+ALTER TABLE public.schools ADD COLUMN school_level text NOT NULL DEFAULT 'secondary';

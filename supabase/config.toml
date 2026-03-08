@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.ai-risk-insights]
 verify_jwt = false
+
+[functions.term-notifications]
+verify_jwt = false

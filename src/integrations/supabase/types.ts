@@ -3000,6 +3000,94 @@ export type Database = {
         }
         Relationships: []
       }
+      student_risk_assessments: {
+        Row: {
+          academic_year_id: string
+          assessed_at: string | null
+          attendance_rate: number | null
+          avg_marks: number | null
+          below_average_subjects: number | null
+          created_at: string | null
+          failing_subjects: number | null
+          id: string
+          insights: Json | null
+          marks_trend: number | null
+          prev_avg_marks: number | null
+          recommendations: Json | null
+          risk_level: string
+          risk_score: number
+          school_id: string | null
+          student_id: string
+          term: string
+          total_subjects: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          assessed_at?: string | null
+          attendance_rate?: number | null
+          avg_marks?: number | null
+          below_average_subjects?: number | null
+          created_at?: string | null
+          failing_subjects?: number | null
+          id?: string
+          insights?: Json | null
+          marks_trend?: number | null
+          prev_avg_marks?: number | null
+          recommendations?: Json | null
+          risk_level?: string
+          risk_score?: number
+          school_id?: string | null
+          student_id: string
+          term: string
+          total_subjects?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          assessed_at?: string | null
+          attendance_rate?: number | null
+          avg_marks?: number | null
+          below_average_subjects?: number | null
+          created_at?: string | null
+          failing_subjects?: number | null
+          id?: string
+          insights?: Json | null
+          marks_trend?: number | null
+          prev_avg_marks?: number | null
+          recommendations?: Json | null
+          risk_level?: string
+          risk_score?: number
+          school_id?: string | null
+          student_id?: string
+          term?: string
+          total_subjects?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_risk_assessments_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_risk_assessments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_risk_assessments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_scholarships: {
         Row: {
           academic_year_id: string | null
@@ -3978,6 +4066,15 @@ export type Database = {
           total_paid: number
           total_scholarship: number
         }[]
+      }
+      calculate_student_risk: {
+        Args: {
+          p_academic_year_id: string
+          p_prev_term?: string
+          p_school_id: string
+          p_term: string
+        }
+        Returns: number
       }
       cancel_library_reservation: {
         Args: { p_reason?: string; p_reservation_id: string }

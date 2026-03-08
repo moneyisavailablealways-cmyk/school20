@@ -162,7 +162,7 @@ const TermConfiguration = () => {
                   <div className="space-y-2">
                     <Label>Academic Year</Label>
                     <Input
-                      value={editingTerm?.academic_years?.name || ''}
+                      value={(editingTerm as any)?.academic_years?.name || ''}
                       disabled
                       className="bg-muted"
                     />

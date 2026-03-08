@@ -50,6 +50,30 @@ const AdminDashboard = () => {
     loadDashboardStats();
     loadRecentActivities();
     loadSchoolName();
+
+    if (!profile?.school_id) return;
+
+    // Real-time subscription for activity_log
+    const channel = supabase
+      .channel(`activity-log-${profile.school_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'activity_log',
+          filter: `school_id=eq.${profile.school_id}`,
+        },
+        () => {
+          loadRecentActivities();
+          loadDashboardStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [profile?.school_id]);
 
   const loadSchoolName = async () => {
@@ -173,16 +197,7 @@ const AdminDashboard = () => {
       setRecentActivities(mappedActivities);
     } catch (error) {
       console.error('Error loading recent activities:', error);
-      // Fallback to static data if there's an error
-      setRecentActivities([
-        {
-          type: 'info',
-          message: 'System is ready for new activities',
-          time: 'Now',
-          icon: CheckCircle,
-          color: 'text-green-500',
-        }
-      ]);
+      setRecentActivities([]);
     }
   };
 
@@ -243,36 +258,6 @@ const AdminDashboard = () => {
     },
   ];
 
-  const recentActivitiesStatic = [
-    {
-      type: 'user_created',
-      message: 'New teacher account created for John Smith',
-      time: '2 hours ago',
-      icon: CheckCircle,
-      color: 'text-green-500',
-    },
-    {
-      type: 'student_enrolled',
-      message: '5 new students enrolled in Grade 3',
-      time: '4 hours ago',
-      icon: GraduationCap,
-      color: 'text-blue-500',
-    },
-    {
-      type: 'class_created',
-      message: 'New section added: Grade 2-C',
-      time: '1 day ago',
-      icon: Building,
-      color: 'text-purple-500',
-    },
-    {
-      type: 'pending',
-      message: '3 admission applications pending review',
-      time: '2 days ago',
-      icon: Clock,
-      color: 'text-orange-500',
-    },
-  ];
 
   if (loading) {
     return (
@@ -420,7 +405,7 @@ const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {(recentActivities.length > 0 ? recentActivities : recentActivitiesStatic).map((activity, index) => (
+            {recentActivities.length > 0 ? recentActivities.map((activity: any, index: number) => (
               <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                 <activity.icon className={`h-5 w-5 ${activity.color}`} />
                 <div className="flex-1">
@@ -428,7 +413,11 @@ const AdminDashboard = () => {
                   <p className="text-xs text-muted-foreground">{activity.time}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                No recent activity recorded yet.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

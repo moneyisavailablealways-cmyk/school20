@@ -36,7 +36,6 @@ const navigation = [
   { name: 'Teacher Attendance', href: '/admin/teacher-attendance', icon: Users },
   { name: 'Report Cards', href: '/admin/report-cards', icon: FileText },
   { name: 'Academic Risk', href: '/admin/academic-risk', icon: Brain },
-  { name: 'Academic Calendar', href: '/admin/academic-calendar', icon: Calendar },
   { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   { name: 'Communications', href: '/admin/communications', icon: MessageCircle },
   { name: 'Settings', href: '/admin/settings', icon: Settings },

@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, Calendar, BarChart3, Library, Clock, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import TermCountdownWidget from '@/components/academic-calendar/TermCountdownWidget';
 
 const StudentDashboard = () => {
   const { profile } = useAuth();
@@ -179,9 +178,6 @@ const StudentDashboard = () => {
           Here's your academic overview and today's schedule.
         </p>
       </div>
-
-      {/* Term Countdown */}
-      {profile?.school_id && <TermCountdownWidget schoolId={profile.school_id} compact />}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">

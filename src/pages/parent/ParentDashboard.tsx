@@ -16,7 +16,6 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import TermCountdownWidget from '@/components/academic-calendar/TermCountdownWidget';
 
 interface Student {
   id: string;
@@ -341,9 +340,6 @@ const ParentDashboard = () => {
           Stay updated on your children's academic progress and school activities.
         </p>
       </div>
-
-      {/* Term Countdown */}
-      {profile?.school_id && <TermCountdownWidget schoolId={profile.school_id} compact />}
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

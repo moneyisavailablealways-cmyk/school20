@@ -302,14 +302,14 @@ const FeeStructures = () => {
               Add Fee Structure
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>{editingFee ? 'Edit Fee Structure' : 'Add Fee Structure'}</DialogTitle>
               <DialogDescription>
                 {editingFee ? 'Update the fee structure details' : 'Create a new fee structure for students'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1">
               <div>
                 <Label htmlFor="name">Fee Name</Label>
                 <Input

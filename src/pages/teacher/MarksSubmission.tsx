@@ -1,18 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { Send, Plus, X, ArrowLeft, ArrowDownAZ } from 'lucide-react';
+import { Send, Plus, X, ArrowLeft, ArrowDownAZ, PenTool, Check, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MySubmissions from '@/components/teacher/MySubmissions';
+import SignaturePad from '@/components/report-cards/SignaturePad';
+import TypeToSign from '@/components/report-cards/TypeToSign';
 
 interface SubjectMarks {
   id: string;

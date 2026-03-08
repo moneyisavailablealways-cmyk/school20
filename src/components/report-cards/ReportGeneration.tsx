@@ -9,9 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil } from 'lucide-react';
+import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const ReportGeneration = () => {
@@ -488,19 +492,64 @@ const ReportGeneration = () => {
                               <Button size="icon" variant="ghost" className="h-8 w-8" title="Share" onClick={() => handleShare(student)}>
                                 <Share2 className="h-4 w-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit" onClick={() => {
-                                toast.info('Edit functionality - regenerate the report after making changes');
-                              }}>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                title="Edit (Regenerate)"
+                                disabled={isGenerating}
+                                onClick={() => {
+                                  toast.info(`Regenerating report for ${student.name}...`);
+                                  generateReports.mutate([student.studentId]);
+                                }}
+                              >
                                 <Pencil className="h-4 w-4" />
                               </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Report Card?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Delete the generated report card for {student.name}? This cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={async () => {
+                                        const { error } = await supabase
+                                          .from('generated_reports')
+                                          .delete()
+                                          .eq('student_id', student.studentId)
+                                          .eq('term', selectedTerm);
+                                        if (error) {
+                                          toast.error('Failed to delete report');
+                                        } else {
+                                          toast.success(`Report for ${student.name} deleted`);
+                                          queryClient.invalidateQueries({ queryKey: ['students-for-generation'] });
+                                          queryClient.invalidateQueries({ queryKey: ['generated-report-cards'] });
+                                        }
+                                      }}
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </>
                           )}
-                          {student.isReady && (
+                          {student.isReady && !student.reportStatus && (
                             <Button
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8"
-                              title={student.reportStatus ? 'Regenerate' : 'Generate'}
+                              title="Generate"
                               onClick={() => generateReports.mutate([student.studentId])}
                               disabled={isGenerating}
                             >

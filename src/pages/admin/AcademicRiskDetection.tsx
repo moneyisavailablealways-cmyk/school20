@@ -66,7 +66,11 @@ const RISK_BADGES: Record<string, { label: string; icon: string; variant: 'defau
   critical: { label: '🔴 Critical Risk', icon: '🔴', variant: 'destructive' },
 };
 
-const AcademicRiskDetection = () => {
+interface AcademicRiskDetectionProps {
+  viewMode?: 'admin' | 'teacher' | 'head_teacher';
+}
+
+const AcademicRiskDetection = ({ viewMode = 'admin' }: AcademicRiskDetectionProps) => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [assessments, setAssessments] = useState<RiskAssessment[]>([]);

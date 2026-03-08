@@ -330,7 +330,7 @@ const FeeStructures = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="amount">Amount ($)</Label>
+                  <Label htmlFor="amount">Amount (UGX)</Label>
                   <Input
                     id="amount"
                     type="number"

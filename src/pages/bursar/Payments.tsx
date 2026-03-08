@@ -275,7 +275,7 @@ const Payments = () => {
                   }}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Payment Amount ($)</FormLabel>
+                      <FormLabel>Payment Amount (UGX)</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" placeholder="0.00" {...field} />
                       </FormControl>

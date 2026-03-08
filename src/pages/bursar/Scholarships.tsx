@@ -466,7 +466,7 @@ const Scholarships = () => {
                     rules={{ required: 'Amount is required', min: { value: 0.01, message: 'Amount must be positive' } }}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Award Amount ($)</FormLabel>
+                        <FormLabel>Award Amount (UGX)</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" placeholder="0.00" {...field} />
                         </FormControl>

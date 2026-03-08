@@ -137,7 +137,7 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
             {stampUrl && (
               <div style={{
                 position: 'absolute',
-                right: '-10px',
+                right: '3cm',
                 top: '10px',
                 transform: 'rotate(-8deg)',
                 zIndex: 10,
@@ -145,7 +145,7 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
                 opacity: 0.7,
                 mixBlendMode: 'multiply',
               }}>
-                <img src={stampUrl} alt="School Stamp" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
+                <img src={stampUrl} alt="School Stamp" style={{ width: '400px', height: '400px', objectFit: 'contain' }} />
               </div>
             )}
           </div>

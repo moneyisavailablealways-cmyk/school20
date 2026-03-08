@@ -396,6 +396,45 @@ const ReportGeneration = () => {
                   <FileText className="mr-2 h-4 w-4" />
                   Generate ({selectedStudents.length})
                 </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={isGenerating}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete ({selectedStudents.length})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Selected Reports?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete the generated report cards for {selectedStudents.length} selected student(s). This cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={async () => {
+                          const { error } = await supabase
+                            .from('generated_reports')
+                            .delete()
+                            .eq('term', selectedTerm)
+                            .in('student_id', selectedStudents);
+                          if (error) {
+                            toast.error('Failed to delete reports');
+                          } else {
+                            toast.success(`${selectedStudents.length} report(s) deleted`);
+                            setSelectedStudents([]);
+                            queryClient.invalidateQueries({ queryKey: ['students-for-generation'] });
+                            queryClient.invalidateQueries({ queryKey: ['generated-report-cards'] });
+                          }
+                        }}
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <Button variant="outline" disabled={isGenerating}>
                   <Package className="mr-2 h-4 w-4" />
                   Download ZIP

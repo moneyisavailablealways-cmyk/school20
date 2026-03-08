@@ -739,6 +739,74 @@ export type Database = {
           },
         ]
       }
+      fee_override_audit_log: {
+        Row: {
+          action: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_amount: number | null
+          old_amount: number | null
+          reason: string | null
+          school_id: string | null
+          student_fee_override_id: string | null
+          student_id: string | null
+        }
+        Insert: {
+          action: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_amount?: number | null
+          old_amount?: number | null
+          reason?: string | null
+          school_id?: string | null
+          student_fee_override_id?: string | null
+          student_id?: string | null
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_amount?: number | null
+          old_amount?: number | null
+          reason?: string | null
+          school_id?: string | null
+          student_fee_override_id?: string | null
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_override_audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_override_audit_log_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_override_audit_log_student_fee_override_id_fkey"
+            columns: ["student_fee_override_id"]
+            isOneToOne: false
+            referencedRelation: "student_fee_overrides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_override_audit_log_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fee_structures: {
         Row: {
           academic_year_id: string | null
@@ -2768,6 +2836,77 @@ export type Database = {
           },
         ]
       }
+      student_fee_overrides: {
+        Row: {
+          academic_year_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          override_amount: number
+          override_reason: string | null
+          override_type: string
+          school_id: string | null
+          student_id: string
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          override_amount: number
+          override_reason?: string | null
+          override_type?: string
+          school_id?: string | null
+          student_id: string
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          override_amount?: number
+          override_reason?: string | null
+          override_type?: string
+          school_id?: string | null
+          student_id?: string
+          term?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_fee_overrides_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_fee_overrides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_fee_overrides_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_fee_overrides_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_fees: {
         Row: {
           amount: number
@@ -3822,6 +3961,23 @@ export type Database = {
       calculate_o_level_division: {
         Args: { p_best_eight_total: number }
         Returns: string
+      }
+      calculate_student_fees_balance: {
+        Args: {
+          p_academic_year_id: string
+          p_student_id: string
+          p_term?: string
+        }
+        Returns: {
+          adjusted_fees: number
+          balance: number
+          final_balance: number
+          has_override: boolean
+          override_amount: number
+          total_fees_required: number
+          total_paid: number
+          total_scholarship: number
+        }[]
       }
       cancel_library_reservation: {
         Args: { p_reason?: string; p_reservation_id: string }

@@ -258,36 +258,6 @@ const AdminDashboard = () => {
     },
   ];
 
-  const recentActivitiesStatic = [
-    {
-      type: 'user_created',
-      message: 'New teacher account created for John Smith',
-      time: '2 hours ago',
-      icon: CheckCircle,
-      color: 'text-green-500',
-    },
-    {
-      type: 'student_enrolled',
-      message: '5 new students enrolled in Grade 3',
-      time: '4 hours ago',
-      icon: GraduationCap,
-      color: 'text-blue-500',
-    },
-    {
-      type: 'class_created',
-      message: 'New section added: Grade 2-C',
-      time: '1 day ago',
-      icon: Building,
-      color: 'text-purple-500',
-    },
-    {
-      type: 'pending',
-      message: '3 admission applications pending review',
-      time: '2 days ago',
-      icon: Clock,
-      color: 'text-orange-500',
-    },
-  ];
 
   if (loading) {
     return (

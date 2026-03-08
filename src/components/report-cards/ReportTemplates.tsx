@@ -173,6 +173,19 @@ const ReportTemplates = () => {
                           ))}
                         </ul>
                       )}
+                      <div className="flex items-center gap-1 mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewTemplate({ type: template.template_type, name: template.name });
+                          }}
+                        >
+                          <Eye className="mr-1 h-3 w-3" />
+                          Preview
+                        </Button>
+                      </div>
                     </div>
                     <FileText className="h-12 w-12 text-muted-foreground/50" />
                   </div>

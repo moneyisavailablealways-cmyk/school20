@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,63 +7,88 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { Send, Plus, X, ArrowLeft, ArrowDownAZ, PenTool, Check, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Send, Plus, X, Trash2, Check, PenTool } from 'lucide-react';
 import MySubmissions from '@/components/teacher/MySubmissions';
 import SignaturePad from '@/components/report-cards/SignaturePad';
 import TypeToSign from '@/components/report-cards/TypeToSign';
 
-interface SubjectMarks {
-  id: string;
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface SubjectRow {
+  id: string;            // local key
   subjectId: string;
-  a1: string;
-  a2: string;
-  a3: string;
-  avg: number | null;
-  score20: number | null;
-  score80: number | null;
-  score100: number | null;
-  grade: string;
-  achievementLevel: string;
-  identifier: string;
+  marks: string;         // raw marks out of 100
+  grade: string;         // auto-calculated
+  remarks: string;
   existingId?: string;
   status?: string;
 }
 
+interface SectionState {
+  rows: SubjectRow[];
+  saving: boolean;
+}
+
+type SectionKey = 'bot' | 'mot' | 'eot';
+
+const SECTION_LABELS: Record<SectionKey, string> = {
+  bot: 'Beginning of Term (BOT)',
+  mot: 'Mid Term (MOT)',
+  eot: 'End of Term (EOT)',
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const emptyRow = (): SubjectRow => ({
+  id: crypto.randomUUID(),
+  subjectId: '',
+  marks: '',
+  grade: '',
+  remarks: '',
+});
+
+const initSections = (): Record<SectionKey, SectionState> => ({
+  bot: { rows: [emptyRow()], saving: false },
+  mot: { rows: [emptyRow()], saving: false },
+  eot: { rows: [emptyRow()], saving: false },
+});
+
+// Map section key → term suffix stored in DB
+// BOT = "Term 1 BOT", MOT = "Term 1 MOT", EOT = "Term 1"
+const buildDbTerm = (term: string, section: SectionKey) => {
+  if (section === 'eot') return term;
+  return `${term} ${section.toUpperCase()}`;
+};
+
+// ── Component ────────────────────────────────────────────────────────────────
+
 const MarksSubmission = () => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedTerm, setSelectedTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
   const [sortAsc, setSortAsc] = useState(true);
-  const [subjectCards, setSubjectCards] = useState<SubjectMarks[]>([
-    { id: crypto.randomUUID(), subjectId: '', a1: '', a2: '', a3: '', avg: null, score20: null, score80: null, score100: null, grade: '', achievementLevel: '', identifier: '1', existingId: undefined, status: undefined },
-  ]);
-  const autoSaveTimerRef = useRef<Record<string, NodeJS.Timeout>>({});
+  const [sections, setSections] = useState<Record<SectionKey, SectionState>>(initSections());
+  const autoSaveTimers = useRef<Record<string, NodeJS.Timeout>>({});
 
-  // Fetch teacher record
+  // ── Queries ─────────────────────────────────────────────────────────────────
+
   const { data: teacherRecord } = useQuery({
     queryKey: ['teacher-record', profile?.id],
     queryFn: async () => {
       if (!profile?.id) return null;
-      const { data } = await supabase
-        .from('teachers')
-        .select('id')
-        .eq('profile_id', profile.id)
-        .maybeSingle();
+      const { data } = await supabase.from('teachers').select('id').eq('profile_id', profile.id).maybeSingle();
       return data;
     },
     enabled: !!profile?.id,
   });
 
-  // Fetch classes
   const { data: classes } = useQuery({
     queryKey: ['teacher-classes', profile?.id, teacherRecord?.id],
     queryFn: async () => {
@@ -86,28 +111,20 @@ const MarksSubmission = () => {
     enabled: !!profile?.id,
   });
 
-  // Check if teacher is class teacher for the selected class
   const isClassTeacher = selectedClass
     ? classes?.find(c => c.id === selectedClass)?.class_teacher_id === profile?.id
     : false;
 
-  // Fetch existing signature for this teacher
   const { data: existingSignature, refetch: refetchSignature } = useQuery({
     queryKey: ['teacher-signature', profile?.id],
     queryFn: async () => {
       if (!profile?.id) return null;
-      const { data } = await supabase
-        .from('digital_signatures')
-        .select('*')
-        .eq('user_id', profile.id)
-        .eq('is_active', true)
-        .maybeSingle();
+      const { data } = await supabase.from('digital_signatures').select('*').eq('user_id', profile.id).eq('is_active', true).maybeSingle();
       return data;
     },
     enabled: !!profile?.id,
   });
 
-  // Fetch subjects for this teacher filtered by class
   const { data: subjects } = useQuery({
     queryKey: ['teacher-subjects-for-class', teacherRecord?.id, selectedClass],
     queryFn: async () => {
@@ -126,21 +143,14 @@ const MarksSubmission = () => {
     enabled: !!teacherRecord?.id && !!selectedClass,
   });
 
-  // Current academic year
   const { data: currentYear } = useQuery({
     queryKey: ['current-academic-year'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('academic_years')
-        .select('id, name')
-        .eq('is_current', true)
-        .order('created_at', { ascending: false })
-        .limit(1);
+      const { data } = await supabase.from('academic_years').select('id, name').eq('is_current', true).order('created_at', { ascending: false }).limit(1);
       return data?.[0] || null;
     },
   });
 
-  // Grading config
   const { data: gradingConfig } = useQuery({
     queryKey: ['grading-config'],
     queryFn: async () => {
@@ -149,7 +159,6 @@ const MarksSubmission = () => {
     },
   });
 
-  // Fetch students for selected class
   const { data: students } = useQuery({
     queryKey: ['class-students', selectedClass, currentYear?.id],
     queryFn: async () => {
@@ -168,328 +177,594 @@ const MarksSubmission = () => {
       const profileMap = new Map((profiles || []).map(p => [p.id, p]));
       return (studentsData || []).map(s => {
         const p = profileMap.get(s.profile_id);
-        return {
-          id: s.id,
-          admissionNo: s.student_id || '',
-          name: `${p?.first_name || ''} ${p?.last_name || ''}`.trim() || 'Unknown',
-        };
+        return { id: s.id, admissionNo: s.student_id || '', name: `${p?.first_name || ''} ${p?.last_name || ''}`.trim() || 'Unknown' };
       }).sort((a, b) => a.name.localeCompare(b.name));
     },
     enabled: !!selectedClass && !!currentYear?.id,
   });
 
-  const getAchievementLevel = (score: number | null): string => {
-    if (score === null) return '';
-    if (score >= 80) return 'Outstanding';
-    if (score >= 45) return 'Moderate';
-    return 'Basic';
+  // ── Grade calculation ────────────────────────────────────────────────────────
+
+  const calculateGrade = useCallback((marks: number | null): string => {
+    if (marks === null || !gradingConfig?.length) return '';
+    const cfg = gradingConfig.find(g => marks >= g.min_marks && marks <= g.max_marks);
+    return cfg?.grade || '';
+  }, [gradingConfig]);
+
+  // ── Section helpers ──────────────────────────────────────────────────────────
+
+  const updateSection = (key: SectionKey, updater: (prev: SectionState) => SectionState) => {
+    setSections(prev => ({ ...prev, [key]: updater(prev[key]) }));
   };
 
-  const calculateGrade = useCallback(
-    (total: number | null) => {
-      if (total === null || !gradingConfig?.length) return { grade: '', gradePoints: null, remark: '' };
-      const config = gradingConfig.find(g => total >= g.min_marks && total <= g.max_marks);
-      const achievement = getAchievementLevel(total);
-      return config
-        ? { grade: config.grade, gradePoints: config.grade_points, remark: achievement }
-        : { grade: '', gradePoints: null, remark: achievement };
-    },
-    [gradingConfig]
-  );
+  const addRow = (section: SectionKey) => {
+    updateSection(section, s => ({ ...s, rows: [...s.rows, emptyRow()] }));
+  };
 
-  const recalcCard = useCallback((card: SubjectMarks): SubjectMarks => {
-    const scores = [parseFloat(card.a1), parseFloat(card.a2), parseFloat(card.a3)].filter(n => !isNaN(n));
-    const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
-    const score20 = avg !== null ? Math.round((avg / 3) * 20 * 100) / 100 : null;
-    // 80% score is the exam score itself (entered as 0-100, weighted to 80%)
-    const examVal = parseFloat(card.a3); // We'll use a dedicated exam field logic below
-    // Actually from the image: A1, A2, A3 are assessment scores, then AVG is their average
-    // 20% Score = CA component, 80% Score = Exam component, 100% Score = total
-    // But the image doesn't show a separate exam field - it shows A1, A2, A3 → AVG → 20% → 80% → 100%
-    // Let me re-interpret: the 80% score field is likely manually entered (the exam score)
-    // Looking at image more carefully: A1, A2, A3 are decimal scores, AVG auto-calc
-    // Then 20% Score and 80% Score are separate input fields (0-100 range)
-    // 100% Score = 20% + 80% auto-calculated
-    // So the flow is: teacher enters A1, A2, A3 (assessments) + manually enters 20% and 80% scores
-    // Actually re-reading: 20% Score has "0-100" placeholder, 80% Score has "0-100" placeholder
-    // These look like input fields, not auto-calculated
-    // But AVG is auto-calculated from A1+A2+A3
-    // 100% Score is auto-calculated from 20% + 80%
-    // Grade and Achievement Level are auto-calculated
-    
-    return { ...card, avg, score20, score80: card.score80, score100: card.score100, grade: card.grade, achievementLevel: card.achievementLevel };
-  }, []);
-
-  // Load existing submissions when student changes
-  const loadStudentSubmissions = useCallback(async () => {
-    if (!selectedStudent || !currentYear?.id || !selectedTerm) return;
-
-    const subjectIdsInCards = subjectCards.map(c => c.subjectId).filter(Boolean);
-    if (subjectIdsInCards.length === 0) return;
-
-    const { data: submissions } = await supabase
-      .from('subject_submissions')
-      .select('*')
-      .eq('student_id', selectedStudent)
-      .eq('academic_year_id', currentYear.id)
-      .eq('term', selectedTerm)
-      .in('subject_id', subjectIdsInCards);
-
-    if (!submissions?.length) return;
-
-    const subMap = new Map(submissions.map(s => [s.subject_id, s]));
-    setSubjectCards(prev => prev.map(card => {
-      const sub = subMap.get(card.subjectId);
-      if (!sub) return card;
-      const gc = calculateGrade(sub.marks);
-      return {
-        ...card,
-        a1: sub.a1_score?.toString() || '',
-        a2: sub.a2_score?.toString() || '',
-        a3: sub.a3_score?.toString() || '',
-        avg: sub.a1_score != null && sub.a2_score != null && sub.a3_score != null
-          ? Math.round(((sub.a1_score + sub.a2_score + sub.a3_score) / 3) * 100) / 100
-          : null,
-        score20: sub.marks != null ? Math.round(((sub.marks * 0.2)) * 100) / 100 : null,
-        score80: sub.exam_score ?? null,
-        score100: sub.marks ?? null,
-        grade: sub.grade || gc.grade,
-        achievementLevel: sub.remark || gc.remark,
-        identifier: sub.identifier?.toString() || '1',
-        existingId: sub.id,
-        status: sub.status,
-      };
+  const removeRow = (section: SectionKey, rowId: string) => {
+    updateSection(section, s => ({
+      ...s,
+      rows: s.rows.length > 1 ? s.rows.filter(r => r.id !== rowId) : s.rows,
     }));
-  }, [selectedStudent, currentYear?.id, selectedTerm, subjectCards, calculateGrade]);
+  };
 
-  useEffect(() => {
-    if (selectedStudent && selectedTerm) {
-      loadStudentSubmissions();
+  const updateRow = (section: SectionKey, rowId: string, field: keyof SubjectRow, value: string) => {
+    updateSection(section, s => ({
+      ...s,
+      rows: s.rows.map(r => {
+        if (r.id !== rowId) return r;
+        const updated = { ...r, [field]: value };
+        if (field === 'marks') {
+          const n = parseFloat(value);
+          updated.grade = isNaN(n) ? '' : calculateGrade(n);
+        }
+        return updated;
+      }),
+    }));
+
+    // Auto-save debounce
+    const timerKey = `${section}-${rowId}`;
+    if (autoSaveTimers.current[timerKey]) clearTimeout(autoSaveTimers.current[timerKey]);
+    autoSaveTimers.current[timerKey] = setTimeout(() => autoSaveRow(section, rowId), 2000);
+  };
+
+  const handleSubjectChange = (section: SectionKey, rowId: string, subjectId: string) => {
+    updateSection(section, s => ({
+      ...s,
+      rows: s.rows.map(r => r.id === rowId
+        ? { ...r, subjectId, marks: '', grade: '', remarks: '', existingId: undefined, status: undefined }
+        : r),
+    }));
+    // Load existing submission for this subject+student
+    if (selectedStudent && currentYear?.id && selectedTerm) {
+      const dbTerm = buildDbTerm(selectedTerm, section);
+      supabase
+        .from('subject_submissions')
+        .select('*')
+        .eq('student_id', selectedStudent)
+        .eq('subject_id', subjectId)
+        .eq('academic_year_id', currentYear.id)
+        .eq('term', dbTerm)
+        .maybeSingle()
+        .then(({ data: sub }) => {
+          if (!sub) return;
+          updateSection(section, s => ({
+            ...s,
+            rows: s.rows.map(r => r.id === rowId ? {
+              ...r,
+              marks: sub.marks?.toString() || '',
+              grade: sub.grade || '',
+              remarks: sub.remark || '',
+              existingId: sub.id,
+              status: sub.status,
+            } : r),
+          }));
+        });
     }
-  }, [selectedStudent, selectedTerm]);
+  };
 
-  const updateCardField = useCallback((cardId: string, field: string, value: string) => {
-    setSubjectCards(prev => prev.map(card => {
-      if (card.id !== cardId) return card;
-      const updated = { ...card, [field]: value };
+  // ── Auto-save ────────────────────────────────────────────────────────────────
 
-      // Recalculate AVG from A1, A2, A3
-      const a1 = parseFloat(field === 'a1' ? value : updated.a1);
-      const a2 = parseFloat(field === 'a2' ? value : updated.a2);
-      const a3 = parseFloat(field === 'a3' ? value : updated.a3);
-      const validScores = [a1, a2, a3].filter(n => !isNaN(n));
-      updated.avg = validScores.length > 0 ? Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 100) / 100 : null;
+  const autoSaveRow = useCallback(async (section: SectionKey, rowId: string) => {
+    setSections(current => {
+      const row = current[section].rows.find(r => r.id === rowId);
+      if (!row || !row.subjectId || !selectedStudent || !profile?.id || !currentYear?.id || !selectedTerm) return current;
+      if (row.status === 'approved') return current;
+      const marks = parseFloat(row.marks);
+      if (isNaN(marks)) return current;
 
-      // Parse 20% and 80% scores
-      const s20 = parseFloat(field === 'score20' ? value : (updated.score20?.toString() || ''));
-      const s80 = parseFloat(field === 'score80' ? value : (updated.score80?.toString() || ''));
-
-      if (field === 'score20') updated.score20 = isNaN(s20) ? null : s20;
-      if (field === 'score80') updated.score80 = isNaN(s80) ? null : s80;
-
-      // 100% = 20% + 80%
-      const final20 = updated.score20 ?? (isNaN(s20) ? null : s20);
-      const final80 = updated.score80 ?? (isNaN(s80) ? null : s80);
-      if (final20 !== null && final80 !== null) {
-        updated.score100 = Math.round((final20 + final80) * 100) / 100;
-        const gc = calculateGrade(updated.score100);
-        updated.grade = gc.grade;
-        updated.achievementLevel = gc.remark;
-        // Auto-calculate identifier based on score
-        if (updated.score100 >= 80) updated.identifier = '1';
-        else if (updated.score100 >= 45) updated.identifier = '2';
-        else updated.identifier = '3';
-      } else {
-        updated.score100 = null;
-        updated.grade = '';
-        updated.achievementLevel = '';
-      }
-
-      return updated;
-    }));
-
-    // Auto-save
-    const key = `${cardId}-${selectedStudent}`;
-    if (autoSaveTimerRef.current[key]) clearTimeout(autoSaveTimerRef.current[key]);
-    autoSaveTimerRef.current[key] = setTimeout(() => {
-      autoSaveSingleCard(cardId);
-    }, 2000);
-  }, [calculateGrade, selectedStudent]);
-
-  const autoSaveSingleCard = useCallback(async (cardId: string) => {
-    const card = subjectCards.find(c => c.id === cardId);
-    if (!card || !card.subjectId || !selectedStudent || !profile?.id || !currentYear?.id || !selectedTerm) return;
-    if (card.status === 'approved') return;
-
-    const a1 = parseFloat(card.a1) || null;
-    const a2 = parseFloat(card.a2) || null;
-    const a3 = parseFloat(card.a3) || null;
-    if (a1 === null && a2 === null && a3 === null && card.score20 === null && card.score80 === null) return;
-
-    const initials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
-
-    try {
+      const dbTerm = buildDbTerm(selectedTerm, section);
+      const initials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
       const record: any = {
         student_id: selectedStudent,
-        subject_id: card.subjectId,
+        subject_id: row.subjectId,
         academic_year_id: currentYear.id,
-        term: selectedTerm,
-        a1_score: a1,
-        a2_score: a2,
-        a3_score: a3,
-        exam_score: card.score80,
-        marks: card.score100,
-        grade: card.grade || null,
-        grade_points: card.score100 !== null ? (calculateGrade(card.score100).gradePoints) : null,
-        remark: card.achievementLevel || null,
-        identifier: parseInt(card.identifier) || 1,
+        term: dbTerm,
+        marks,
+        grade: row.grade || null,
+        remark: row.remarks || null,
         teacher_initials: initials,
         submitted_by: profile.id,
         status: 'draft',
       };
 
-      if (card.existingId) {
-        await supabase.from('subject_submissions').update(record).eq('id', card.existingId);
+      if (row.existingId) {
+        supabase.from('subject_submissions').update(record).eq('id', row.existingId).then(() => {});
       } else {
-        const { data } = await supabase.from('subject_submissions').insert(record).select('id').maybeSingle();
-        if (data?.id) {
-          setSubjectCards(prev => prev.map(c => c.id === card.id ? { ...c, existingId: data.id } : c));
+        supabase.from('subject_submissions').insert(record).select('id').maybeSingle().then(({ data }) => {
+          if (data?.id) {
+            setSections(prev => ({
+              ...prev,
+              [section]: {
+                ...prev[section],
+                rows: prev[section].rows.map(r => r.id === rowId ? { ...r, existingId: data.id } : r),
+              },
+            }));
+          }
+        });
+      }
+      return current;
+    });
+  }, [selectedStudent, profile, currentYear?.id, selectedTerm]);
+
+  // ── Save section ─────────────────────────────────────────────────────────────
+
+  const saveSection = async (section: SectionKey) => {
+    if (!profile?.id || !currentYear?.id || !selectedStudent || !selectedTerm) {
+      toast.error('Please select class, student and term first');
+      return;
+    }
+    const rows = sections[section].rows;
+    const validRows = rows.filter(r => r.subjectId && r.marks && r.status !== 'approved');
+    if (validRows.length === 0) {
+      toast.error('No marks entered to save');
+      return;
+    }
+
+    updateSection(section, s => ({ ...s, saving: true }));
+    const dbTerm = buildDbTerm(selectedTerm, section);
+    const initials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
+
+    try {
+      for (const row of validRows) {
+        const marks = parseFloat(row.marks);
+        const record: any = {
+          student_id: selectedStudent,
+          subject_id: row.subjectId,
+          academic_year_id: currentYear.id,
+          term: dbTerm,
+          marks: isNaN(marks) ? null : marks,
+          grade: row.grade || null,
+          remark: row.remarks || null,
+          teacher_initials: initials,
+          submitted_by: profile.id,
+          submitted_at: new Date().toISOString(),
+          status: 'pending',
+        };
+
+        if (row.existingId) {
+          const { error } = await supabase.from('subject_submissions').update(record).eq('id', row.existingId);
+          if (error) throw error;
+        } else {
+          const { data, error } = await supabase.from('subject_submissions').insert(record).select('id').maybeSingle();
+          if (error) throw error;
+          if (data?.id) {
+            updateSection(section, s => ({
+              ...s,
+              rows: s.rows.map(r => r.id === row.id ? { ...r, existingId: data.id, status: 'pending' } : r),
+            }));
+          }
         }
       }
-    } catch {
-      // silent fail for auto-save
-    }
-  }, [subjectCards, selectedStudent, profile, currentYear?.id, selectedTerm, calculateGrade]);
-
-  // Submit all marks
-  const submitAll = useMutation({
-    mutationFn: async () => {
-      if (!profile?.id || !currentYear?.id || !selectedStudent || !selectedTerm) throw new Error('Please select class, student, and term');
-
-      const cardsWithSubject = subjectCards.filter(c => c.subjectId);
-      if (cardsWithSubject.length === 0) throw new Error('No subjects selected');
-
-      const cardsWithMarks = cardsWithSubject.filter(c =>
-        c.status !== 'approved' && (c.a1 || c.a2 || c.a3 || c.score20 !== null || c.score80 !== null)
-      );
-      if (cardsWithMarks.length === 0) throw new Error('No marks entered for any subject');
-
-      const initials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
-      // Split into updates (existing records) and inserts (new records)
-      const updates = cardsWithMarks.filter(c => c.existingId);
-      const inserts = cardsWithMarks.filter(c => !c.existingId);
-
-      const buildRecord = (card: typeof cardsWithMarks[0]) => ({
-        student_id: selectedStudent,
-        subject_id: card.subjectId,
-        academic_year_id: currentYear!.id,
-        term: selectedTerm,
-        a1_score: parseFloat(card.a1) || null,
-        a2_score: parseFloat(card.a2) || null,
-        a3_score: parseFloat(card.a3) || null,
-        exam_score: card.score80,
-        marks: card.score100,
-        grade: card.grade || null,
-        grade_points: card.score100 !== null ? (calculateGrade(card.score100).gradePoints) : null,
-        remark: card.achievementLevel || null,
-        identifier: parseInt(card.identifier) || 1,
-        teacher_initials: initials,
-        submitted_by: profile!.id,
-        submitted_at: new Date().toISOString(),
-        status: 'pending',
-      });
-
-      // Update existing records by id, insert new ones via onConflict
-      for (const card of updates) {
-        const record = { id: card.existingId, ...buildRecord(card) };
-        const { error } = await supabase.from('subject_submissions').upsert(record);
-        if (error) throw error;
-      }
-
-      if (inserts.length > 0) {
-        const newRecords = inserts.map(card => buildRecord(card));
-        const { error } = await supabase
-          .from('subject_submissions')
-          .insert(newRecords);
-        if (error) throw error;
-      }
-
-      return cardsWithMarks.length;
-    },
-    onSuccess: (count) => {
-      toast.success(`${count} subject mark(s) submitted for approval`);
+      toast.success(`${SECTION_LABELS[section]} marks submitted for approval`);
       queryClient.invalidateQueries({ queryKey: ['class-students-marks'] });
-      loadStudentSubmissions();
-    },
-    onError: (error) => toast.error(error.message),
-  });
-
-  const addSubjectCard = () => {
-    setSubjectCards(prev => [...prev, {
-      id: crypto.randomUUID(), subjectId: '', a1: '', a2: '', a3: '',
-      avg: null, score20: null, score80: null, score100: null,
-      grade: '', achievementLevel: '', identifier: '1',
-    }]);
-  };
-
-  const removeSubjectCard = (cardId: string) => {
-    if (subjectCards.length <= 1) return;
-    setSubjectCards(prev => prev.filter(c => c.id !== cardId));
-  };
-
-  const handleSubjectChange = (cardId: string, subjectId: string) => {
-    setSubjectCards(prev => prev.map(c => c.id === cardId ? {
-      ...c, subjectId, a1: '', a2: '', a3: '', avg: null,
-      score20: null, score80: null, score100: null, grade: '', achievementLevel: '',
-      identifier: '1', existingId: undefined, status: undefined,
-    } : c));
-    // Load existing data for this student+subject
-    if (selectedStudent && currentYear?.id && selectedTerm) {
-      setTimeout(async () => {
-        const { data: sub } = await supabase
-          .from('subject_submissions')
-          .select('*')
-          .eq('student_id', selectedStudent)
-          .eq('subject_id', subjectId)
-          .eq('academic_year_id', currentYear!.id)
-          .eq('term', selectedTerm)
-          .maybeSingle();
-        if (sub) {
-          const gc = calculateGrade(sub.marks);
-          setSubjectCards(prev => prev.map(c => c.id === cardId ? {
-            ...c,
-            a1: sub.a1_score?.toString() || '',
-            a2: sub.a2_score?.toString() || '',
-            a3: sub.a3_score?.toString() || '',
-            avg: sub.a1_score != null && sub.a2_score != null && sub.a3_score != null
-              ? Math.round(((sub.a1_score + sub.a2_score + sub.a3_score) / 3) * 100) / 100
-              : null,
-            score20: sub.marks != null ? Math.round((sub.marks * 0.2) * 100) / 100 : null,
-            score80: sub.exam_score ?? null,
-            score100: sub.marks ?? null,
-            grade: sub.grade || gc.grade,
-            achievementLevel: sub.remark || gc.remark,
-            identifier: sub.identifier?.toString() || '1',
-            existingId: sub.id,
-            status: sub.status,
-          } : c));
-        }
-      }, 100);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save marks');
+    } finally {
+      updateSection(section, s => ({ ...s, saving: false }));
     }
   };
 
-  const usedSubjectIds = subjectCards.map(c => c.subjectId).filter(Boolean);
-  const teacherInitials = profile ? `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() : '';
+  // ── Aggregates ───────────────────────────────────────────────────────────────
 
-  const filteredStudents = (students || []).filter(s =>
-    s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-    s.admissionNo.toLowerCase().includes(studentSearch.toLowerCase())
-  ).sort((a, b) => sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+  const calcAggregate = (rows: SubjectRow[]) => {
+    const vals = rows.map(r => parseFloat(r.marks)).filter(n => !isNaN(n));
+    if (vals.length === 0) return null;
+    return vals.reduce((a, b) => a + b, 0);
+  };
+
+  const calcAverage = (rows: SubjectRow[]) => {
+    const vals = rows.map(r => parseFloat(r.marks)).filter(n => !isNaN(n));
+    if (vals.length === 0) return null;
+    return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+  };
+
+  // ── Derived ──────────────────────────────────────────────────────────────────
+
+  const filteredStudents = (students || [])
+    .filter(s =>
+      s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+      s.admissionNo.toLowerCase().includes(studentSearch.toLowerCase())
+    )
+    .sort((a, b) => sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+
+  const teacherInitials = profile
+    ? `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase()
+    : '';
+
+  const usedSubjectIds = (section: SectionKey) =>
+    sections[section].rows.map(r => r.subjectId).filter(Boolean);
+
+  // ── Render helpers ────────────────────────────────────────────────────────────
+
+  const renderBOT = () => {
+    const sec = sections.bot;
+    const agg = calcAggregate(sec.rows);
+    return (
+      <Card className="border-border">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base font-bold">Beginning of Term (BOT) — Examination Results</CardTitle>
+            <Button size="sm" variant="outline" onClick={() => addRow('bot')}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Subject
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Header row */}
+          <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground border-b pb-1">
+            <div className="col-span-4">Subject</div>
+            <div className="col-span-3">Marks (100)</div>
+            <div className="col-span-2">Grade</div>
+            <div className="col-span-2">Status</div>
+            <div className="col-span-1"></div>
+          </div>
+
+          {sec.rows.map(row => {
+            const isApproved = row.status === 'approved';
+            return (
+              <div key={row.id} className="grid grid-cols-12 gap-2 items-center">
+                <div className="col-span-4">
+                  <Select
+                    value={row.subjectId}
+                    onValueChange={v => handleSubjectChange('bot', row.id, v)}
+                    disabled={isApproved}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-card border-border">
+                      <SelectValue placeholder="Select subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects?.filter(s => !usedSubjectIds('bot').includes(s.id) || s.id === row.subjectId).map(s => (
+                        <SelectItem key={s.id} value={s.id} className="text-xs">{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-3">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={row.marks}
+                    onChange={e => updateRow('bot', row.id, 'marks', e.target.value)}
+                    disabled={isApproved}
+                    placeholder="0–100"
+                    className="h-8 text-xs bg-card border-border"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    value={row.grade || '—'}
+                    disabled
+                    className="h-8 text-xs bg-muted border-border font-semibold"
+                  />
+                </div>
+                <div className="col-span-2">
+                  {row.status && (
+                    <Badge variant={row.status === 'approved' ? 'default' : 'secondary'} className="text-[10px]">
+                      {row.status === 'approved' ? '✓ Approved' : row.status === 'pending' ? '⏳ Pending' : '📝 Draft'}
+                    </Badge>
+                  )}
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  <Button
+                    variant="ghost" size="icon"
+                    className="h-7 w-7 text-destructive"
+                    disabled={sec.rows.length <= 1 || isApproved}
+                    onClick={() => removeRow('bot', row.id)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Aggregates */}
+          <div className="grid grid-cols-12 gap-2 items-center border-t pt-2 mt-1">
+            <div className="col-span-4 text-xs font-semibold text-right pr-2">AGG</div>
+            <div className="col-span-3">
+              <Input value={agg !== null ? agg.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+            </div>
+            <div className="col-span-5 text-xs text-muted-foreground">Aggregate (sum of marks)</div>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <Button size="sm" onClick={() => saveSection('bot')} disabled={sec.saving}>
+              <Send className="h-3.5 w-3.5 mr-1.5" />
+              {sec.saving ? 'Saving...' : 'Save BOT Marks'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderMOT = () => {
+    const sec = sections.mot;
+    const agg = calcAggregate(sec.rows);
+    const avg = calcAverage(sec.rows);
+    const total = agg;
+    return (
+      <Card className="border-border">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base font-bold">Mid Term (MOT) — Examination Results</CardTitle>
+            <Button size="sm" variant="outline" onClick={() => addRow('mot')}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Subject
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Header row */}
+          <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground border-b pb-1">
+            <div className="col-span-4">Subject</div>
+            <div className="col-span-3">Marks (Min)</div>
+            <div className="col-span-2">Grade</div>
+            <div className="col-span-2">Status</div>
+            <div className="col-span-1"></div>
+          </div>
+
+          {sec.rows.map(row => {
+            const isApproved = row.status === 'approved';
+            return (
+              <div key={row.id} className="grid grid-cols-12 gap-2 items-center">
+                <div className="col-span-4">
+                  <Select
+                    value={row.subjectId}
+                    onValueChange={v => handleSubjectChange('mot', row.id, v)}
+                    disabled={isApproved}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-card border-border">
+                      <SelectValue placeholder="Select subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects?.filter(s => !usedSubjectIds('mot').includes(s.id) || s.id === row.subjectId).map(s => (
+                        <SelectItem key={s.id} value={s.id} className="text-xs">{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-3">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={row.marks}
+                    onChange={e => updateRow('mot', row.id, 'marks', e.target.value)}
+                    disabled={isApproved}
+                    placeholder="0–100"
+                    className="h-8 text-xs bg-card border-border"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    value={row.grade || '—'}
+                    disabled
+                    className="h-8 text-xs bg-muted border-border font-semibold"
+                  />
+                </div>
+                <div className="col-span-2">
+                  {row.status && (
+                    <Badge variant={row.status === 'approved' ? 'default' : 'secondary'} className="text-[10px]">
+                      {row.status === 'approved' ? '✓ Approved' : row.status === 'pending' ? '⏳ Pending' : '📝 Draft'}
+                    </Badge>
+                  )}
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  <Button
+                    variant="ghost" size="icon"
+                    className="h-7 w-7 text-destructive"
+                    disabled={sec.rows.length <= 1 || isApproved}
+                    onClick={() => removeRow('mot', row.id)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Aggregates */}
+          <div className="grid grid-cols-12 gap-2 items-center border-t pt-2 mt-1">
+            <div className="col-span-4 text-xs font-semibold text-right pr-2">DIV</div>
+            <div className="col-span-3">
+              <Input value={avg !== null ? avg.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+            </div>
+            <div className="col-span-5 text-xs text-muted-foreground">Division (average)</div>
+          </div>
+          <div className="grid grid-cols-12 gap-2 items-center">
+            <div className="col-span-4 text-xs font-semibold text-right pr-2">TOTAL</div>
+            <div className="col-span-3">
+              <Input value={total !== null ? total.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+            </div>
+            <div className="col-span-5 text-xs text-muted-foreground">Total (sum)</div>
+          </div>
+          <div className="grid grid-cols-12 gap-2 items-center">
+            <div className="col-span-4 text-xs font-semibold text-right pr-2">AGG</div>
+            <div className="col-span-3">
+              <Input value={agg !== null ? agg.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+            </div>
+            <div className="col-span-5 text-xs text-muted-foreground">Aggregate</div>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <Button size="sm" onClick={() => saveSection('mot')} disabled={sec.saving}>
+              <Send className="h-3.5 w-3.5 mr-1.5" />
+              {sec.saving ? 'Saving...' : 'Save MOT Marks'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderEOT = () => {
+    const sec = sections.eot;
+    const agg = calcAggregate(sec.rows);
+    const avg = calcAverage(sec.rows);
+    return (
+      <Card className="border-border">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base font-bold">End of Term (EOT) — Examination Results</CardTitle>
+            <Button size="sm" variant="outline" onClick={() => addRow('eot')}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Subject
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Header row */}
+          <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground border-b pb-1">
+            <div className="col-span-3">Subject</div>
+            <div className="col-span-1 text-center">Full Marks</div>
+            <div className="col-span-2">Marks Obtained</div>
+            <div className="col-span-1 text-center">AGG</div>
+            <div className="col-span-2">Remarks</div>
+            <div className="col-span-1 text-center">Initials</div>
+            <div className="col-span-1">Status</div>
+            <div className="col-span-1"></div>
+          </div>
+
+          {sec.rows.map(row => {
+            const isApproved = row.status === 'approved';
+            const marks = parseFloat(row.marks);
+            return (
+              <div key={row.id} className="grid grid-cols-12 gap-2 items-center">
+                <div className="col-span-3">
+                  <Select
+                    value={row.subjectId}
+                    onValueChange={v => handleSubjectChange('eot', row.id, v)}
+                    disabled={isApproved}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-card border-border">
+                      <SelectValue placeholder="Subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects?.filter(s => !usedSubjectIds('eot').includes(s.id) || s.id === row.subjectId).map(s => (
+                        <SelectItem key={s.id} value={s.id} className="text-xs">{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-1">
+                  <Input value="100" disabled className="h-8 text-xs bg-muted text-center border-border" />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={row.marks}
+                    onChange={e => updateRow('eot', row.id, 'marks', e.target.value)}
+                    disabled={isApproved}
+                    placeholder="0–100"
+                    className="h-8 text-xs bg-card border-border"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <Input
+                    value={row.grade || '—'}
+                    disabled
+                    className="h-8 text-xs bg-muted border-border font-semibold text-center"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    value={row.remarks}
+                    onChange={e => updateRow('eot', row.id, 'remarks', e.target.value)}
+                    disabled={isApproved}
+                    placeholder="Remarks"
+                    className="h-8 text-xs bg-card border-border"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <Input value={teacherInitials} disabled className="h-8 text-xs bg-muted border-border text-center" />
+                </div>
+                <div className="col-span-1">
+                  {row.status && (
+                    <Badge variant={row.status === 'approved' ? 'default' : 'secondary'} className="text-[10px] whitespace-nowrap">
+                      {row.status === 'approved' ? '✓' : row.status === 'pending' ? '⏳' : '📝'}
+                    </Badge>
+                  )}
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  <Button
+                    variant="ghost" size="icon"
+                    className="h-7 w-7 text-destructive"
+                    disabled={sec.rows.length <= 1 || isApproved}
+                    onClick={() => removeRow('eot', row.id)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Aggregates */}
+          <div className="border-t pt-2 mt-1 grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground">AGG (Aggregate)</p>
+              <Input value={agg !== null ? agg.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground">AVE (Average)</p>
+              <Input value={avg !== null ? avg.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground">DIV (Division)</p>
+              <Input value={avg !== null ? calcDivision(avg) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <Button size="sm" onClick={() => saveSection('eot')} disabled={sec.saving}>
+              <Send className="h-3.5 w-3.5 mr-1.5" />
+              {sec.saving ? 'Saving...' : 'Save EOT Marks'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Division calculation for primary (common Ugandan primary scale)
+  const calcDivision = (avg: number): string => {
+    if (avg >= 85) return 'Div 1';
+    if (avg >= 70) return 'Div 2';
+    if (avg >= 50) return 'Div 3';
+    if (avg >= 35) return 'Div 4';
+    return 'Ungraded';
+  };
+
+  // ── Main render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-
       <h1 className="text-2xl font-bold tracking-tight">Mark Submission Form</h1>
 
       {/* Row 1: Class + Term */}
@@ -501,11 +776,7 @@ const MarksSubmission = () => {
             onValueChange={v => {
               setSelectedClass(v);
               setSelectedStudent('');
-              setSubjectCards([{
-                id: crypto.randomUUID(), subjectId: '', a1: '', a2: '', a3: '',
-                avg: null, score20: null, score80: null, score100: null,
-                grade: '', achievementLevel: '', identifier: '1',
-              }]);
+              setSections(initSections());
             }}
           >
             <SelectTrigger className="bg-card border-border">
@@ -533,42 +804,29 @@ const MarksSubmission = () => {
         </div>
       </div>
 
-      {/* Row 2: Student search + sort + New Subject button */}
+      {/* Student selector */}
       {selectedClass && (
-        <>
-          <div className="space-y-1">
-            <Label className="text-xs font-medium">Student</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                value={studentSearch}
-                onChange={e => setStudentSearch(e.target.value)}
-                placeholder="Search student..."
-                className="flex-1 bg-card border-border"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSortAsc(p => !p)}
-                className="shrink-0"
-              >
-                {sortAsc ? '↑ → Z' : 'Z → ↑'}
-              </Button>
-              <Button variant="outline" size="sm" onClick={addSubjectCard} className="shrink-0">
-                <Plus className="h-4 w-4 mr-1" />
-                New Subject
-              </Button>
-            </div>
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">Student</Label>
+          <div className="flex items-center gap-2 mb-1">
+            <Input
+              value={studentSearch}
+              onChange={e => setStudentSearch(e.target.value)}
+              placeholder="Search student..."
+              className="flex-1 bg-card border-border"
+            />
+            <Button variant="outline" size="sm" onClick={() => setSortAsc(p => !p)} className="shrink-0">
+              {sortAsc ? 'A → Z' : 'Z → A'}
+            </Button>
           </div>
-
-          {/* Student dropdown */}
-          <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+          <Select value={selectedStudent} onValueChange={v => { setSelectedStudent(v); setSections(initSections()); }}>
             <SelectTrigger className="bg-card border-border">
               <SelectValue placeholder="Select a student" />
             </SelectTrigger>
             <SelectContent>
               {filteredStudents.map(s => (
                 <SelectItem key={s.id} value={s.id}>
-                  {s.name} {s.admissionNo ? `(${s.admissionNo})` : ''}
+                  {s.name}{s.admissionNo ? ` (${s.admissionNo})` : ''}
                 </SelectItem>
               ))}
               {filteredStudents.length === 0 && (
@@ -576,222 +834,19 @@ const MarksSubmission = () => {
               )}
             </SelectContent>
           </Select>
-        </>
+        </div>
       )}
 
-      {/* Subject Marks Section */}
+      {/* Three-section marks forms */}
       {selectedClass && selectedStudent && selectedTerm && (
-        <>
-          <h2 className="text-lg font-semibold">Subject Marks</h2>
-
-          {subjectCards.map((card, idx) => {
-            const isApproved = card.status === 'approved';
-            const subjectObj = subjects?.find(s => s.id === card.subjectId);
-
-            return (
-              <Card key={card.id} className="relative border-border">
-                <CardContent className="pt-5 pb-5 space-y-4">
-                  {/* Card header */}
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-sm">Subject {idx + 1}</h3>
-                    {subjectCards.length > 1 && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeSubjectCard(card.id)}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Subject + Subject Code */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Subject (Only Your Assigned Subjects for This Class)</Label>
-                      <Select
-                        value={card.subjectId}
-                        onValueChange={v => handleSubjectChange(card.id, v)}
-                        disabled={isApproved}
-                      >
-                        <SelectTrigger className="bg-card border-border">
-                          <SelectValue placeholder="Select subject" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {subjects
-                            ?.filter(s => !usedSubjectIds.includes(s.id) || s.id === card.subjectId)
-                            .map(s => (
-                              <SelectItem key={s.id} value={s.id}>
-                                {s.code ? `${s.code} – ` : ''}{s.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Subject Code</Label>
-                      <Input
-                        value={subjectObj?.code || ''}
-                        disabled
-                        className="bg-muted border-border"
-                        placeholder="Auto-filled"
-                      />
-                    </div>
-                  </div>
-
-                  {card.subjectId && (
-                    <>
-                      {/* Row: A1, A2, A3, AVG */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">A1 Score (must include decimal)</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={card.a1}
-                            onChange={e => updateCardField(card.id, 'a1', e.target.value)}
-                            disabled={isApproved}
-                            placeholder="e.g., 12.5"
-                            className="bg-card border-border"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">A2 Score (must include decimal)</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={card.a2}
-                            onChange={e => updateCardField(card.id, 'a2', e.target.value)}
-                            disabled={isApproved}
-                            placeholder="e.g., 8.0"
-                            className="bg-card border-border"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">A3 Score (must include decimal)</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={card.a3}
-                            onChange={e => updateCardField(card.id, 'a3', e.target.value)}
-                            disabled={isApproved}
-                            placeholder="e.g., 0.5"
-                            className="bg-card border-border"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">AVG</Label>
-                          <Input
-                            value={card.avg !== null ? card.avg.toFixed(2) : '0.00'}
-                            disabled
-                            className="bg-muted border-border font-semibold"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Row: 20% Score, 80% Score, 100% Score, Teacher Initials */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">20% Score</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            value={card.score20?.toString() || ''}
-                            onChange={e => updateCardField(card.id, 'score20', e.target.value)}
-                            disabled={isApproved}
-                            placeholder="0-100"
-                            className="bg-card border-border"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">80% Score</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            value={card.score80?.toString() || ''}
-                            onChange={e => updateCardField(card.id, 'score80', e.target.value)}
-                            disabled={isApproved}
-                            placeholder="0-100"
-                            className="bg-card border-border"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">100% Score</Label>
-                          <Input
-                            value={card.score100 !== null ? card.score100.toFixed(2) : ''}
-                            disabled
-                            className="bg-muted border-border font-semibold"
-                            placeholder="0-100"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Teacher Initials</Label>
-                          <Input
-                            value={teacherInitials}
-                            disabled
-                            className="bg-muted border-border"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Row: Identifier, Grade, Achievement Level */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Identifier (Auto-calculated)</Label>
-                          <Input
-                            value={card.identifier ? `${card.identifier} - ${card.identifier === '1' ? 'Outstanding' : card.identifier === '2' ? 'Moderate' : 'Basic'}` : 'Auto'}
-                            disabled
-                            className="bg-muted border-border"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Grade (Auto-calculated)</Label>
-                          <Input
-                            value={card.grade || 'Auto'}
-                            disabled
-                            className="bg-muted border-border"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Achievement Level (Auto-calculated)</Label>
-                          <Input
-                            value={card.achievementLevel || 'Auto'}
-                            disabled
-                            className="bg-muted border-border"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Status badge */}
-                      {card.status && (
-                        <div className="flex justify-end">
-                          <Badge variant={card.status === 'approved' ? 'default' : 'secondary'} className="text-xs">
-                            {card.status === 'approved' ? '✓ Approved' : card.status === 'pending' ? '⏳ Pending Approval' : '📝 Draft'}
-                          </Badge>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-
-          {/* Submit All button */}
-          <div className="flex justify-end">
-            <Button
-              onClick={() => submitAll.mutate()}
-              disabled={submitAll.isPending || !subjectCards.some(c => c.subjectId && (c.a1 || c.a2 || c.a3 || c.score20 !== null || c.score80 !== null))}
-              size="lg"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              {submitAll.isPending ? 'Submitting...' : 'Submit All Marks'}
-            </Button>
-          </div>
-        </>
+        <div className="space-y-6">
+          {renderBOT()}
+          {renderMOT()}
+          {renderEOT()}
+        </div>
       )}
 
-      {/* Class Teacher Signature Section */}
+      {/* Class Teacher Signature */}
       {isClassTeacher && selectedClass && (
         <ClassTeacherSignature
           profileId={profile!.id}
@@ -801,7 +856,7 @@ const MarksSubmission = () => {
         />
       )}
 
-      {/* My Submissions Section */}
+      {/* My Submissions */}
       {selectedTerm && currentYear?.id && profile?.id && (
         <MySubmissions
           teacherId={profile.id}
@@ -813,7 +868,8 @@ const MarksSubmission = () => {
   );
 };
 
-// Class Teacher Signature sub-component
+// ── Class Teacher Signature ───────────────────────────────────────────────────
+
 interface ClassTeacherSignatureProps {
   profileId: string;
   schoolId: string | null;
@@ -828,13 +884,7 @@ const ClassTeacherSignature = ({ profileId, schoolId, existingSignature, onSaved
   const saveSignature = async (signatureData: string, signatureType: string, fontFamily?: string) => {
     setSaving(true);
     try {
-      // Deactivate any existing signatures
-      await supabase
-        .from('digital_signatures')
-        .update({ is_active: false })
-        .eq('user_id', profileId);
-
-      // Insert new signature
+      await supabase.from('digital_signatures').update({ is_active: false }).eq('user_id', profileId);
       const { error } = await supabase.from('digital_signatures').insert({
         user_id: profileId,
         school_id: schoolId,
@@ -843,7 +893,6 @@ const ClassTeacherSignature = ({ profileId, schoolId, existingSignature, onSaved
         font_family: fontFamily || null,
         is_active: true,
       });
-
       if (error) throw error;
       toast.success('Signature saved successfully');
       onSaved();
@@ -858,10 +907,7 @@ const ClassTeacherSignature = ({ profileId, schoolId, existingSignature, onSaved
     if (!existingSignature?.id) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('digital_signatures')
-        .delete()
-        .eq('id', existingSignature.id);
+      const { error } = await supabase.from('digital_signatures').delete().eq('id', existingSignature.id);
       if (error) throw error;
       toast.success('Signature removed');
       onSaved();
@@ -880,64 +926,39 @@ const ClassTeacherSignature = ({ profileId, schoolId, existingSignature, onSaved
           Class Teacher Signature
         </CardTitle>
         <CardDescription>
-          As a class teacher, set your digital signature for report cards. This signature will appear on all student report cards for your class.
+          As a class teacher, set your digital signature for report cards.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Current signature preview */}
         {existingSignature && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Current Signature</Label>
             <div className="flex items-center gap-4">
               <div className="border rounded-lg p-3 bg-card">
-                <img
-                  src={existingSignature.signature_data}
-                  alt="Current signature"
-                  className="max-h-16 w-auto"
-                />
+                <img src={existingSignature.signature_data} alt="Current signature" className="max-h-16 w-auto" />
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="default" className="gap-1">
-                  <Check className="h-3 w-3" />
-                  Active
-                </Badge>
-                <Badge variant="secondary">
-                  {existingSignature.signature_type === 'drawn' ? 'Hand-drawn' : 'Typed'}
-                </Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={deleteSignature}
-                  disabled={saving}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />
-                  Remove
+                <Badge variant="default" className="gap-1"><Check className="h-3 w-3" />Active</Badge>
+                <Badge variant="secondary">{existingSignature.signature_type === 'drawn' ? 'Hand-drawn' : 'Typed'}</Badge>
+                <Button variant="outline" size="sm" onClick={deleteSignature} disabled={saving} className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />Remove
                 </Button>
               </div>
             </div>
           </div>
         )}
-
-        {/* Signature input */}
         <div className="space-y-2">
-          <Label className="text-xs font-medium">
-            {existingSignature ? 'Update Signature' : 'Create Signature'}
-          </Label>
+          <Label className="text-xs font-medium">{existingSignature ? 'Update Signature' : 'Create Signature'}</Label>
           <Tabs value={signatureTab} onValueChange={setSignatureTab}>
             <TabsList className="grid w-full grid-cols-2 max-w-xs">
               <TabsTrigger value="draw">Draw</TabsTrigger>
               <TabsTrigger value="type">Type</TabsTrigger>
             </TabsList>
             <TabsContent value="draw" className="mt-3">
-              <SignaturePad
-                onSave={(data) => saveSignature(data, 'drawn')}
-              />
+              <SignaturePad onSave={(data) => saveSignature(data, 'drawn')} />
             </TabsContent>
             <TabsContent value="type" className="mt-3">
-              <TypeToSign
-                onSave={(text, fontFamily, imageData) => saveSignature(imageData, 'typed', fontFamily)}
-              />
+              <TypeToSign onSave={(text, fontFamily, imageData) => saveSignature(imageData, 'typed', fontFamily)} />
             </TabsContent>
           </Tabs>
         </div>

@@ -627,8 +627,10 @@ const MarksSubmission = () => {
 
   const renderEOT = () => {
     const sec = sections.eot;
-    const agg = calcAggregate(sec.rows);
+    const total = calcAggregate(sec.rows);
     const avg = calcAverage(sec.rows);
+    const agg = avg !== null ? Math.round(avg) : null;
+    const div = avg !== null ? calcDivision(avg) : null;
     return (
       <Card className="border-border">
         <CardHeader className="pb-3">

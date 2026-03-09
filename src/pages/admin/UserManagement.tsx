@@ -396,7 +396,7 @@ const UserManagement = () => {
               Add User
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
               <DialogDescription>
@@ -404,7 +404,7 @@ const UserManagement = () => {
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(createUser)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(createUser)} className="space-y-4 overflow-y-auto flex-1 pr-1">
                 {/* Avatar Upload */}
                 <div className="flex flex-col items-center gap-2">
                   <div className="relative">

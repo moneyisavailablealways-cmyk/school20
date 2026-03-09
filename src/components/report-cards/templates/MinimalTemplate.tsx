@@ -1,4 +1,4 @@
-import { ReportData, SignatureRenderer, StampOverlay } from './shared';
+import { ReportData, SignatureRenderer, StampOverlay, calcAvg } from './shared';
 
 const MinimalTemplate = ({ data }: { data: ReportData }) => {
   const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl, stampConfig } = data;

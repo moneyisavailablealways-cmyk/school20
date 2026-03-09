@@ -472,9 +472,14 @@ const FeesPayments = () => {
                         </div>
                       )}
 
-                      <Button variant="outline" size="sm" className="flex items-center gap-2">
-                        <Download className="h-4 w-4" />
-                        Download Receipt
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center gap-2"
+                        onClick={() => handlePrintReceipt(payment)}
+                      >
+                        <Printer className="h-4 w-4" />
+                        Print Receipt
                       </Button>
                     </CardContent>
                   </Card>

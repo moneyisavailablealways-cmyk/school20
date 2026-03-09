@@ -540,7 +540,7 @@ const ReportGeneration = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={student.isReady ? 'bg-green-500' : 'bg-yellow-500'}>
+                          <Badge variant={student.isReady ? 'default' : 'secondary'}>
                             {student.isReady ? 'Ready' : 'Not Ready'}
                           </Badge>
                         </TableCell>

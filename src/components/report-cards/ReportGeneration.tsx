@@ -443,17 +443,25 @@ const ReportGeneration = () => {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Generate Report Cards?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        You are about to generate report cards for <strong>{selectedStudents.length}</strong> selected student(s) for <strong>{selectedTerm}</strong>.
-                        {classTeacherComment && ' A custom class teacher comment will be applied.'}
-                        {headTeacherComment && ' A custom head teacher comment will be applied.'}
-                        {' '}This may take a moment. Existing reports for these students will be overwritten.
+                      <AlertDialogDescription asChild>
+                        <div className="space-y-2">
+                          <p>You are about to generate report cards for <strong>{selectedStudents.length}</strong> selected student(s) for <strong>{selectedTerm}</strong>.</p>
+                          {classTeacherComment && <p>✓ Custom class teacher comment will be applied.</p>}
+                          {headTeacherComment && <p>✓ Custom head teacher comment will be applied.</p>}
+                          <p className="text-destructive font-medium">⚠ Existing reports for these students will be overwritten.</p>
+                        </div>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => generateReports.mutate(selectedStudents)}>
-                        Generate
+                      <AlertDialogCancel disabled={isGenerating}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        disabled={isGenerating}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          generateReports.mutate(selectedStudents);
+                        }}
+                      >
+                        {isGenerating ? 'Generating...' : `Generate ${selectedStudents.length} Report(s)`}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

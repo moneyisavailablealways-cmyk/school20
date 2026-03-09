@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CreditCard, DollarSign, Calendar, FileText, User, Download } from 'lucide-react';
+import { CreditCard, DollarSign, Calendar, FileText, User, Download, Printer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useReceiptGenerator } from '@/hooks/useReceiptGenerator';
 
 interface Invoice {
   id: string;

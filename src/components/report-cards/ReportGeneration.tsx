@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -17,6 +19,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import ReportCardPreviewDialog from './ReportCardPreviewDialog';
 
 const ReportGeneration = () => {
   const { profile } = useAuth();
@@ -27,6 +30,12 @@ const ReportGeneration = () => {
   const [generatingProgress, setGeneratingProgress] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedStream, setSelectedStream] = useState<string>('all');
+  const [classTeacherComment, setClassTeacherComment] = useState('');
+  const [headTeacherComment, setHeadTeacherComment] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [previewStudentName, setPreviewStudentName] = useState('');
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
 
   // Fetch classes with streams
   const { data: classes } = useQuery({
@@ -54,7 +63,6 @@ const ReportGeneration = () => {
     },
   });
 
-  // Fetch all academic years to find the right one
   const { data: academicYears } = useQuery({
     queryKey: ['academic-years-for-generation'],
     queryFn: async () => {
@@ -69,23 +77,25 @@ const ReportGeneration = () => {
 
   const currentYear = academicYears?.[0] || null;
 
-  // Fetch students with their submission readiness
+  // Fetch students with their submission readiness (supports primary BOT/MOT/EOT)
   const { data: studentsData, isLoading } = useQuery({
     queryKey: ['students-for-generation', selectedClass, selectedStream, selectedTerm, currentYear?.id],
     queryFn: async () => {
       if (!currentYear?.id) return [];
 
-      // First, find which academic_year_id has approved submissions for the selected term
+      // Check all term variants: "Term 1", "Term 1 BOT", "Term 1 MOT"
+      const termVariants = [selectedTerm, `${selectedTerm} BOT`, `${selectedTerm} MOT`];
+
+      // Find academic year with approved submissions for any of these terms
       const { data: submissionYears } = await supabase
         .from('subject_submissions')
         .select('academic_year_id')
-        .eq('term', selectedTerm)
+        .in('term', termVariants)
         .eq('status', 'approved')
         .limit(1);
 
       const targetAcademicYearId = submissionYears?.[0]?.academic_year_id || currentYear.id;
 
-      // Get enrollments - handle both null and matching academic_year_id
       let query = supabase
         .from('student_enrollments')
         .select(`
@@ -104,31 +114,25 @@ const ReportGeneration = () => {
         `)
         .eq('status', 'active');
 
-      if (selectedClass !== 'all') {
-        query = query.eq('class_id', selectedClass);
-      }
-
-      if (selectedStream !== 'all') {
-        query = query.eq('stream_id', selectedStream);
-      }
+      if (selectedClass !== 'all') query = query.eq('class_id', selectedClass);
+      if (selectedStream !== 'all') query = query.eq('stream_id', selectedStream);
 
       const { data: enrollments, error: enrollError } = await query;
       if (enrollError) throw enrollError;
 
-      // Filter enrollments: include those with matching academic_year_id OR null academic_year_id
-      const filteredEnrollments = enrollments?.filter(e => 
+      const filteredEnrollments = enrollments?.filter(e =>
         !e.academic_year_id || e.academic_year_id === targetAcademicYearId || e.academic_year_id === currentYear.id
       ) || [];
 
       const studentIds = filteredEnrollments.map(e => e.student_id);
       if (studentIds.length === 0) return [];
 
-      // Get all submissions for these students (approved + pending)
+      // Get all submissions for these students across all term variants
       const { data: submissions } = await supabase
         .from('subject_submissions')
-        .select('student_id, subject_id, status')
+        .select('student_id, subject_id, status, term')
         .eq('academic_year_id', targetAcademicYearId)
-        .eq('term', selectedTerm)
+        .in('term', termVariants)
         .in('student_id', studentIds);
 
       // Get existing generated reports
@@ -139,7 +143,6 @@ const ReportGeneration = () => {
         .eq('term', selectedTerm)
         .in('student_id', studentIds);
 
-      // Build student readiness data
       return filteredEnrollments.map(enrollment => {
         const student = enrollment.students as any;
         const classInfo = enrollment.classes as any;
@@ -160,7 +163,7 @@ const ReportGeneration = () => {
           approvedSubjects: approvedCount,
           pendingSubjects: pendingCount,
           totalSubjects: totalSubmissions,
-          isReady: approvedCount >= 1, // At least 1 approved subject
+          isReady: approvedCount >= 1,
           reportStatus: existingReport?.status || null,
           reportCode: existingReport?.verification_code || null,
           reportDate: existingReport?.generated_at || null,
@@ -188,19 +191,20 @@ const ReportGeneration = () => {
 
       for (let i = 0; i < studentIds.length; i++) {
         const studentId = studentIds[i];
-
         const { data, error } = await supabase.functions.invoke('generate-report-pdf', {
           body: {
             studentId,
             academicYearId: targetAcademicYearId,
             term: selectedTerm,
             generatedBy: profile?.id,
+            classTeacherComment: classTeacherComment || undefined,
+            headTeacherComment: headTeacherComment || undefined,
           },
         });
 
-        if (error) {
-          console.error(`Failed to generate report for ${studentId}:`, error);
-          toast.error(`Failed to generate report for student`);
+        if (error || !data?.success) {
+          console.error(`Failed to generate report for ${studentId}:`, error || data?.error);
+          toast.error(`Failed to generate report for a student`);
         }
 
         setGeneratingProgress(Math.round(((i + 1) / studentIds.length) * 100));
@@ -212,6 +216,7 @@ const ReportGeneration = () => {
       toast.success('Reports generated successfully');
       setSelectedStudents([]);
       queryClient.invalidateQueries({ queryKey: ['students-for-generation'] });
+      queryClient.invalidateQueries({ queryKey: ['generated-report-cards'] });
     },
     onError: (error) => {
       setIsGenerating(false);
@@ -230,48 +235,59 @@ const ReportGeneration = () => {
     setSelectedStudents(readyIds);
   };
 
-  const handlePreview = (student: any) => {
-    if (student.reportUrl) {
-      window.open(student.reportUrl, '_blank');
-    } else {
-      toast.info('Report preview not available yet');
-    }
-  };
+  // Fetch report data and open preview
+  const openPreview = async (student: any) => {
+    setLoadingPreviewId(student.studentId);
+    try {
+      const submissionYears = await supabase
+        .from('subject_submissions')
+        .select('academic_year_id')
+        .eq('term', selectedTerm)
+        .eq('status', 'approved')
+        .limit(1);
+      const targetAcademicYearId = submissionYears?.data?.[0]?.academic_year_id || currentYear?.id;
 
-  const handleDownload = (student: any) => {
-    if (student.reportUrl) {
-      const link = document.createElement('a');
-      link.href = student.reportUrl;
-      link.download = `report-${student.admissionNo || student.studentId}.pdf`;
-      link.click();
-    } else {
-      toast.info('Report not available for download');
-    }
-  };
+      // Try to get existing report_data first
+      const { data: existing } = await supabase
+        .from('generated_reports')
+        .select('report_data')
+        .eq('student_id', student.studentId)
+        .eq('term', selectedTerm)
+        .maybeSingle();
 
-  const handlePrint = (student: any) => {
-    if (student.reportUrl) {
-      const printWindow = window.open(student.reportUrl, '_blank');
-      printWindow?.addEventListener('load', () => {
-        printWindow.print();
-      });
-    } else {
-      toast.info('Report not available for printing');
+      if (existing?.report_data) {
+        setPreviewData(existing.report_data);
+        setPreviewStudentName(student.name);
+        setPreviewOpen(true);
+      } else {
+        // Regenerate
+        const { data, error } = await supabase.functions.invoke('generate-report-pdf', {
+          body: {
+            studentId: student.studentId,
+            academicYearId: targetAcademicYearId,
+            term: selectedTerm,
+            generatedBy: profile?.id,
+          },
+        });
+        if (error || !data?.success) throw new Error(data?.error || 'Failed to generate');
+        setPreviewData(data.reportData);
+        setPreviewStudentName(student.name);
+        setPreviewOpen(true);
+        queryClient.invalidateQueries({ queryKey: ['students-for-generation'] });
+      }
+    } catch (err: any) {
+      toast.error('Failed to load report: ' + err.message);
+    } finally {
+      setLoadingPreviewId(null);
     }
   };
 
   const handleShare = (student: any) => {
-    if (navigator.share && student.reportUrl) {
-      navigator.share({
-        title: `Report Card - ${student.name}`,
-        text: `Report card for ${student.name}`,
-        url: student.reportUrl,
-      }).catch(() => {});
-    } else if (student.reportCode) {
+    if (student.reportCode) {
       navigator.clipboard.writeText(student.reportCode);
       toast.success('Verification code copied to clipboard');
     } else {
-      toast.info('Nothing to share yet');
+      toast.info('Report not yet generated');
     }
   };
 
@@ -320,7 +336,7 @@ const ReportGeneration = () => {
         </Card>
       </div>
 
-      {/* Filters & Actions */}
+      {/* Filters */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -340,11 +356,7 @@ const ReportGeneration = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Select
-                value={selectedStream}
-                onValueChange={setSelectedStream}
-                disabled={selectedClass === 'all'}
-              >
+              <Select value={selectedStream} onValueChange={setSelectedStream} disabled={selectedClass === 'all'}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="All Streams" />
                 </SelectTrigger>
@@ -370,7 +382,39 @@ const ReportGeneration = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+      </Card>
+
+      {/* Comment Overrides */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Comment Overrides (Optional)</CardTitle>
+          <CardDescription>Override auto-generated comments for all selected reports. Leave blank to use automatic comments.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Class Teacher's Comment</Label>
+            <Textarea
+              placeholder="Leave blank to auto-generate based on performance..."
+              value={classTeacherComment}
+              onChange={e => setClassTeacherComment(e.target.value)}
+              className="resize-none h-20 text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Head Teacher's Comment</Label>
+            <Textarea
+              placeholder="Leave blank to auto-generate based on performance..."
+              value={headTeacherComment}
+              onChange={e => setHeadTeacherComment(e.target.value)}
+              className="resize-none h-20 text-sm"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Students Table + Actions */}
+      <Card>
+        <CardContent className="pt-4">
           {/* Generation Progress */}
           {isGenerating && (
             <div className="mb-4 p-4 bg-muted rounded-lg">
@@ -383,16 +427,13 @@ const ReportGeneration = () => {
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-4 flex-wrap">
             <Button variant="outline" onClick={selectAllReady}>
               Select All Ready ({stats.ready})
             </Button>
             {selectedStudents.length > 0 && (
               <>
-                <Button
-                  onClick={() => generateReports.mutate(selectedStudents)}
-                  disabled={isGenerating}
-                >
+                <Button onClick={() => generateReports.mutate(selectedStudents)} disabled={isGenerating}>
                   <FileText className="mr-2 h-4 w-4" />
                   Generate ({selectedStudents.length})
                 </Button>
@@ -474,137 +515,170 @@ const ReportGeneration = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {studentsData?.map(student => (
-                    <TableRow key={student.studentId}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedStudents.includes(student.studentId)}
-                          onCheckedChange={() => toggleStudent(student.studentId)}
-                          disabled={!student.isReady}
-                        />
-                      </TableCell>
-                      <TableCell className="font-mono">{student.admissionNo}</TableCell>
-                      <TableCell className="font-medium">{student.name}</TableCell>
-                      <TableCell>{student.className}</TableCell>
-                      <TableCell>{student.streamName || '-'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="text-green-600 font-medium">{student.approvedSubjects}</span>
-                          {student.pendingSubjects > 0 && (
-                            <span className="text-yellow-600">+{student.pendingSubjects} pending</span>
-                          )}
-                          <span className="text-muted-foreground">/ {student.totalSubjects}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={student.isReady ? 'bg-green-500' : 'bg-yellow-500'}>
-                          {student.isReady ? 'Ready' : 'Not Ready'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {student.reportStatus ? (
-                          <div>
-                            <Badge variant="outline">{student.reportStatus}</Badge>
-                            {student.reportDate && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {format(new Date(student.reportDate), 'MMM d, yyyy')}
-                              </p>
+                  {studentsData?.map(student => {
+                    const isLoadingThis = loadingPreviewId === student.studentId;
+                    return (
+                      <TableRow key={student.studentId}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedStudents.includes(student.studentId)}
+                            onCheckedChange={() => toggleStudent(student.studentId)}
+                            disabled={!student.isReady}
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono">{student.admissionNo}</TableCell>
+                        <TableCell className="font-medium">{student.name}</TableCell>
+                        <TableCell>{student.className}</TableCell>
+                        <TableCell>{student.streamName || '-'}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-600 font-medium">{student.approvedSubjects}</span>
+                            {student.pendingSubjects > 0 && (
+                              <span className="text-yellow-600">+{student.pendingSubjects} pending</span>
                             )}
+                            <span className="text-muted-foreground">/ {student.totalSubjects}</span>
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">Not generated</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {student.reportStatus && (
-                            <>
-                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Preview" onClick={() => handlePreview(student)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Download" onClick={() => handleDownload(student)}>
-                                <Download className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Print" onClick={() => handlePrint(student)}>
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8" title="Share" onClick={() => handleShare(student)}>
-                                <Share2 className="h-4 w-4" />
-                              </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={student.isReady ? 'bg-green-500' : 'bg-yellow-500'}>
+                            {student.isReady ? 'Ready' : 'Not Ready'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {student.reportStatus ? (
+                            <div>
+                              <Badge variant="outline">{student.reportStatus}</Badge>
+                              {student.reportDate && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {format(new Date(student.reportDate), 'MMM d, yyyy')}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Not generated</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {/* Preview always available if ready */}
+                            {(student.isReady || student.reportStatus) && (
                               <Button
                                 size="icon"
                                 variant="ghost"
                                 className="h-8 w-8"
-                                title="Edit (Regenerate)"
-                                disabled={isGenerating}
-                                onClick={() => {
-                                  toast.info(`Regenerating report for ${student.name}...`);
-                                  generateReports.mutate([student.studentId]);
-                                }}
+                                title="Preview"
+                                disabled={isLoadingThis || isGenerating}
+                                onClick={() => openPreview(student)}
                               >
-                                <Pencil className="h-4 w-4" />
+                                {isLoadingThis
+                                  ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                  : <Eye className="h-4 w-4" />}
                               </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Report Card?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Delete the generated report card for {student.name}? This cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      onClick={async () => {
-                                        const { error } = await supabase
-                                          .from('generated_reports')
-                                          .delete()
-                                          .eq('student_id', student.studentId)
-                                          .eq('term', selectedTerm);
-                                        if (error) {
-                                          toast.error('Failed to delete report');
-                                        } else {
-                                          toast.success(`Report for ${student.name} deleted`);
-                                          queryClient.invalidateQueries({ queryKey: ['students-for-generation'] });
-                                          queryClient.invalidateQueries({ queryKey: ['generated-report-cards'] });
-                                        }
-                                      }}
-                                    >
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </>
-                          )}
-                          {student.isReady && !student.reportStatus && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              title="Generate"
-                              onClick={() => generateReports.mutate([student.studentId])}
-                              disabled={isGenerating}
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            )}
+                            {student.reportStatus && (
+                              <>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  title="Print"
+                                  disabled={isLoadingThis || isGenerating}
+                                  onClick={() => openPreview(student)}
+                                >
+                                  <Printer className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  title="Share / Copy Code"
+                                  onClick={() => handleShare(student)}
+                                >
+                                  <Share2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  title="Regenerate"
+                                  disabled={isGenerating}
+                                  onClick={() => {
+                                    toast.info(`Regenerating report for ${student.name}...`);
+                                    generateReports.mutate([student.studentId]);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" title="Delete">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Report Card?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Delete the generated report card for {student.name}? This cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        onClick={async () => {
+                                          const { error } = await supabase
+                                            .from('generated_reports')
+                                            .delete()
+                                            .eq('student_id', student.studentId)
+                                            .eq('term', selectedTerm);
+                                          if (error) {
+                                            toast.error('Failed to delete report');
+                                          } else {
+                                            toast.success(`Report for ${student.name} deleted`);
+                                            queryClient.invalidateQueries({ queryKey: ['students-for-generation'] });
+                                            queryClient.invalidateQueries({ queryKey: ['generated-report-cards'] });
+                                          }
+                                        }}
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </>
+                            )}
+                            {student.isReady && !student.reportStatus && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                title="Generate"
+                                onClick={() => generateReports.mutate([student.studentId])}
+                                disabled={isGenerating}
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Preview Dialog */}
+      <ReportCardPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        reportData={previewData}
+        studentName={previewStudentName}
+      />
     </div>
   );
 };

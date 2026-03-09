@@ -111,7 +111,7 @@ async function fetchSignatures(supabase: any, schoolId: string, classTeacherId: 
 
   if (allSigs) {
     // Head teacher signature - match head_teacher, principal, OR admin
-    const headSig = allSigs.find((s: any) => 
+    const headSig = allSigs.find((s: any) =>
       ['head_teacher', 'principal', 'admin'].includes(s.profiles?.role)
     );
     if (headSig) {
@@ -151,8 +151,8 @@ async function fetchSchoolStamp(supabase: any, schoolId: string) {
   return data?.stamp_url || null;
 }
 
-// Helper: process subjects
-function processSubjects(submissions: any[]) {
+// Helper: process subjects for SECONDARY schools (O-Level CBC)
+function processSecondarySubjects(submissions: any[]) {
   return (submissions || []).map((sub: any) => {
     const a1 = sub.a1_score;
     const a2 = sub.a2_score;
@@ -179,6 +179,55 @@ function processSubjects(submissions: any[]) {
   });
 }
 
+// Helper: process subjects for PRIMARY schools (BOT / MOT / EOT)
+// botSubs = Beginning of Term submissions, motSubs = Mid Term, eotSubs = End of Term
+function processPrimarySubjects(botSubs: any[], motSubs: any[], eotSubs: any[]) {
+  // Build a map of subject_id -> combined data
+  const subjectMap = new Map<string, any>();
+
+  const merge = (subs: any[], key: 'a1' | 'a2' | 'total100_eot') => {
+    for (const sub of subs) {
+      const id = sub.subject_id;
+      if (!subjectMap.has(id)) {
+        subjectMap.set(id, {
+          code: sub.subjects?.code || '',
+          name: sub.subjects?.name || '',
+          a1: null,
+          a2: null,
+          a3: null,
+          avg: null,
+          ca20: null,
+          exam80: null,
+          total100: null,
+          identifier: 2,
+          grade: '',
+          remark: '',
+          teacherInitials: sub.teacher_initials || '',
+        });
+      }
+      const entry = subjectMap.get(id);
+      if (key === 'a1') {
+        entry.a1 = sub.marks !== null ? Number(sub.marks) : null;
+      } else if (key === 'a2') {
+        entry.a2 = sub.marks !== null ? Number(sub.marks) : null;
+      } else if (key === 'total100_eot') {
+        entry.total100 = sub.marks !== null ? Number(sub.marks) : null;
+        entry.exam80 = sub.marks !== null ? Number(sub.marks) : null; // same field for primary
+        entry.grade = sub.grade || '';
+        entry.remark = sub.remark || '';
+        entry.teacherInitials = sub.teacher_initials || '';
+        entry.identifier = sub.identifier || 2;
+      }
+    }
+  };
+
+  merge(botSubs, 'a1');
+  merge(motSubs, 'a2');
+  merge(eotSubs, 'total100_eot');
+
+  return Array.from(subjectMap.values());
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -198,11 +247,10 @@ serve(async (req) => {
     console.log(`Generating report for student: ${studentId}, year: ${academicYearId}, term: ${term}`);
 
     // Fetch core data in parallel
-    const [studentData, enrollment, academicYear, submissions, gradingConfig, comments, autoCommentRules] = await Promise.all([
+    const [studentData, enrollment, academicYear, gradingConfig, comments, autoCommentRules] = await Promise.all([
       fetchStudentData(supabase, studentId),
       fetchEnrollment(supabase, studentId, academicYearId),
       supabase.from('academic_years').select('name').eq('id', academicYearId).single().then((r: any) => r.data),
-      supabase.from('subject_submissions').select(`*, subjects(id, name, code)`).eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', term).eq('status', 'approved').then((r: any) => { if (r.error) throw new Error(`Submissions fetch error: ${r.error.message}`); return r.data; }),
       supabase.from('grading_config').select('*').eq('is_active', true).order('max_marks', { ascending: false }).then((r: any) => r.data),
       supabase.from('report_comments').select('*').eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', term).then((r: any) => r.data),
       supabase.from('auto_comment_rules').select('*').eq('is_active', true).order('priority', { ascending: false }).then((r: any) => r.data),
@@ -210,19 +258,57 @@ serve(async (req) => {
 
     const schoolId = studentData.school_id;
     const classTeacherId = enrollment?.classes?.class_teacher_id || null;
+    const levelName = (enrollment?.classes?.levels?.name || '').toLowerCase();
+
+    // Determine if this is a primary school based on the class level name
+    const isPrimary = levelName.includes('primary') || levelName.includes('p1') || levelName.includes('p2')
+      || levelName.includes('p3') || levelName.includes('p4') || levelName.includes('p5')
+      || levelName.includes('p6') || levelName.includes('p7') || levelName.startsWith('p');
+
+    // Fetch submissions differently based on school type
+    let processedSubjects: any[] = [];
+
+    if (isPrimary) {
+      // For primary: fetch BOT, MOT, EOT separately
+      const botTerm = `${term} BOT`;
+      const motTerm = `${term} MOT`;
+      const eotTerm = term; // EOT is stored as just "Term 1"
+
+      const [botSubs, motSubs, eotSubs] = await Promise.all([
+        supabase.from('subject_submissions').select(`*, subjects(id, name, code)`)
+          .eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', botTerm)
+          .in('status', ['approved', 'pending']).then((r: any) => r.data || []),
+        supabase.from('subject_submissions').select(`*, subjects(id, name, code)`)
+          .eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', motTerm)
+          .in('status', ['approved', 'pending']).then((r: any) => r.data || []),
+        supabase.from('subject_submissions').select(`*, subjects(id, name, code)`)
+          .eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', eotTerm)
+          .in('status', ['approved', 'pending']).then((r: any) => r.data || []),
+      ]);
+
+      processedSubjects = processPrimarySubjects(botSubs, motSubs, eotSubs);
+    } else {
+      // For secondary: fetch only EOT (main term)
+      const { data: submissions, error: subError } = await supabase
+        .from('subject_submissions')
+        .select(`*, subjects(id, name, code)`)
+        .eq('student_id', studentId)
+        .eq('academic_year_id', academicYearId)
+        .eq('term', term)
+        .eq('status', 'approved');
+
+      if (subError) throw new Error(`Submissions fetch error: ${subError.message}`);
+      processedSubjects = processSecondarySubjects(submissions || []);
+    }
 
     // Fetch school-specific data in parallel
-    // Fetch school settings - try by school_id first, fall back to latest record with data
     const fetchSchoolSettings = async () => {
       const { data: bySchoolId } = await supabase.from('school_settings').select('*').eq('school_id', schoolId).maybeSingle();
-      // Check if the matched record has meaningful data
       if (bySchoolId && (bySchoolId.address || bySchoolId.phone || bySchoolId.email || bySchoolId.logo_url)) {
         return bySchoolId;
       }
-      // Fall back to latest record that has actual data
       const { data: allSettings } = await supabase.from('school_settings').select('*').order('created_at', { ascending: false });
       if (allSettings && allSettings.length > 0) {
-        // Find the first one with meaningful data
         const withData = allSettings.find((s: any) => s.address || s.phone || s.email || s.logo_url);
         return withData || allSettings[0];
       }
@@ -261,15 +347,11 @@ serve(async (req) => {
     const dob = studentData.date_of_birth ? new Date(studentData.date_of_birth) : null;
     const age = dob ? Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
 
-    // Process subjects
-    const processedSubjects = processSubjects(submissions);
-
-    // Calculate overall averages
+    // Calculate overall averages from EOT/total100 marks
     const validTotals = processedSubjects.filter(s => s.total100 !== null).map(s => s.total100 as number);
     const overallAvg = validTotals.length > 0 ? validTotals.reduce((a, b) => a + b, 0) / validTotals.length : 0;
 
     let overallGrade = 'F';
-    let overallRemark = 'Basic';
     for (const gc of gradingConfig || []) {
       if (overallAvg >= gc.min_marks && overallAvg <= gc.max_marks) {
         overallGrade = gc.grade;
@@ -278,12 +360,11 @@ serve(async (req) => {
     }
 
     // Map overall average to achievement levels
+    let overallRemark = 'Basic';
     if (overallAvg >= 80) {
       overallRemark = 'Outstanding';
     } else if (overallAvg >= 45) {
       overallRemark = 'Moderate';
-    } else {
-      overallRemark = 'Basic';
     }
 
     const avgIdentifier = processedSubjects.length > 0
@@ -297,7 +378,6 @@ serve(async (req) => {
       return rule?.comment_text || '';
     };
 
-    // Head teacher auto-comments use distinct administrative language
     const getHeadTeacherAutoComment = (score: number): string => {
       if (score >= 90) return 'An exceptional academic record this term. The school commends your exemplary dedication and encourages you to sustain this standard of excellence.';
       if (score >= 75) return 'A commendable performance that reflects consistent effort. The school is pleased with your progress and expects continued commitment.';
@@ -331,6 +411,9 @@ serve(async (req) => {
         classTeacherName = `${ctProfile.first_name} ${ctProfile.last_name}`;
       }
     }
+
+    // Determine template: primary schools always use 'primary' template
+    const templateType = isPrimary ? 'primary' : (defaultTemplate?.template_type || 'classic');
 
     // Build report data
     const reportData = {
@@ -393,7 +476,7 @@ serve(async (req) => {
         headTeacher: signatures.headTeacher,
       },
       stampUrl,
-      templateType: defaultTemplate?.template_type || 'classic',
+      templateType,
       gradingScale: gradingConfig?.map((gc: any) => ({
         grade: gc.grade,
         minScore: gc.min_marks,
@@ -436,10 +519,10 @@ serve(async (req) => {
       action: 'generate_report',
       target_type: 'report',
       target_id: report?.id || studentId,
-      details: { term, academicYearId, verificationCode },
+      details: { term, academicYearId, verificationCode, isPrimary },
     });
 
-    console.log('Report generated successfully:', verificationCode);
+    console.log('Report generated successfully:', verificationCode, '| isPrimary:', isPrimary, '| template:', templateType);
 
     return new Response(JSON.stringify({
       success: true,

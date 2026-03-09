@@ -56,6 +56,7 @@ const PrimaryTemplate = ({ data }: { data: ReportData }) => {
         border: '1px solid #000',
       }}
     >
+      <StampOverlay stampUrl={stampUrl} stampConfig={stampConfig} />
       {/* ============ SECTION 1: SCHOOL HEADER ============ */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px' }}>
         {/* LEFT: School Logo */}

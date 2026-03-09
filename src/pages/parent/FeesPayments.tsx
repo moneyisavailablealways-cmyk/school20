@@ -157,12 +157,12 @@ const FeesPayments = () => {
       if (profile.school_id) {
         const { data: schoolData } = await supabase
           .from('schools')
-          .select('name')
+          .select('school_name')
           .eq('id', profile.school_id)
           .single();
         
         if (schoolData) {
-          setSchoolName(schoolData.name);
+          setSchoolName(schoolData.school_name);
         }
       }
     } catch (error) {

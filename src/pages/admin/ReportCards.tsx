@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, CheckCircle, Settings, BarChart3, Layout, Building2, Calendar, PenTool, MessageSquareText, ClipboardList } from 'lucide-react';
+import { FileText, CheckCircle, Settings, BarChart3, Layout, Calendar, PenTool, MessageSquareText, ClipboardList } from 'lucide-react';
 import SubmissionsApproval from '@/components/report-cards/SubmissionsApproval';
 import ReportGeneration from '@/components/report-cards/ReportGeneration';
 import GradingConfig from '@/components/report-cards/GradingConfig';
 import ReportTemplates from '@/components/report-cards/ReportTemplates';
 import ReportAnalytics from '@/components/report-cards/ReportAnalytics';
-import SchoolSettings from '@/components/report-cards/SchoolSettings';
 import TermConfiguration from '@/components/report-cards/TermConfiguration';
 import SignaturesStamps from '@/components/report-cards/SignaturesStamps';
 import AutoCommentRules from '@/components/report-cards/AutoCommentRules';
@@ -62,41 +61,10 @@ const ReportCards = () => {
             <ClipboardList className="h-4 w-4" />
             <span className="hidden sm:inline">Generated</span>
           </TabsTrigger>
-          <TabsTrigger value="school" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">School</span>
-          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="approvals">
-          <SubmissionsApproval />
-        </TabsContent>
-        <TabsContent value="generate">
-          <ReportGeneration />
-        </TabsContent>
-        <TabsContent value="analytics">
-          <ReportAnalytics />
-        </TabsContent>
-        <TabsContent value="grading">
-          <GradingConfig />
-        </TabsContent>
-        <TabsContent value="terms">
-          <TermConfiguration />
-        </TabsContent>
-        <TabsContent value="comments">
-          <AutoCommentRules />
-        </TabsContent>
-        <TabsContent value="signatures">
-          <SignaturesStamps />
-        </TabsContent>
-        <TabsContent value="templates">
-          <ReportTemplates />
-        </TabsContent>
+...
         <TabsContent value="generated">
           <GeneratedReportCards />
-        </TabsContent>
-        <TabsContent value="school">
-          <SchoolSettings />
         </TabsContent>
       </Tabs>
     </div>

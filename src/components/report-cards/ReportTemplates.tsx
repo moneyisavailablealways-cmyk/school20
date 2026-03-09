@@ -66,16 +66,24 @@ const ReportTemplates = () => {
     },
   });
 
-  // Fetch school settings for preview
+  // Fetch school info from schools table for preview
   const { data: schoolSettings } = useQuery({
-    queryKey: ['school-settings'],
+    queryKey: ['school-info-for-templates'],
     queryFn: async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('school_id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
+        .maybeSingle();
+      if (!profile?.school_id) return null;
       const { data, error } = await supabase
-        .from('school_settings')
-        .select('*')
+        .from('schools')
+        .select('school_name, address, phone, email, website, logo_url')
+        .eq('id', profile.school_id)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      // Normalise to the shape the preview expects
+      return data ? { ...data, motto: '' } : null;
     },
   });
 

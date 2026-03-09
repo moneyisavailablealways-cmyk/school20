@@ -1,7 +1,7 @@
-import { ReportData, SignatureRenderer, calcAvg } from './shared';
+import { ReportData, SignatureRenderer, calcAvg, StampOverlay } from './shared';
 
 const ModernTemplate = ({ data }: { data: ReportData }) => {
-  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl } = data;
+  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl, stampConfig } = data;
 
   const getGradeColor = (grade: string) => {
     if (['D1', 'D2', 'A'].includes(grade)) return '#16a34a';

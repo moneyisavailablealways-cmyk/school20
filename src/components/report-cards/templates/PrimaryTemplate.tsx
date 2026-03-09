@@ -1,7 +1,7 @@
-import { ReportData, SignatureRenderer, cellStyle } from './shared';
+import { ReportData, SignatureRenderer, cellStyle, StampOverlay } from './shared';
 
 const PrimaryTemplate = ({ data }: { data: ReportData }) => {
-  const { student, school, term, subjects, summary, gradingScale, signatures, stampUrl } = data;
+  const { student, school, term, subjects, summary, gradingScale, signatures, stampUrl, stampConfig } = data;
 
   const thinBorder = '1px solid #333';
   const cell: React.CSSProperties = { border: thinBorder, padding: '3px 6px', fontSize: '10.5px' };

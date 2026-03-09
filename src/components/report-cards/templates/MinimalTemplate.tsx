@@ -1,7 +1,7 @@
-import { ReportData, SignatureRenderer, calcAvg } from './shared';
+import { ReportData, SignatureRenderer, StampOverlay } from './shared';
 
 const MinimalTemplate = ({ data }: { data: ReportData }) => {
-  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl } = data;
+  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl, stampConfig } = data;
 
   const s: React.CSSProperties = { border: '1px solid #ddd', padding: '2px 5px' };
 

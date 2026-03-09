@@ -48,6 +48,8 @@ const FeesPayments = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'invoices' | 'payments'>('invoices');
+  const [schoolName, setSchoolName] = useState<string>('School');
+  const { printReceipt } = useReceiptGenerator();
 
   useEffect(() => {
     fetchChildren();

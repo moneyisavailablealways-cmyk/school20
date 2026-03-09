@@ -326,7 +326,7 @@ serve(async (req) => {
       return bySchoolId;
     };
 
-    const [schoolSettings, termConfig, feesData, attendanceSummary, signatures, stampUrl, defaultTemplate] = await Promise.all([
+    const [schoolSettings, termConfig, feesData, attendanceSummary, signatures, stampData, defaultTemplate] = await Promise.all([
       fetchSchoolSettings(),
       supabase.from('term_configurations').select('*').eq('academic_year_id', academicYearId).eq('term_name', term).maybeSingle().then((r: any) => r.data),
       calculateFeesBalance(supabase, studentId, academicYearId, term),
@@ -335,6 +335,9 @@ serve(async (req) => {
       fetchSchoolStamp(supabase, schoolId),
       supabase.from('report_templates').select('template_type').eq('school_id', schoolId).eq('is_default', true).maybeSingle().then((r: any) => r.data),
     ]);
+
+    const stampUrl = stampData.stampUrl;
+    const stampConfig = stampData.stampConfig;
 
     // Fetch report_card_fees
     const classId = enrollment?.class_id;

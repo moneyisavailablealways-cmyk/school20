@@ -731,19 +731,19 @@ const MarksSubmission = () => {
             );
           })}
 
-          {/* Aggregates */}
+          {/* Auto-calculated summary */}
           <div className="border-t pt-2 mt-1 grid grid-cols-3 gap-3">
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground">AGG (Aggregate)</p>
-              <Input value={agg !== null ? agg.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+              <p className="text-xs font-semibold text-muted-foreground">TOTAL (Sum)</p>
+              <Input value={total !== null ? total.toString() : '—'} disabled className="h-8 text-xs bg-muted font-bold text-center" />
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground">AVE (Average)</p>
-              <Input value={avg !== null ? avg.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+              <p className="text-xs font-semibold text-muted-foreground">AGG (Average)</p>
+              <Input value={agg !== null ? agg.toString() : '—'} disabled className="h-8 text-xs bg-muted font-bold text-center" />
             </div>
             <div className="space-y-1">
               <p className="text-xs font-semibold text-muted-foreground">DIV (Division)</p>
-              <Input value={avg !== null ? calcDivision(avg) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+              <Input value={div ?? '—'} disabled className="h-8 text-xs bg-muted font-bold text-center" />
             </div>
           </div>
 

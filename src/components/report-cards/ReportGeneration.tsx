@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil, Trash2 } from 'lucide-react';
+import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil, Trash2, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import ReportCardPreviewDialog from './ReportCardPreviewDialog';
 
@@ -229,6 +229,29 @@ const ReportGeneration = () => {
       prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
     );
   };
+
+  // Approve/Reject report mutation
+  const updateReportStatus = useMutation({
+    mutationFn: async ({ studentId, status }: { studentId: string; status: 'finalized' | 'rejected' }) => {
+      const { error } = await supabase
+        .from('generated_reports')
+        .update({ 
+          status, 
+          finalized_at: status === 'finalized' ? new Date().toISOString() : null 
+        })
+        .eq('student_id', studentId)
+        .eq('term', selectedTerm);
+      if (error) throw error;
+    },
+    onSuccess: (_, { status }) => {
+      toast.success(`Report ${status === 'finalized' ? 'approved' : 'rejected'} successfully`);
+      queryClient.invalidateQueries({ queryKey: ['students-for-generation'] });
+      queryClient.invalidateQueries({ queryKey: ['generated-report-cards'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update report: ${error.message}`);
+    },
+  });
 
   const selectAllReady = () => {
     const readyIds = studentsData?.filter(s => s.isReady).map(s => s.studentId) || [];
@@ -606,6 +629,32 @@ const ReportGeneration = () => {
                             )}
                             {student.reportStatus && (
                               <>
+                                {/* Approve Button - show only if not finalized */}
+                                {student.reportStatus !== 'finalized' && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
+                                    title="Approve"
+                                    disabled={updateReportStatus.isPending || isGenerating}
+                                    onClick={() => updateReportStatus.mutate({ studentId: student.studentId, status: 'finalized' })}
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {/* Reject Button - show only if not rejected */}
+                                {student.reportStatus !== 'rejected' && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                                    title="Reject"
+                                    disabled={updateReportStatus.isPending || isGenerating}
+                                    onClick={() => updateReportStatus.mutate({ studentId: student.studentId, status: 'rejected' })}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   size="icon"
                                   variant="ghost"

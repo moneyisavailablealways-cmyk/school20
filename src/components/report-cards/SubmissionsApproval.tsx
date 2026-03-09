@@ -235,6 +235,26 @@ const SubmissionsApproval = () => {
     },
   });
 
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('subject_submissions')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Submission deleted');
+      setDeleteDialog({ isOpen: false, submission: null });
+      queryClient.invalidateQueries({ queryKey: ['submissions-for-approval'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions-stats-counts'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete: ${error.message}`);
+    },
+  });
+
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]

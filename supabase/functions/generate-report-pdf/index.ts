@@ -490,6 +490,7 @@ serve(async (req) => {
         headTeacher: signatures.headTeacher,
       },
       stampUrl,
+      stampConfig,
       templateType,
       gradingScale: gradingConfig?.map((gc: any) => ({
         grade: gc.grade,

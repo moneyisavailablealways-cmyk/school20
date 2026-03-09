@@ -121,7 +121,7 @@ const MinimalTemplate = ({ data }: { data: ReportData }) => {
           <div style={{ borderBottom: '1px solid #ddd', marginTop: '4px' }} />
         </div>
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {stampUrl ? <img src={stampUrl} alt="Stamp" style={{ height: '50px', objectFit: 'contain', opacity: 0.7 }} /> : null}
+          {/* Stamp via overlay */}
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ paddingBottom: '4px', marginBottom: '4px' }}>

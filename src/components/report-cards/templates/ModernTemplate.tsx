@@ -153,7 +153,7 @@ const ModernTemplate = ({ data }: { data: ReportData }) => {
           <div style={{ borderBottom: '2px solid #2563eb', marginTop: '4px' }} />
         </div>
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {stampUrl ? <img src={stampUrl} alt="Stamp" style={{ height: '55px', objectFit: 'contain', opacity: 0.85 }} /> : <span style={{ fontSize: '9px', color: '#aaa' }}>[Stamp]</span>}
+          <span style={{ fontSize: '9px', color: '#aaa' }}>[Stamp]</span>
         </div>
         <div style={{ textAlign: 'center', paddingBottom: '6px' }}>
           <p style={{ margin: 0, fontWeight: '700', fontSize: '10px' }}>{signatures?.headTeacher?.name || 'Head Teacher'}</p>

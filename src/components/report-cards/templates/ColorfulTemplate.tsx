@@ -140,7 +140,7 @@ const ColorfulTemplate = ({ data }: { data: ReportData }) => {
           <div style={{ borderBottom: '2px dashed #c4b5fd', marginTop: '4px' }} />
         </div>
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {stampUrl ? <img src={stampUrl} alt="Stamp" style={{ height: '55px', objectFit: 'contain' }} /> : <span style={{ fontSize: '20px' }}>🏫</span>}
+          {/* Stamp via overlay */}
         </div>
         <div style={{ textAlign: 'center', paddingBottom: '6px' }}>
           <p style={{ margin: 0, fontWeight: '700' }}>{signatures?.headTeacher?.name || 'Head Teacher'}</p>

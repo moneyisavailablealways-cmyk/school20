@@ -283,16 +283,7 @@ const PrimaryTemplate = ({ data }: { data: ReportData }) => {
             <strong style={{ fontSize: '9px' }}>Signature:</strong>
             {signatures?.headTeacher && <div style={{ marginTop: '2px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
             <div style={{ borderBottom: '1px solid #333', marginTop: '4px', width: '120px' }} />
-            {/* School Stamp */}
-            {stampUrl && (
-              <div style={{
-                position: 'absolute', right: '-10px', top: '-20px',
-                transform: 'rotate(-10deg)', zIndex: 10, pointerEvents: 'none',
-                opacity: 0.7, mixBlendMode: 'multiply',
-              }}>
-                <img src={stampUrl} alt="School Stamp" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
-              </div>
-            )}
+            {/* Stamp via global overlay */}
           </div>
         </div>
       </div>

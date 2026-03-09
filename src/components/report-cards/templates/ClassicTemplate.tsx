@@ -8,6 +8,7 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
       className="bg-white text-black mx-auto"
       style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '11px', maxWidth: '210mm', padding: '8mm 10mm', position: 'relative', border: '1px solid #000' }}
     >
+      <StampOverlay stampUrl={stampUrl} stampConfig={stampConfig} />
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
         <div style={{ width: '80px', flexShrink: 0 }}>

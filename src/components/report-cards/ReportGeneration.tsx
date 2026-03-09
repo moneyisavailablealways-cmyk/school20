@@ -433,10 +433,31 @@ const ReportGeneration = () => {
             </Button>
             {selectedStudents.length > 0 && (
               <>
-                <Button onClick={() => generateReports.mutate(selectedStudents)} disabled={isGenerating}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Generate ({selectedStudents.length})
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button disabled={isGenerating}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Generate Report Cards ({selectedStudents.length})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Generate Report Cards?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You are about to generate report cards for <strong>{selectedStudents.length}</strong> selected student(s) for <strong>{selectedTerm}</strong>.
+                        {classTeacherComment && ' A custom class teacher comment will be applied.'}
+                        {headTeacherComment && ' A custom head teacher comment will be applied.'}
+                        {' '}This may take a moment. Existing reports for these students will be overwritten.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => generateReports.mutate(selectedStudents)}>
+                        Generate
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" disabled={isGenerating}>

@@ -301,27 +301,18 @@ serve(async (req) => {
       processedSubjects = processSecondarySubjects(submissions || []);
     }
 
-    // Fetch school info directly from the schools table (set at registration)
+    // Fetch school-specific data in parallel
     const fetchSchoolSettings = async () => {
-      const { data } = await supabase
-        .from('schools')
-        .select('school_name, address, phone, email, website, logo_url')
-        .eq('id', schoolId)
-        .maybeSingle();
-      // Map schools columns to the shape the rest of the function expects
-      if (data) {
-        return {
-          school_name: data.school_name,
-          address: data.address,
-          phone: data.phone,
-          email: data.email,
-          website: data.website,
-          logo_url: data.logo_url,
-          motto: null,
-          footer_motto: null,
-        };
+      const { data: bySchoolId } = await supabase.from('school_settings').select('*').eq('school_id', schoolId).maybeSingle();
+      if (bySchoolId && (bySchoolId.address || bySchoolId.phone || bySchoolId.email || bySchoolId.logo_url)) {
+        return bySchoolId;
       }
-      return null;
+      const { data: allSettings } = await supabase.from('school_settings').select('*').order('created_at', { ascending: false });
+      if (allSettings && allSettings.length > 0) {
+        const withData = allSettings.find((s: any) => s.address || s.phone || s.email || s.logo_url);
+        return withData || allSettings[0];
+      }
+      return bySchoolId;
     };
 
     const [schoolSettings, termConfig, feesData, attendanceSummary, signatures, stampUrl, defaultTemplate] = await Promise.all([

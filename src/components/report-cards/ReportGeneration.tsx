@@ -230,6 +230,29 @@ const ReportGeneration = () => {
     );
   };
 
+  // Approve/Reject report mutation
+  const updateReportStatus = useMutation({
+    mutationFn: async ({ studentId, status }: { studentId: string; status: 'finalized' | 'rejected' }) => {
+      const { error } = await supabase
+        .from('generated_reports')
+        .update({ 
+          status, 
+          finalized_at: status === 'finalized' ? new Date().toISOString() : null 
+        })
+        .eq('student_id', studentId)
+        .eq('term', selectedTerm);
+      if (error) throw error;
+    },
+    onSuccess: (_, { status }) => {
+      toast.success(`Report ${status === 'finalized' ? 'approved' : 'rejected'} successfully`);
+      queryClient.invalidateQueries({ queryKey: ['students-for-generation'] });
+      queryClient.invalidateQueries({ queryKey: ['generated-report-cards'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update report: ${error.message}`);
+    },
+  });
+
   const selectAllReady = () => {
     const readyIds = studentsData?.filter(s => s.isReady).map(s => s.studentId) || [];
     setSelectedStudents(readyIds);

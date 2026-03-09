@@ -10,11 +10,12 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { Check, X, Search, Filter, CheckCircle, XCircle, Clock, RotateCcw } from 'lucide-react';
+import { Check, X, Search, Filter, CheckCircle, XCircle, Clock, RotateCcw, Trash2 } from 'lucide-react';
 
 const SubmissionsApproval = () => {
   const { profile } = useAuth();
@@ -28,6 +29,7 @@ const SubmissionsApproval = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [resetDialog, setResetDialog] = useState<{ isOpen: boolean; submission: any | null }>({ isOpen: false, submission: null });
   const [resetReason, setResetReason] = useState('');
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; submission: any | null }>({ isOpen: false, submission: null });
 
   const canResetMarks = profile?.role && ['admin', 'principal', 'head_teacher'].includes(profile.role);
 
@@ -230,6 +232,26 @@ const SubmissionsApproval = () => {
     },
     onError: (error) => {
       toast.error(`Failed to reset marks: ${error.message}`);
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('subject_submissions')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Submission deleted');
+      setDeleteDialog({ isOpen: false, submission: null });
+      queryClient.invalidateQueries({ queryKey: ['submissions-for-approval'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions-stats-counts'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete: ${error.message}`);
     },
   });
 
@@ -499,6 +521,14 @@ const SubmissionsApproval = () => {
                                 Reset Marks
                               </Button>
                             )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => setDeleteDialog({ isOpen: true, submission })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -581,6 +611,49 @@ const SubmissionsApproval = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog 
+        open={deleteDialog.isOpen} 
+        onOpenChange={(open) => !open && setDeleteDialog({ isOpen: false, submission: null })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this submission? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteDialog.submission && (
+            <div className="text-sm space-y-1 p-3 rounded-md bg-muted">
+              <p>
+                <span className="text-muted-foreground">Student:</span> 
+                <strong> {(deleteDialog.submission.student as any)?.profiles?.first_name} {(deleteDialog.submission.student as any)?.profiles?.last_name}</strong>
+              </p>
+              <p>
+                <span className="text-muted-foreground">Subject:</span> 
+                <strong> {(deleteDialog.submission.subject as any)?.name}</strong>
+              </p>
+              <p>
+                <span className="text-muted-foreground">Marks:</span> 
+                <strong> {deleteDialog.submission.marks}</strong>
+              </p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialog({ isOpen: false, submission: null })}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteDialog.submission && deleteMutation.mutate(deleteDialog.submission.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

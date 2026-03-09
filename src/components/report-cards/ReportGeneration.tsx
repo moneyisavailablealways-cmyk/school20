@@ -532,7 +532,7 @@ const ReportGeneration = () => {
                         <TableCell>{student.streamName || '-'}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <span className="text-green-600 font-medium">{student.approvedSubjects}</span>
+                            <span className="text-primary font-medium">{student.approvedSubjects}</span>
                             {student.pendingSubjects > 0 && (
                               <span className="text-yellow-600">+{student.pendingSubjects} pending</span>
                             )}

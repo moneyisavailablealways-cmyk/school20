@@ -135,21 +135,7 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
             </p>
             {signatures?.headTeacher && <div style={{ marginTop: '2px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
             <div style={{ borderBottom: '1px dashed #999', marginTop: '2px' }} />
-            {/* Stamp overlaid near head teacher signature */}
-            {stampUrl && (
-              <div style={{
-                position: 'absolute',
-                right: '-10px',
-                top: '10px',
-                transform: 'rotate(-8deg)',
-                zIndex: 10,
-                pointerEvents: 'none',
-                opacity: 0.7,
-                mixBlendMode: 'multiply',
-              }}>
-                <img src={stampUrl} alt="School Stamp" style={{ width: '400px', height: '400px', objectFit: 'contain' }} />
-              </div>
-            )}
+            {/* Stamp rendered via global overlay */}
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Stamp, Upload, Trash2, CheckCircle } from 'lucide-react';
+import StampPositioner, { StampConfig } from './StampPositioner';
 
 const SchoolStampManager = () => {
   const queryClient = useQueryClient();
@@ -116,66 +117,114 @@ const SchoolStampManager = () => {
     },
   });
 
+  const saveConfigMutation = useMutation({
+    mutationFn: async (config: StampConfig) => {
+      if (!stamp?.id) throw new Error('No stamp found');
+      const { error } = await supabase
+        .from('school_stamps' as any)
+        .update({
+          stamp_position_x: config.positionX,
+          stamp_position_y: config.positionY,
+          stamp_size: config.size,
+          stamp_custom_scale: config.customScale,
+          stamp_opacity: config.opacity,
+          stamp_preset: config.preset,
+          stamp_rotation: config.rotation,
+        })
+        .eq('id', stamp.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Stamp configuration saved! It will apply to all report cards.');
+      queryClient.invalidateQueries({ queryKey: ['school-stamp'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to save config: ${error.message}`);
+    },
+  });
+
   if (isLoading) {
     return <div className="animate-pulse h-48 bg-muted rounded-lg" />;
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Stamp className="h-5 w-5" />
-          School Stamp
-        </CardTitle>
-        <CardDescription>
-          Upload your school's official stamp. It will automatically appear on all generated report cards.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {stamp?.stamp_url && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle className="h-4 w-4 text-accent" />
-              <span>Current stamp</span>
-            </div>
-            <div className="border rounded-lg p-6 bg-card flex items-center justify-between">
-              <img
-                src={stamp.stamp_url}
-                alt="School stamp"
-                className="max-h-24 object-contain"
-              />
-              <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate()}>
-                <Trash2 className="mr-1 h-3.5 w-3.5" />
-                Remove
-              </Button>
-            </div>
-          </div>
-        )}
+  const currentConfig: StampConfig = {
+    positionX: stamp?.stamp_position_x ?? 85,
+    positionY: stamp?.stamp_position_y ?? 75,
+    size: stamp?.stamp_size ?? 'medium',
+    customScale: stamp?.stamp_custom_scale ?? 100,
+    opacity: stamp?.stamp_opacity ?? 70,
+    preset: stamp?.stamp_preset ?? 'near-signature',
+    rotation: stamp?.stamp_rotation ?? -8,
+  };
 
-        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleUpload}
-            accept="image/*"
-            className="hidden"
-          />
-          <Stamp className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm font-medium mb-1">
-            {stamp ? 'Replace school stamp' : 'Upload school stamp'}
-          </p>
-          <p className="text-xs text-muted-foreground mb-4">PNG or JPG, max 2MB. Transparent background recommended.</p>
-          <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            {uploading ? 'Uploading...' : 'Choose File'}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Stamp className="h-5 w-5" />
+            School Stamp
+          </CardTitle>
+          <CardDescription>
+            Upload your school's official stamp. It will automatically appear on all generated report cards.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {stamp?.stamp_url && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle className="h-4 w-4 text-accent" />
+                <span>Current stamp</span>
+              </div>
+              <div className="border rounded-lg p-6 bg-card flex items-center justify-between">
+                <img
+                  src={stamp.stamp_url}
+                  alt="School stamp"
+                  className="max-h-24 object-contain"
+                />
+                <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate()}>
+                  <Trash2 className="mr-1 h-3.5 w-3.5" />
+                  Remove
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleUpload}
+              accept="image/*"
+              className="hidden"
+            />
+            <Stamp className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm font-medium mb-1">
+              {stamp ? 'Replace school stamp' : 'Upload school stamp'}
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">PNG or JPG, max 2MB. Transparent background recommended.</p>
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {uploading ? 'Uploading...' : 'Choose File'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stamp positioning - only show when stamp exists */}
+      {stamp?.stamp_url && (
+        <StampPositioner
+          stampUrl={stamp.stamp_url}
+          config={currentConfig}
+          onSave={(cfg) => saveConfigMutation.mutate(cfg)}
+          saving={saveConfigMutation.isPending}
+        />
+      )}
+    </div>
   );
 };
 

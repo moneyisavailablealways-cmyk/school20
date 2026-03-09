@@ -1,12 +1,13 @@
-import { ReportData, SignatureRenderer, calcAvg } from './shared';
+import { ReportData, SignatureRenderer, StampOverlay, calcAvg } from './shared';
 
 const MinimalTemplate = ({ data }: { data: ReportData }) => {
-  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl } = data;
+  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl, stampConfig } = data;
 
   const s: React.CSSProperties = { border: '1px solid #ddd', padding: '2px 5px' };
 
   return (
-    <div className="bg-white text-black mx-auto" style={{ fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", fontSize: '11px', maxWidth: '210mm', padding: '10mm 12mm' }}>
+    <div className="bg-white text-black mx-auto" style={{ fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", fontSize: '11px', maxWidth: '210mm', padding: '10mm 12mm', position: 'relative' }}>
+      <StampOverlay stampUrl={stampUrl} stampConfig={stampConfig} />
       {/* Header - Minimal */}
       <div style={{ textAlign: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid #ddd' }}>
         {school.logoUrl && <img src={school.logoUrl} alt="Logo" style={{ width: '50px', height: '50px', objectFit: 'contain', marginBottom: '4px' }} />}
@@ -121,7 +122,7 @@ const MinimalTemplate = ({ data }: { data: ReportData }) => {
           <div style={{ borderBottom: '1px solid #ddd', marginTop: '4px' }} />
         </div>
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {stampUrl ? <img src={stampUrl} alt="Stamp" style={{ height: '50px', objectFit: 'contain', opacity: 0.7 }} /> : null}
+          {/* Stamp via overlay */}
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ paddingBottom: '4px', marginBottom: '4px' }}>

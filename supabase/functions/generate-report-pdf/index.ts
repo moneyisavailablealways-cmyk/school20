@@ -140,15 +140,26 @@ async function fetchSignatures(supabase: any, schoolId: string, classTeacherId: 
   return result;
 }
 
-// Helper: fetch school stamp
+// Helper: fetch school stamp with config
 async function fetchSchoolStamp(supabase: any, schoolId: string) {
   const { data } = await supabase
     .from('school_stamps')
-    .select('stamp_url')
+    .select('stamp_url, stamp_position_x, stamp_position_y, stamp_size, stamp_custom_scale, stamp_opacity, stamp_preset, stamp_rotation')
     .eq('school_id', schoolId)
     .eq('is_active', true)
     .maybeSingle();
-  return data?.stamp_url || null;
+  if (!data?.stamp_url) return { stampUrl: null, stampConfig: null };
+  return {
+    stampUrl: data.stamp_url,
+    stampConfig: {
+      positionX: data.stamp_position_x ?? 85,
+      positionY: data.stamp_position_y ?? 75,
+      size: data.stamp_size ?? 'medium',
+      customScale: data.stamp_custom_scale ?? 100,
+      opacity: data.stamp_opacity ?? 70,
+      rotation: data.stamp_rotation ?? -8,
+    },
+  };
 }
 
 // Helper: process subjects for SECONDARY schools (O-Level CBC)
@@ -315,7 +326,7 @@ serve(async (req) => {
       return bySchoolId;
     };
 
-    const [schoolSettings, termConfig, feesData, attendanceSummary, signatures, stampUrl, defaultTemplate] = await Promise.all([
+    const [schoolSettings, termConfig, feesData, attendanceSummary, signatures, stampData, defaultTemplate] = await Promise.all([
       fetchSchoolSettings(),
       supabase.from('term_configurations').select('*').eq('academic_year_id', academicYearId).eq('term_name', term).maybeSingle().then((r: any) => r.data),
       calculateFeesBalance(supabase, studentId, academicYearId, term),
@@ -324,6 +335,9 @@ serve(async (req) => {
       fetchSchoolStamp(supabase, schoolId),
       supabase.from('report_templates').select('template_type').eq('school_id', schoolId).eq('is_default', true).maybeSingle().then((r: any) => r.data),
     ]);
+
+    const stampUrl = stampData.stampUrl;
+    const stampConfig = stampData.stampConfig;
 
     // Fetch report_card_fees
     const classId = enrollment?.class_id;
@@ -476,6 +490,7 @@ serve(async (req) => {
         headTeacher: signatures.headTeacher,
       },
       stampUrl,
+      stampConfig,
       templateType,
       gradingScale: gradingConfig?.map((gc: any) => ({
         grade: gc.grade,

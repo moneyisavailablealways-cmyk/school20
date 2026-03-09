@@ -1,7 +1,7 @@
-import { ReportData, SignatureRenderer, calcAvg } from './shared';
+import { ReportData, SignatureRenderer, calcAvg, StampOverlay } from './shared';
 
 const ColorfulTemplate = ({ data }: { data: ReportData }) => {
-  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl } = data;
+  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl, stampConfig } = data;
 
   const getGradeBg = (grade: string) => {
     if (['D1', 'D2', 'A'].includes(grade)) return { bg: '#dcfce7', color: '#166534' };
@@ -13,7 +13,8 @@ const ColorfulTemplate = ({ data }: { data: ReportData }) => {
   const cs: React.CSSProperties = { border: '1px solid #c4b5fd', padding: '2px 4px' };
 
   return (
-    <div className="bg-white text-black mx-auto" style={{ fontFamily: "'Comic Sans MS', 'Nunito', cursive, sans-serif", fontSize: '11px', maxWidth: '210mm', padding: '8mm 10mm' }}>
+    <div className="bg-white text-black mx-auto" style={{ fontFamily: "'Comic Sans MS', 'Nunito', cursive, sans-serif", fontSize: '11px', maxWidth: '210mm', padding: '8mm 10mm', position: 'relative' }}>
+      <StampOverlay stampUrl={stampUrl} stampConfig={stampConfig} />
       {/* Header - Colorful */}
       <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #f59e0b 100%)', color: 'white', padding: '14px 16px', borderRadius: '12px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         {school.logoUrl && <img src={school.logoUrl} alt="Logo" style={{ width: '65px', height: '65px', objectFit: 'contain', borderRadius: '50%', background: 'white', padding: '4px' }} />}
@@ -140,7 +141,7 @@ const ColorfulTemplate = ({ data }: { data: ReportData }) => {
           <div style={{ borderBottom: '2px dashed #c4b5fd', marginTop: '4px' }} />
         </div>
         <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {stampUrl ? <img src={stampUrl} alt="Stamp" style={{ height: '55px', objectFit: 'contain' }} /> : <span style={{ fontSize: '20px' }}>🏫</span>}
+          {/* Stamp via overlay */}
         </div>
         <div style={{ textAlign: 'center', paddingBottom: '6px' }}>
           <p style={{ margin: 0, fontWeight: '700' }}>{signatures?.headTeacher?.name || 'Head Teacher'}</p>

@@ -73,6 +73,14 @@ export interface ReportData {
     headTeacher: any;
   };
   stampUrl?: string;
+  stampConfig?: {
+    positionX: number;
+    positionY: number;
+    size: string;
+    customScale: number;
+    opacity: number;
+    rotation: number;
+  };
   templateType?: string;
   gradingScale: Array<{ grade: string; minScore: number; maxScore: number }>;
 }
@@ -132,6 +140,30 @@ export const SignatureRenderer = ({ sig }: { sig: any }) => {
     );
   }
   return <img src={sig.signatureData} alt="Signature" style={{ height: '40px', objectFit: 'contain' }} />;
+};
+
+const SIZE_SCALES: Record<string, number> = { small: 60, medium: 100, large: 150 };
+
+export const StampOverlay = ({ stampUrl, stampConfig }: { stampUrl?: string; stampConfig?: ReportData['stampConfig'] }) => {
+  if (!stampUrl) return null;
+  const cfg = stampConfig || { positionX: 85, positionY: 75, size: 'medium', customScale: 100, opacity: 70, rotation: -8 };
+  const scale = cfg.size === 'custom' ? cfg.customScale : (SIZE_SCALES[cfg.size] || 100);
+  const stampPx = Math.round(120 * scale / 100);
+
+  return (
+    <div style={{
+      position: 'absolute',
+      left: `${cfg.positionX}%`,
+      top: `${cfg.positionY}%`,
+      transform: `translate(-50%, -50%) rotate(${cfg.rotation}deg)`,
+      zIndex: 10,
+      pointerEvents: 'none',
+      opacity: cfg.opacity / 100,
+      mixBlendMode: 'multiply',
+    }}>
+      <img src={stampUrl} alt="School Stamp" style={{ width: `${stampPx}px`, height: `${stampPx}px`, objectFit: 'contain' }} />
+    </div>
+  );
 };
 
 export const calcAvg = (subjects: SubjectData[], key: keyof SubjectData) => {

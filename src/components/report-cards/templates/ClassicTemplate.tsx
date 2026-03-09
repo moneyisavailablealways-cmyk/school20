@@ -1,13 +1,14 @@
-import { ReportData, SignatureRenderer, SummaryBox, AttendanceBox, FooterCell, cellStyle, Th, Td, calcAvg } from './shared';
+import { ReportData, SignatureRenderer, SummaryBox, AttendanceBox, FooterCell, cellStyle, Th, Td, calcAvg, StampOverlay } from './shared';
 
 const ClassicTemplate = ({ data }: { data: ReportData }) => {
-  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl } = data;
+  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl, stampConfig } = data;
 
   return (
     <div
       className="bg-white text-black mx-auto"
       style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: '11px', maxWidth: '210mm', padding: '8mm 10mm', position: 'relative', border: '1px solid #000' }}
     >
+      <StampOverlay stampUrl={stampUrl} stampConfig={stampConfig} />
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
         <div style={{ width: '80px', flexShrink: 0 }}>
@@ -135,21 +136,7 @@ const ClassicTemplate = ({ data }: { data: ReportData }) => {
             </p>
             {signatures?.headTeacher && <div style={{ marginTop: '2px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
             <div style={{ borderBottom: '1px dashed #999', marginTop: '2px' }} />
-            {/* Stamp overlaid near head teacher signature */}
-            {stampUrl && (
-              <div style={{
-                position: 'absolute',
-                right: '-10px',
-                top: '10px',
-                transform: 'rotate(-8deg)',
-                zIndex: 10,
-                pointerEvents: 'none',
-                opacity: 0.7,
-                mixBlendMode: 'multiply',
-              }}>
-                <img src={stampUrl} alt="School Stamp" style={{ width: '400px', height: '400px', objectFit: 'contain' }} />
-              </div>
-            )}
+            {/* Stamp rendered via global overlay */}
           </div>
         </div>
       </div>

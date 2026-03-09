@@ -2910,6 +2910,13 @@ export type Database = {
           id: string
           is_active: boolean
           school_id: string
+          stamp_custom_scale: number | null
+          stamp_opacity: number | null
+          stamp_position_x: number | null
+          stamp_position_y: number | null
+          stamp_preset: string | null
+          stamp_rotation: number | null
+          stamp_size: string | null
           stamp_url: string
           updated_at: string
           uploaded_by: string | null
@@ -2919,6 +2926,13 @@ export type Database = {
           id?: string
           is_active?: boolean
           school_id: string
+          stamp_custom_scale?: number | null
+          stamp_opacity?: number | null
+          stamp_position_x?: number | null
+          stamp_position_y?: number | null
+          stamp_preset?: string | null
+          stamp_rotation?: number | null
+          stamp_size?: string | null
           stamp_url: string
           updated_at?: string
           uploaded_by?: string | null
@@ -2928,6 +2942,13 @@ export type Database = {
           id?: string
           is_active?: boolean
           school_id?: string
+          stamp_custom_scale?: number | null
+          stamp_opacity?: number | null
+          stamp_position_x?: number | null
+          stamp_position_y?: number | null
+          stamp_preset?: string | null
+          stamp_rotation?: number | null
+          stamp_size?: string | null
           stamp_url?: string
           updated_at?: string
           uploaded_by?: string | null

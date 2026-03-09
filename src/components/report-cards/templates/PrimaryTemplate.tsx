@@ -1,7 +1,7 @@
-import { ReportData, SignatureRenderer, cellStyle } from './shared';
+import { ReportData, SignatureRenderer, cellStyle, StampOverlay } from './shared';
 
 const PrimaryTemplate = ({ data }: { data: ReportData }) => {
-  const { student, school, term, subjects, summary, gradingScale, signatures, stampUrl } = data;
+  const { student, school, term, subjects, summary, gradingScale, signatures, stampUrl, stampConfig } = data;
 
   const thinBorder = '1px solid #333';
   const cell: React.CSSProperties = { border: thinBorder, padding: '3px 6px', fontSize: '10.5px' };
@@ -56,6 +56,7 @@ const PrimaryTemplate = ({ data }: { data: ReportData }) => {
         border: '1px solid #000',
       }}
     >
+      <StampOverlay stampUrl={stampUrl} stampConfig={stampConfig} />
       {/* ============ SECTION 1: SCHOOL HEADER ============ */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px' }}>
         {/* LEFT: School Logo */}
@@ -283,16 +284,7 @@ const PrimaryTemplate = ({ data }: { data: ReportData }) => {
             <strong style={{ fontSize: '9px' }}>Signature:</strong>
             {signatures?.headTeacher && <div style={{ marginTop: '2px' }}><SignatureRenderer sig={signatures.headTeacher} /></div>}
             <div style={{ borderBottom: '1px solid #333', marginTop: '4px', width: '120px' }} />
-            {/* School Stamp */}
-            {stampUrl && (
-              <div style={{
-                position: 'absolute', right: '-10px', top: '-20px',
-                transform: 'rotate(-10deg)', zIndex: 10, pointerEvents: 'none',
-                opacity: 0.7, mixBlendMode: 'multiply',
-              }}>
-                <img src={stampUrl} alt="School Stamp" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
-              </div>
-            )}
+            {/* Stamp via global overlay */}
           </div>
         </div>
       </div>

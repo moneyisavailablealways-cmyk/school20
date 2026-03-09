@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, CheckCircle, Settings, BarChart3, Layout, Building2, Calendar, PenTool, MessageSquareText, ClipboardList } from 'lucide-react';
+import { FileText, CheckCircle, Settings, BarChart3, Layout, Calendar, PenTool, MessageSquareText, ClipboardList } from 'lucide-react';
 import SubmissionsApproval from '@/components/report-cards/SubmissionsApproval';
 import ReportGeneration from '@/components/report-cards/ReportGeneration';
 import GradingConfig from '@/components/report-cards/GradingConfig';
 import ReportTemplates from '@/components/report-cards/ReportTemplates';
 import ReportAnalytics from '@/components/report-cards/ReportAnalytics';
-import SchoolSettings from '@/components/report-cards/SchoolSettings';
 import TermConfiguration from '@/components/report-cards/TermConfiguration';
 import SignaturesStamps from '@/components/report-cards/SignaturesStamps';
 import AutoCommentRules from '@/components/report-cards/AutoCommentRules';

@@ -140,15 +140,26 @@ async function fetchSignatures(supabase: any, schoolId: string, classTeacherId: 
   return result;
 }
 
-// Helper: fetch school stamp
+// Helper: fetch school stamp with config
 async function fetchSchoolStamp(supabase: any, schoolId: string) {
   const { data } = await supabase
     .from('school_stamps')
-    .select('stamp_url')
+    .select('stamp_url, stamp_position_x, stamp_position_y, stamp_size, stamp_custom_scale, stamp_opacity, stamp_preset, stamp_rotation')
     .eq('school_id', schoolId)
     .eq('is_active', true)
     .maybeSingle();
-  return data?.stamp_url || null;
+  if (!data?.stamp_url) return { stampUrl: null, stampConfig: null };
+  return {
+    stampUrl: data.stamp_url,
+    stampConfig: {
+      positionX: data.stamp_position_x ?? 85,
+      positionY: data.stamp_position_y ?? 75,
+      size: data.stamp_size ?? 'medium',
+      customScale: data.stamp_custom_scale ?? 100,
+      opacity: data.stamp_opacity ?? 70,
+      rotation: data.stamp_rotation ?? -8,
+    },
+  };
 }
 
 // Helper: process subjects for SECONDARY schools (O-Level CBC)

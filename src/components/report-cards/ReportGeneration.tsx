@@ -306,9 +306,9 @@ const ReportGeneration = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Ready to Generate</p>
-                <p className="text-3xl font-bold text-green-600">{stats.ready}</p>
+                <p className="text-3xl font-bold text-primary">{stats.ready}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -317,9 +317,9 @@ const ReportGeneration = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Not Ready</p>
-                <p className="text-3xl font-bold text-yellow-600">{stats.notReady}</p>
+                <p className="text-3xl font-bold text-foreground">{stats.notReady}</p>
               </div>
-              <AlertCircle className="h-8 w-8 text-yellow-500" />
+              <AlertCircle className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -328,9 +328,9 @@ const ReportGeneration = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Generated</p>
-                <p className="text-3xl font-bold text-blue-600">{stats.generated}</p>
+                <p className="text-3xl font-bold text-foreground">{stats.generated}</p>
               </div>
-              <FileText className="h-8 w-8 text-blue-500" />
+              <FileText className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>

@@ -629,6 +629,32 @@ const ReportGeneration = () => {
                             )}
                             {student.reportStatus && (
                               <>
+                                {/* Approve Button - show only if not finalized */}
+                                {student.reportStatus !== 'finalized' && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    title="Approve"
+                                    disabled={updateReportStatus.isPending || isGenerating}
+                                    onClick={() => updateReportStatus.mutate({ studentId: student.studentId, status: 'finalized' })}
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {/* Reject Button - show only if not rejected */}
+                                {student.reportStatus !== 'rejected' && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    title="Reject"
+                                    disabled={updateReportStatus.isPending || isGenerating}
+                                    onClick={() => updateReportStatus.mutate({ studentId: student.studentId, status: 'rejected' })}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   size="icon"
                                   variant="ghost"

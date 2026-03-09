@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CreditCard, DollarSign, Calendar, FileText, User, Download } from 'lucide-react';
+import { CreditCard, DollarSign, Calendar, FileText, User, Download, Printer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useReceiptGenerator } from '@/hooks/useReceiptGenerator';
 
 interface Invoice {
   id: string;
@@ -47,6 +48,8 @@ const FeesPayments = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'invoices' | 'payments'>('invoices');
+  const [schoolName, setSchoolName] = useState<string>('School');
+  const { printReceipt } = useReceiptGenerator();
 
   useEffect(() => {
     fetchChildren();
@@ -149,6 +152,19 @@ const FeesPayments = () => {
       if (childrenData.length > 0 && !selectedChild) {
         setSelectedChild(childrenData[0].id);
       }
+
+      // Fetch school name
+      if (profile.school_id) {
+        const { data: schoolData } = await supabase
+          .from('schools')
+          .select('school_name')
+          .eq('id', profile.school_id)
+          .single();
+        
+        if (schoolData) {
+          setSchoolName(schoolData.school_name);
+        }
+      }
     } catch (error) {
       console.error('Error fetching children:', error);
       toast.error('Failed to load children information');
@@ -225,6 +241,16 @@ const FeesPayments = () => {
     return payments.reduce((total, payment) => 
       payment.status === 'completed' ? total + payment.amount : total, 0
     );
+  };
+
+  const getSelectedChildName = () => {
+    const child = children.find(c => c.id === selectedChild);
+    return child ? `${child.profiles.first_name} ${child.profiles.last_name}` : 'Student';
+  };
+
+  const handlePrintReceipt = (payment: Payment) => {
+    printReceipt(payment, getSelectedChildName(), schoolName);
+    toast.success('Receipt opened for printing');
   };
 
   if (loading) {
@@ -446,9 +472,14 @@ const FeesPayments = () => {
                         </div>
                       )}
 
-                      <Button variant="outline" size="sm" className="flex items-center gap-2">
-                        <Download className="h-4 w-4" />
-                        Download Receipt
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center gap-2"
+                        onClick={() => handlePrintReceipt(payment)}
+                      >
+                        <Printer className="h-4 w-4" />
+                        Print Receipt
                       </Button>
                     </CardContent>
                   </Card>

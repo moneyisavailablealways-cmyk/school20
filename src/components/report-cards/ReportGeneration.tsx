@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil, Trash2 } from 'lucide-react';
+import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil, Trash2, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import ReportCardPreviewDialog from './ReportCardPreviewDialog';
 

@@ -61,41 +61,10 @@ const ReportCards = () => {
             <ClipboardList className="h-4 w-4" />
             <span className="hidden sm:inline">Generated</span>
           </TabsTrigger>
-          <TabsTrigger value="school" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">School</span>
-          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="approvals">
-          <SubmissionsApproval />
-        </TabsContent>
-        <TabsContent value="generate">
-          <ReportGeneration />
-        </TabsContent>
-        <TabsContent value="analytics">
-          <ReportAnalytics />
-        </TabsContent>
-        <TabsContent value="grading">
-          <GradingConfig />
-        </TabsContent>
-        <TabsContent value="terms">
-          <TermConfiguration />
-        </TabsContent>
-        <TabsContent value="comments">
-          <AutoCommentRules />
-        </TabsContent>
-        <TabsContent value="signatures">
-          <SignaturesStamps />
-        </TabsContent>
-        <TabsContent value="templates">
-          <ReportTemplates />
-        </TabsContent>
+...
         <TabsContent value="generated">
           <GeneratedReportCards />
-        </TabsContent>
-        <TabsContent value="school">
-          <SchoolSettings />
         </TabsContent>
       </Tabs>
     </div>

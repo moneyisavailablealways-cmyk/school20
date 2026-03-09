@@ -611,6 +611,49 @@ const SubmissionsApproval = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog 
+        open={deleteDialog.isOpen} 
+        onOpenChange={(open) => !open && setDeleteDialog({ isOpen: false, submission: null })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this submission? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteDialog.submission && (
+            <div className="text-sm space-y-1 p-3 rounded-md bg-muted">
+              <p>
+                <span className="text-muted-foreground">Student:</span> 
+                <strong> {(deleteDialog.submission.student as any)?.profiles?.first_name} {(deleteDialog.submission.student as any)?.profiles?.last_name}</strong>
+              </p>
+              <p>
+                <span className="text-muted-foreground">Subject:</span> 
+                <strong> {(deleteDialog.submission.subject as any)?.name}</strong>
+              </p>
+              <p>
+                <span className="text-muted-foreground">Marks:</span> 
+                <strong> {deleteDialog.submission.marks}</strong>
+              </p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialog({ isOpen: false, submission: null })}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteDialog.submission && deleteMutation.mutate(deleteDialog.submission.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

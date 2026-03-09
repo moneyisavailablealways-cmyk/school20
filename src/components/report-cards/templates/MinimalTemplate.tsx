@@ -6,7 +6,8 @@ const MinimalTemplate = ({ data }: { data: ReportData }) => {
   const s: React.CSSProperties = { border: '1px solid #ddd', padding: '2px 5px' };
 
   return (
-    <div className="bg-white text-black mx-auto" style={{ fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", fontSize: '11px', maxWidth: '210mm', padding: '10mm 12mm' }}>
+    <div className="bg-white text-black mx-auto" style={{ fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", fontSize: '11px', maxWidth: '210mm', padding: '10mm 12mm', position: 'relative' }}>
+      <StampOverlay stampUrl={stampUrl} stampConfig={stampConfig} />
       {/* Header - Minimal */}
       <div style={{ textAlign: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid #ddd' }}>
         {school.logoUrl && <img src={school.logoUrl} alt="Logo" style={{ width: '50px', height: '50px', objectFit: 'contain', marginBottom: '4px' }} />}

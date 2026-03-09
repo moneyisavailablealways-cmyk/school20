@@ -11,7 +11,8 @@ const ModernTemplate = ({ data }: { data: ReportData }) => {
   };
 
   return (
-    <div className="bg-white text-black mx-auto" style={{ fontFamily: "'Segoe UI', Tahoma, sans-serif", fontSize: '11px', maxWidth: '210mm', padding: '8mm 10mm' }}>
+    <div className="bg-white text-black mx-auto" style={{ fontFamily: "'Segoe UI', Tahoma, sans-serif", fontSize: '11px', maxWidth: '210mm', padding: '8mm 10mm', position: 'relative' }}>
+      <StampOverlay stampUrl={stampUrl} stampConfig={stampConfig} />
       {/* Header - Modern gradient accent */}
       <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', color: 'white', padding: '12px 16px', borderRadius: '8px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         {school.logoUrl && <img src={school.logoUrl} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain', borderRadius: '8px', background: 'white', padding: '4px' }} />}

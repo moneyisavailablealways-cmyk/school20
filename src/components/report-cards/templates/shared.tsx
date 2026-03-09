@@ -73,6 +73,14 @@ export interface ReportData {
     headTeacher: any;
   };
   stampUrl?: string;
+  stampConfig?: {
+    positionX: number;
+    positionY: number;
+    size: string;
+    customScale: number;
+    opacity: number;
+    rotation: number;
+  };
   templateType?: string;
   gradingScale: Array<{ grade: string; minScore: number; maxScore: number }>;
 }

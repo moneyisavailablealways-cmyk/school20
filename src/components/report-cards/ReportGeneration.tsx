@@ -634,7 +634,7 @@ const ReportGeneration = () => {
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
                                     title="Approve"
                                     disabled={updateReportStatus.isPending || isGenerating}
                                     onClick={() => updateReportStatus.mutate({ studentId: student.studentId, status: 'finalized' })}
@@ -647,7 +647,7 @@ const ReportGeneration = () => {
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    className="h-8 w-8 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                                     title="Reject"
                                     disabled={updateReportStatus.isPending || isGenerating}
                                     onClick={() => updateReportStatus.mutate({ studentId: student.studentId, status: 'rejected' })}

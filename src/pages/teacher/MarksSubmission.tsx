@@ -513,9 +513,10 @@ const MarksSubmission = () => {
 
   const renderMOT = () => {
     const sec = sections.mot;
-    const agg = calcAggregate(sec.rows);
+    const total = calcAggregate(sec.rows);
     const avg = calcAverage(sec.rows);
-    const total = agg;
+    const agg = avg !== null ? Math.round(avg) : null;
+    const div = avg !== null ? calcDivision(avg) : null;
     return (
       <Card className="border-border">
         <CardHeader className="pb-3">
@@ -530,7 +531,7 @@ const MarksSubmission = () => {
           {/* Header row */}
           <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground border-b pb-1">
             <div className="col-span-4">Subject</div>
-            <div className="col-span-3">Marks (Min)</div>
+            <div className="col-span-3">Marks (100)</div>
             <div className="col-span-2">Grade</div>
             <div className="col-span-2">Status</div>
             <div className="col-span-1"></div>
@@ -597,27 +598,20 @@ const MarksSubmission = () => {
             );
           })}
 
-          {/* Aggregates */}
-          <div className="grid grid-cols-12 gap-2 items-center border-t pt-2 mt-1">
-            <div className="col-span-4 text-xs font-semibold text-right pr-2">DIV</div>
-            <div className="col-span-3">
-              <Input value={avg !== null ? avg.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+          {/* Auto-calculated summary */}
+          <div className="border-t pt-2 mt-1 grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground">TOTAL (Sum)</p>
+              <Input value={total !== null ? total.toString() : '—'} disabled className="h-8 text-xs bg-muted font-bold text-center" />
             </div>
-            <div className="col-span-5 text-xs text-muted-foreground">Division (average)</div>
-          </div>
-          <div className="grid grid-cols-12 gap-2 items-center">
-            <div className="col-span-4 text-xs font-semibold text-right pr-2">TOTAL</div>
-            <div className="col-span-3">
-              <Input value={total !== null ? total.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground">AGG (Average)</p>
+              <Input value={agg !== null ? agg.toString() : '—'} disabled className="h-8 text-xs bg-muted font-bold text-center" />
             </div>
-            <div className="col-span-5 text-xs text-muted-foreground">Total (sum)</div>
-          </div>
-          <div className="grid grid-cols-12 gap-2 items-center">
-            <div className="col-span-4 text-xs font-semibold text-right pr-2">AGG</div>
-            <div className="col-span-3">
-              <Input value={agg !== null ? agg.toFixed(1) : '—'} disabled className="h-8 text-xs bg-muted font-bold" />
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground">DIV (Division)</p>
+              <Input value={div ?? '—'} disabled className="h-8 text-xs bg-muted font-bold text-center" />
             </div>
-            <div className="col-span-5 text-xs text-muted-foreground">Aggregate</div>
           </div>
 
           <div className="flex justify-end pt-1">

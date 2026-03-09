@@ -1,7 +1,7 @@
-import { ReportData, SignatureRenderer, SummaryBox, AttendanceBox, FooterCell, cellStyle, Th, Td, calcAvg } from './shared';
+import { ReportData, SignatureRenderer, SummaryBox, AttendanceBox, FooterCell, cellStyle, Th, Td, calcAvg, StampOverlay } from './shared';
 
 const ClassicTemplate = ({ data }: { data: ReportData }) => {
-  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl } = data;
+  const { student, school, term, subjects, summary, gradingScale, attendance, signatures, stampUrl, stampConfig } = data;
 
   return (
     <div

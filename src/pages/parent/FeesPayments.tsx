@@ -152,6 +152,19 @@ const FeesPayments = () => {
       if (childrenData.length > 0 && !selectedChild) {
         setSelectedChild(childrenData[0].id);
       }
+
+      // Fetch school name
+      if (profile.school_id) {
+        const { data: schoolData } = await supabase
+          .from('schools')
+          .select('name')
+          .eq('id', profile.school_id)
+          .single();
+        
+        if (schoolData) {
+          setSchoolName(schoolData.name);
+        }
+      }
     } catch (error) {
       console.error('Error fetching children:', error);
       toast.error('Failed to load children information');

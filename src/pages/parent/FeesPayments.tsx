@@ -243,6 +243,16 @@ const FeesPayments = () => {
     );
   };
 
+  const getSelectedChildName = () => {
+    const child = children.find(c => c.id === selectedChild);
+    return child ? `${child.profiles.first_name} ${child.profiles.last_name}` : 'Student';
+  };
+
+  const handlePrintReceipt = (payment: Payment) => {
+    printReceipt(payment, getSelectedChildName(), schoolName);
+    toast.success('Receipt opened for printing');
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">

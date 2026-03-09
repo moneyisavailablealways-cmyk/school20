@@ -678,16 +678,39 @@ const ReportGeneration = () => {
                               </>
                             )}
                             {student.isReady && !student.reportStatus && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                title="Generate"
-                                onClick={() => generateReports.mutate([student.studentId])}
-                                disabled={isGenerating}
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-primary"
+                                    title="Generate Report Card"
+                                    disabled={isGenerating}
+                                  >
+                                    <RefreshCw className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Generate Report Card?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Generate a report card for <strong>{student.name}</strong> for <strong>{selectedTerm}</strong>?
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel disabled={isGenerating}>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      disabled={isGenerating}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        generateReports.mutate([student.studentId]);
+                                      }}
+                                    >
+                                      {isGenerating ? 'Generating...' : 'Generate'}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             )}
                           </div>
                         </TableCell>

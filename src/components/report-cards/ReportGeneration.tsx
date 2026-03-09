@@ -534,7 +534,7 @@ const ReportGeneration = () => {
                           <div className="flex items-center gap-2">
                             <span className="text-primary font-medium">{student.approvedSubjects}</span>
                             {student.pendingSubjects > 0 && (
-                              <span className="text-yellow-600">+{student.pendingSubjects} pending</span>
+                              <span className="text-muted-foreground">+{student.pendingSubjects} pending</span>
                             )}
                             <span className="text-muted-foreground">/ {student.totalSubjects}</span>
                           </div>

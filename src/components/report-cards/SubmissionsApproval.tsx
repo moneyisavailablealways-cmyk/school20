@@ -10,11 +10,12 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { Check, X, Search, Filter, CheckCircle, XCircle, Clock, RotateCcw } from 'lucide-react';
+import { Check, X, Search, Filter, CheckCircle, XCircle, Clock, RotateCcw, Trash2 } from 'lucide-react';
 
 const SubmissionsApproval = () => {
   const { profile } = useAuth();
@@ -28,6 +29,7 @@ const SubmissionsApproval = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [resetDialog, setResetDialog] = useState<{ isOpen: boolean; submission: any | null }>({ isOpen: false, submission: null });
   const [resetReason, setResetReason] = useState('');
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; submission: any | null }>({ isOpen: false, submission: null });
 
   const canResetMarks = profile?.role && ['admin', 'principal', 'head_teacher'].includes(profile.role);
 

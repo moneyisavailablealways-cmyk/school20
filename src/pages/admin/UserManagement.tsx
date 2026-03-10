@@ -326,7 +326,7 @@ const UserManagement = () => {
         setUploadingAvatar(false);
       }
 
-      const { error } = await supabase
+      const { data: updateResult, error } = await supabase
         .from('profiles')
         .update({
           first_name: data.firstName,
@@ -336,9 +336,14 @@ const UserManagement = () => {
           is_active: data.is_active,
           avatar_url: avatarUrl,
         })
-        .eq('id', editingUser.id);
+        .eq('id', editingUser.id)
+        .select();
 
       if (error) throw error;
+      
+      if (!updateResult || updateResult.length === 0) {
+        throw new Error('Profile update failed - no rows were updated. Please try again.');
+      }
 
       toast({
         title: 'Success',

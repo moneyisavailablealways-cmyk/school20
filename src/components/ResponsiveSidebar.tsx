@@ -7,6 +7,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ConnectionStatusIndicator } from '@/components/ConnectionStatusIndicator';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { Badge } from '@/components/ui/badge';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
 
 interface NavigationItem {
   name: string;

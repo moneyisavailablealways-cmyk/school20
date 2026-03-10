@@ -148,6 +148,18 @@ interface MobileHeaderProps {
   navigation: NavigationItem[];
 }
 
+const SCHOOL_LEVEL_LABELS: Record<string, string> = {
+  primary: 'Primary',
+  secondary: 'Secondary',
+  higher_institution: 'Higher Institution',
+};
+
+const SCHOOL_LEVEL_COLORS: Record<string, string> = {
+  primary: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+  secondary: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  higher_institution: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+};
+
 export function ResponsiveHeader({
   portalName,
   portalIcon: PortalIcon,
@@ -156,6 +168,7 @@ export function ResponsiveHeader({
   navigation,
 }: MobileHeaderProps) {
   const isMobile = useIsMobile();
+  const { schoolLevel } = useSchoolLevel();
 
   return (
     <div>
@@ -175,14 +188,19 @@ export function ResponsiveHeader({
           {/* Portal Title - Desktop shows full, mobile shows compact */}
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <PortalIcon className="h-6 w-6 text-primary shrink-0 hidden md:block" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex items-center gap-2">
               <h1 className="text-lg font-semibold truncate">{portalName}</h1>
-              {userName && !isMobile && (
-                <p className="text-sm text-muted-foreground truncate">
-                  Welcome, {userName}
-                </p>
+              {schoolLevel && (
+                <Badge variant="outline" className={cn("text-xs font-medium shrink-0 border-0", SCHOOL_LEVEL_COLORS[schoolLevel])}>
+                  {SCHOOL_LEVEL_LABELS[schoolLevel]}
+                </Badge>
               )}
             </div>
+            {userName && !isMobile && (
+              <p className="text-sm text-muted-foreground truncate hidden lg:block">
+                Welcome, {userName}
+              </p>
+            )}
           </div>
 
           {/* Connection Status Indicator */}

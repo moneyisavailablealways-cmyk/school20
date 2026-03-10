@@ -91,13 +91,26 @@ const SubjectManagement = () => {
 
   const fetchLevels = async () => {
     try {
-      const { data, error } = await supabase
+      // Try fetching levels for this school first, then fall back to all levels (some schools have levels with null school_id)
+      let { data, error } = await supabase
         .from('levels')
         .select('id, name, parent_id')
         .eq('school_id', schoolId!)
         .order('name', { ascending: true });
 
       if (error) throw error;
+
+      // If no school-specific levels found, fetch levels without school_id filter
+      if (!data || data.length === 0) {
+        const { data: allLevels, error: allError } = await supabase
+          .from('levels')
+          .select('id, name, parent_id')
+          .order('name', { ascending: true });
+
+        if (allError) throw allError;
+        data = allLevels;
+      }
+
       setLevels(data || []);
     } catch (error) {
       console.error('Error fetching levels:', error);

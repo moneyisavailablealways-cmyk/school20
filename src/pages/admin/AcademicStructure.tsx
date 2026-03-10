@@ -1296,7 +1296,7 @@ const AcademicStructure = () => {
                       </TableCell>
                       <TableCell>{cls.max_students}</TableCell>
                       <TableCell>
-                        {cls.academic_year?.name || <Badge variant="outline">No Year</Badge>}
+                        {(cls as any).academic_years?.name || cls.academic_year?.name || <Badge variant="outline">No Year</Badge>}
                       </TableCell>
                       <TableCell>
                         {streams.filter(s => s.class_id === cls.id).length}

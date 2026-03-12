@@ -54,10 +54,11 @@ const MarksApproval = () => {
     try {
       setLoading(true);
 
-      // Fetch all submissions grouped by subject
+      // Fetch all submissions grouped by subject for this school
       const { data: rawSubmissions, error } = await supabase
         .from('subject_submissions')
-        .select('id, subject_id, submitted_by, submitted_at, status, marks, term')
+        .select('id, subject_id, submitted_by, submitted_at, status, marks, term, school_id')
+        .eq('school_id', profile?.school_id)
         .order('submitted_at', { ascending: false });
 
       if (error) throw error;

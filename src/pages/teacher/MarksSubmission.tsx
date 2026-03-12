@@ -279,6 +279,7 @@ const MarksSubmission = () => {
         student_id: selectedStudent,
         subject_id: row.subjectId,
         academic_year_id: currentYear.id,
+        school_id: profile.school_id,
         term: dbTerm,
         marks,
         grade: row.grade || null,
@@ -332,6 +333,7 @@ const MarksSubmission = () => {
           student_id: selectedStudent,
           subject_id: row.subjectId,
           academic_year_id: currentYear.id,
+          school_id: profile.school_id,
           term: dbTerm,
           marks: isNaN(marks) ? null : marks,
           grade: row.grade || null,
@@ -358,6 +360,31 @@ const MarksSubmission = () => {
       }
       toast.success(`${SECTION_LABELS[section]} marks submitted for approval`);
       queryClient.invalidateQueries({ queryKey: ['class-students-marks'] });
+
+      // Notify admin/head_teacher of pending submission
+      try {
+        const { data: admins } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('school_id', profile.school_id)
+          .in('role', ['admin', 'principal', 'head_teacher'])
+          .eq('is_active', true);
+
+        if (admins && admins.length > 0) {
+          const teacherName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+          const notifications = admins.map(admin => ({
+            user_id: admin.id,
+            title: '📝 New Marks Submission Awaiting Approval',
+            message: `${teacherName} has submitted ${SECTION_LABELS[section]} marks for approval (${selectedTerm}).`,
+            type: 'info',
+            category: 'marks_submission',
+            school_id: profile.school_id,
+          }));
+          await supabase.from('notifications').insert(notifications);
+        }
+      } catch (notifErr) {
+        console.error('Failed to send notifications:', notifErr);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to save marks');
     } finally {

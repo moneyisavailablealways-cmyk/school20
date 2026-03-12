@@ -333,6 +333,7 @@ const MarksSubmission = () => {
           student_id: selectedStudent,
           subject_id: row.subjectId,
           academic_year_id: currentYear.id,
+          school_id: profile.school_id,
           term: dbTerm,
           marks: isNaN(marks) ? null : marks,
           grade: row.grade || null,

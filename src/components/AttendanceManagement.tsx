@@ -46,11 +46,13 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 
   // Fetch attendance settings
   const { data: settings, isLoading: settingsLoading } = useQuery({
-    queryKey: ['attendance-settings'],
+    queryKey: ['attendance-settings', profile?.school_id],
     queryFn: async () => {
-      const { data } = await supabase.from('attendance_settings').select('*').single();
+      if (!profile?.school_id) return null;
+      const { data } = await supabase.from('attendance_settings').select('*').eq('school_id', profile.school_id).maybeSingle();
       return data;
-    }
+    },
+    enabled: !!profile?.school_id,
   });
 
   // Fetch attendance records for date/class

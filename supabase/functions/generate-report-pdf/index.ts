@@ -313,17 +313,33 @@ serve(async (req) => {
     }
 
     // Fetch school-specific data in parallel
+    // First fetch from schools table (registration data), then overlay school_settings if available
     const fetchSchoolSettings = async () => {
-      const { data: bySchoolId } = await supabase.from('school_settings').select('*').eq('school_id', schoolId).maybeSingle();
-      if (bySchoolId && (bySchoolId.address || bySchoolId.phone || bySchoolId.email || bySchoolId.logo_url)) {
-        return bySchoolId;
-      }
-      const { data: allSettings } = await supabase.from('school_settings').select('*').order('created_at', { ascending: false });
-      if (allSettings && allSettings.length > 0) {
-        const withData = allSettings.find((s: any) => s.address || s.phone || s.email || s.logo_url);
-        return withData || allSettings[0];
-      }
-      return bySchoolId;
+      // Always fetch the registered school record as the primary source
+      const { data: schoolRecord } = await supabase
+        .from('schools')
+        .select('school_name, address, phone, email, website, logo_url')
+        .eq('id', schoolId)
+        .single();
+
+      // Then check for school_settings overrides
+      const { data: settingsOverride } = await supabase
+        .from('school_settings')
+        .select('*')
+        .eq('school_id', schoolId)
+        .maybeSingle();
+
+      // Merge: school_settings values take priority when they exist, otherwise use schools table
+      return {
+        school_name: settingsOverride?.school_name || schoolRecord?.school_name || 'School Name',
+        motto: settingsOverride?.motto || '',
+        address: settingsOverride?.address || schoolRecord?.address || '',
+        phone: settingsOverride?.phone || schoolRecord?.phone || '',
+        email: settingsOverride?.email || schoolRecord?.email || '',
+        website: settingsOverride?.website || schoolRecord?.website || '',
+        logo_url: settingsOverride?.logo_url || schoolRecord?.logo_url || '',
+        footer_motto: settingsOverride?.footer_motto || '',
+      };
     };
 
     const [schoolSettings, termConfig, feesData, attendanceSummary, signatures, stampData, defaultTemplate] = await Promise.all([

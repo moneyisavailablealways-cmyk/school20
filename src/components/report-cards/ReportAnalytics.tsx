@@ -13,15 +13,18 @@ const COLORS = ['#22c55e', '#3b82f6', '#eab308', '#f97316', '#ef4444'];
 const ReportAnalytics = () => {
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedTerm, setSelectedTerm] = useState<string>('Term 1');
+  const { profile } = useAuth();
 
   // Fetch classes
   const { data: classes } = useQuery({
-    queryKey: ['classes-for-analytics'],
+    queryKey: ['classes-for-analytics', profile?.school_id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('classes').select('id, name').order('name');
+      if (!profile?.school_id) return [];
+      const { data, error } = await supabase.from('classes').select('id, name').eq('school_id', profile.school_id).order('name');
       if (error) throw error;
       return data;
     },
+    enabled: !!profile?.school_id,
   });
 
   // Fetch current academic year

@@ -38,6 +38,7 @@ const Timetable = () => {
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
   const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 

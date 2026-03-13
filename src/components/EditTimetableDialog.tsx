@@ -67,6 +67,7 @@ const EditTimetableDialog: React.FC<EditTimetableDialogProps> = ({
   });
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { profile } = useAuth();
 
   const daysOfWeek = [
     { value: 1, label: 'Monday' },

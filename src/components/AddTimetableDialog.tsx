@@ -84,8 +84,8 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
   const fetchData = async () => {
     try {
       const [{ data: classData, error: classError }, { data: subjectData, error: subjectError }] = await Promise.all([
-        supabase.from('classes').select('id, name').order('name'),
-        supabase.from('subjects').select('id, name, code').eq('is_active', true).order('name'),
+        supabase.from('classes').select('id, name').eq('school_id', profile?.school_id).order('name'),
+        supabase.from('subjects').select('id, name, code').eq('is_active', true).eq('school_id', profile?.school_id).order('name'),
       ]);
 
       if (classError) throw classError;

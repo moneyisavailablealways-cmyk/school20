@@ -2981,7 +2981,9 @@ export type Database = {
           id: string
           logo_url: string | null
           max_students: number | null
+          motto: string | null
           phone: string | null
+          po_box: string | null
           region: string | null
           school_code: string
           school_level: string
@@ -3004,7 +3006,9 @@ export type Database = {
           id?: string
           logo_url?: string | null
           max_students?: number | null
+          motto?: string | null
           phone?: string | null
+          po_box?: string | null
           region?: string | null
           school_code: string
           school_level?: string
@@ -3027,7 +3031,9 @@ export type Database = {
           id?: string
           logo_url?: string | null
           max_students?: number | null
+          motto?: string | null
           phone?: string | null
+          po_box?: string | null
           region?: string | null
           school_code?: string
           school_level?: string

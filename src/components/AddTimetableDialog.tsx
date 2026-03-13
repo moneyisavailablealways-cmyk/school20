@@ -171,7 +171,8 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
           day_of_week: parseInt(formData.day_of_week),
           start_time: formData.start_time,
           end_time: formData.end_time,
-          room_number: formData.room_number || null
+          room_number: formData.room_number || null,
+          school_id: profile?.school_id,
         }]);
 
       if (error) throw error;

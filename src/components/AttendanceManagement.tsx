@@ -35,11 +35,13 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 
   // Fetch all classes
   const { data: classes } = useQuery({
-    queryKey: ['all-classes'],
+    queryKey: ['all-classes', profile?.school_id],
     queryFn: async () => {
-      const { data } = await supabase.from('classes').select('id, name').order('name');
+      if (!profile?.school_id) return [];
+      const { data } = await supabase.from('classes').select('id, name').eq('school_id', profile.school_id).order('name');
       return data || [];
-    }
+    },
+    enabled: !!profile?.school_id,
   });
 
   // Fetch attendance settings

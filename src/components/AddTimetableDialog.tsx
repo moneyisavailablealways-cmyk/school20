@@ -54,6 +54,7 @@ const AddTimetableDialog: React.FC<AddTimetableDialogProps> = ({
   });
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { profile } = useAuth();
 
   const daysOfWeek = [
     { value: '1', label: 'Monday' },

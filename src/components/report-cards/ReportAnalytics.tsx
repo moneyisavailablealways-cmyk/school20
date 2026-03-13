@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, Users, Award, BookOpen, AlertTriangle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const COLORS = ['#22c55e', '#3b82f6', '#eab308', '#f97316', '#ef4444'];
 

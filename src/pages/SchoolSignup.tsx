@@ -6,23 +6,29 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { GraduationCap, School, CheckCircle, Loader2 } from 'lucide-react';
+import { GraduationCap, School, CheckCircle, Loader2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 
+const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
+
 const schema = z.object({
-  school_name: z.string().min(3, 'School name must be at least 3 characters'),
+  school_name: z.string().min(3, 'School name must be at least 3 characters').max(100),
   school_code: z.string().min(2, 'School code required (e.g. KHS001)').max(10),
+  motto: z.string().max(200).optional(),
   country: z.string().min(2, 'Country required'),
   school_level: z.enum(['primary', 'secondary', 'higher_institution']),
   region: z.string().optional(),
   email: z.string().email('Valid school email required'),
   phone: z.string().optional(),
   address: z.string().optional(),
-  admin_first_name: z.string().min(2, 'Admin first name required'),
-  admin_last_name: z.string().min(2, 'Admin last name required'),
+  po_box: z.string().max(50).optional(),
+  website: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  admin_first_name: z.string().min(2, 'Admin first name required').max(50),
+  admin_last_name: z.string().min(2, 'Admin last name required').max(50),
   admin_email: z.string().email('Valid admin email required'),
   admin_password: z.string().min(8, 'Password must be at least 8 characters'),
   confirm_password: z.string(),
@@ -38,17 +44,23 @@ const SchoolSignup = () => {
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
   const form = useForm<SchoolSignupForm>({
     resolver: zodResolver(schema),
     defaultValues: {
       school_name: '',
       school_code: '',
+      motto: '',
       country: 'Uganda',
       school_level: undefined as unknown as 'primary' | 'secondary' | 'higher_institution',
       region: '',
       email: '',
       phone: '',
       address: '',
+      po_box: '',
+      website: '',
       admin_first_name: '',
       admin_last_name: '',
       admin_email: '',
@@ -57,6 +69,41 @@ const SchoolSignup = () => {
     },
   });
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+      toast.error('Only PNG or JPG files are allowed');
+      return;
+    }
+    if (file.size > MAX_LOGO_SIZE) {
+      toast.error('Logo must be under 2MB');
+      return;
+    }
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+  };
+
+  const uploadLogo = async (schoolId: string): Promise<string | null> => {
+    if (!logoFile) return null;
+    const ext = logoFile.name.split('.').pop();
+    const path = `${schoolId}/logo-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('school-logos').upload(path, logoFile, { upsert: true });
+    if (error) {
+      console.error('Logo upload error:', error);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('school-logos').getPublicUrl(path);
+    return urlData?.publicUrl || null;
+  };
+
   const onSubmit = async (data: SchoolSignupForm) => {
     setIsSubmitting(true);
     try {
@@ -64,12 +111,15 @@ const SchoolSignup = () => {
         body: {
           school_name: data.school_name,
           school_code: data.school_code,
+          motto: data.motto || null,
           country: data.country,
           school_level: data.school_level,
           region: data.region,
           email: data.email,
           phone: data.phone,
           address: data.address,
+          po_box: data.po_box || null,
+          website: data.website || null,
           admin_first_name: data.admin_first_name,
           admin_last_name: data.admin_last_name,
           admin_email: data.admin_email,
@@ -80,6 +130,15 @@ const SchoolSignup = () => {
       if (error) throw new Error(error.message || 'Registration failed');
       if (result?.error) throw new Error(result.error);
 
+      // Upload logo if provided
+      if (logoFile && result?.school_id) {
+        const logoUrl = await uploadLogo(result.school_id);
+        if (logoUrl) {
+          // Update the school record with logo URL
+          await supabase.from('schools').update({ logo_url: logoUrl } as any).eq('id', result.school_id);
+        }
+      }
+
       // Auto-login the newly registered admin
       setRegisteredEmail(data.admin_email);
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -88,11 +147,9 @@ const SchoolSignup = () => {
       });
 
       if (signInError) {
-        // If auto-login fails, show success and let them login manually
         console.warn('Auto-login failed after registration:', signInError.message);
         setStep('success');
       } else {
-        // Auto-login succeeded, redirect to admin dashboard
         toast.success('School registered successfully! Redirecting to your dashboard...');
         navigate('/admin');
       }
@@ -170,17 +227,45 @@ const SchoolSignup = () => {
                         <FormMessage />
                       </FormItem>
                     )} />
+
+                    {/* Logo Upload */}
+                    <div className="sm:col-span-2">
+                      <label className="text-sm font-medium">School Logo</label>
+                      <div className="mt-1.5 flex items-center gap-4">
+                        {logoPreview ? (
+                          <div className="relative">
+                            <img src={logoPreview} alt="Logo preview" className="h-16 w-16 rounded-lg object-contain border" />
+                            <button type="button" onClick={removeLogo} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="h-16 w-16 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                            <Upload className="h-5 w-5 text-muted-foreground/50" />
+                          </div>
+                        )}
+                        <div>
+                          <label htmlFor="logo-upload" className="cursor-pointer inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+                            <Upload className="h-4 w-4" />
+                            {logoFile ? 'Change Logo' : 'Upload Logo'}
+                          </label>
+                          <input id="logo-upload" type="file" accept="image/png,image/jpeg,image/jpg" className="hidden" onChange={handleLogoChange} />
+                          <p className="text-xs text-muted-foreground mt-0.5">PNG or JPG, max 2MB</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <FormField control={form.control} name="motto" render={({ field }) => (
+                      <FormItem className="sm:col-span-2">
+                        <FormLabel>School Motto</FormLabel>
+                        <FormControl><Input placeholder="e.g. Education for Excellence" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
                     <FormField control={form.control} name="school_code" render={({ field }) => (
                       <FormItem>
                         <FormLabel>School Code *</FormLabel>
                         <FormControl><Input placeholder="e.g. KHS001" {...field} onChange={e => field.onChange(e.target.value.toUpperCase())} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="country" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Country *</FormLabel>
-                        <FormControl><Input placeholder="Uganda" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -193,12 +278,26 @@ const SchoolSignup = () => {
                               <SelectValue placeholder="Select level" />
                             </SelectTrigger>
                           </FormControl>
-          <SelectContent>
-            <SelectItem value="primary">Primary School</SelectItem>
-            <SelectItem value="secondary">Secondary School</SelectItem>
-            <SelectItem value="higher_institution">Higher Institution (Beta)</SelectItem>
-          </SelectContent>
+                          <SelectContent>
+                            <SelectItem value="primary">Primary School</SelectItem>
+                            <SelectItem value="secondary">Secondary School</SelectItem>
+                            <SelectItem value="higher_institution">Higher Institution (Beta)</SelectItem>
+                          </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="country" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country *</FormLabel>
+                        <FormControl><Input placeholder="Uganda" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="region" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Region</FormLabel>
+                        <FormControl><Input placeholder="e.g. Central" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -211,15 +310,30 @@ const SchoolSignup = () => {
                     )} />
                     <FormField control={form.control} name="phone" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone</FormLabel>
+                        <FormLabel>Telephone Number</FormLabel>
                         <FormControl><Input placeholder="+256 700 000 000" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="address" render={({ field }) => (
                       <FormItem className="sm:col-span-2">
-                        <FormLabel>Address</FormLabel>
+                        <FormLabel>School Location / Address</FormLabel>
                         <FormControl><Input placeholder="School physical address" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="po_box" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>P.O. Box</FormLabel>
+                        <FormControl><Input placeholder="e.g. P.O. Box 12345, Kampala" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="website" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Website</FormLabel>
+                        <FormControl><Input placeholder="https://www.school.com" {...field} /></FormControl>
+                        <FormDescription className="text-xs">Optional</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />

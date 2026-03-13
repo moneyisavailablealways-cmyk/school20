@@ -35,20 +35,24 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 
   // Fetch all classes
   const { data: classes } = useQuery({
-    queryKey: ['all-classes'],
+    queryKey: ['all-classes', profile?.school_id],
     queryFn: async () => {
-      const { data } = await supabase.from('classes').select('id, name').order('name');
+      if (!profile?.school_id) return [];
+      const { data } = await supabase.from('classes').select('id, name').eq('school_id', profile.school_id).order('name');
       return data || [];
-    }
+    },
+    enabled: !!profile?.school_id,
   });
 
   // Fetch attendance settings
   const { data: settings, isLoading: settingsLoading } = useQuery({
-    queryKey: ['attendance-settings'],
+    queryKey: ['attendance-settings', profile?.school_id],
     queryFn: async () => {
-      const { data } = await supabase.from('attendance_settings').select('*').single();
+      if (!profile?.school_id) return null;
+      const { data } = await supabase.from('attendance_settings').select('*').eq('school_id', profile.school_id).maybeSingle();
       return data;
-    }
+    },
+    enabled: !!profile?.school_id,
   });
 
   // Fetch attendance records for date/class

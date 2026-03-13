@@ -94,12 +94,14 @@ const TimetableAutoGenerator = () => {
 
   // Fetch classes for filter
   const { data: classes } = useQuery({
-    queryKey: ['classes-for-gen-filter'],
+    queryKey: ['classes-for-gen-filter', profile?.school_id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('classes').select('id, name').order('name');
+      if (!profile?.school_id) return [];
+      const { data, error } = await supabase.from('classes').select('id, name').eq('school_id', profile.school_id).order('name');
       if (error) throw error;
       return data;
     },
+    enabled: !!profile?.school_id,
   });
 
   const handleGenerate = () => {

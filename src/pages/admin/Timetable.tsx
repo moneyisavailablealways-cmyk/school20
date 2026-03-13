@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,7 @@ const Timetable = () => {
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
   const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -46,9 +48,10 @@ const Timetable = () => {
     return dayNames[dayNumber] || '';
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { if (profile?.school_id) fetchData(); }, [profile?.school_id]);
 
   const fetchData = async () => {
+    if (!profile?.school_id) return;
     try {
       setLoading(true);
       const { data: timetableData, error: timetableError } = await supabase
@@ -59,13 +62,14 @@ const Timetable = () => {
           teacher:profiles!timetables_teacher_id_fkey(first_name, last_name),
           class:classes(name)
         `)
+        .eq('school_id', profile.school_id)
         .order('day_of_week')
         .order('start_time');
 
       if (timetableError) throw timetableError;
 
       const { data: classesData, error: classesError } = await supabase
-        .from('classes').select('id, name').order('name');
+        .from('classes').select('id, name').eq('school_id', profile.school_id).order('name');
       if (classesError) throw classesError;
 
       setTimetableEntries(timetableData || []);

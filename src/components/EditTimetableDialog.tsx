@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,6 +67,7 @@ const EditTimetableDialog: React.FC<EditTimetableDialogProps> = ({
   });
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { profile } = useAuth();
 
   const daysOfWeek = [
     { value: 1, label: 'Monday' },
@@ -106,8 +108,8 @@ const EditTimetableDialog: React.FC<EditTimetableDialogProps> = ({
   const fetchData = async () => {
     try {
       const [classesRes, subjectsRes] = await Promise.all([
-        supabase.from('classes').select('id, name').order('name'),
-        supabase.from('subjects').select('id, name, code').eq('is_active', true).order('name'),
+        supabase.from('classes').select('id, name').eq('school_id', profile?.school_id).order('name'),
+        supabase.from('subjects').select('id, name, code').eq('is_active', true).eq('school_id', profile?.school_id).order('name'),
       ]);
 
       if (classesRes.error) throw classesRes.error;

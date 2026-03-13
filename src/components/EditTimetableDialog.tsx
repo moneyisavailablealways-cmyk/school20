@@ -108,8 +108,8 @@ const EditTimetableDialog: React.FC<EditTimetableDialogProps> = ({
   const fetchData = async () => {
     try {
       const [classesRes, subjectsRes] = await Promise.all([
-        supabase.from('classes').select('id, name').order('name'),
-        supabase.from('subjects').select('id, name, code').eq('is_active', true).order('name'),
+        supabase.from('classes').select('id, name').eq('school_id', profile?.school_id).order('name'),
+        supabase.from('subjects').select('id, name, code').eq('is_active', true).eq('school_id', profile?.school_id).order('name'),
       ]);
 
       if (classesRes.error) throw classesRes.error;

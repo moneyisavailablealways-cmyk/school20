@@ -8,9 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Save, Building2, Upload, X, Image } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const SchoolSettings = () => {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
@@ -23,15 +25,43 @@ const SchoolSettings = () => {
     logo_url: '',
   });
 
+  // Fetch school_settings, falling back to the schools table for registration data
   const { data: settings, isLoading } = useQuery({
-    queryKey: ['school-settings'],
+    queryKey: ['school-settings', profile?.school_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: settingsData, error } = await supabase
         .from('school_settings')
         .select('*')
         .maybeSingle();
       if (error) throw error;
-      return data;
+
+      // If school_settings has data, return it
+      if (settingsData && (settingsData.school_name || settingsData.address || settingsData.phone || settingsData.email)) {
+        return settingsData;
+      }
+
+      // Otherwise, fetch from the schools table (registration data) as fallback
+      if (profile?.school_id) {
+        const { data: schoolRecord } = await supabase
+          .from('schools')
+          .select('school_name, address, phone, email, website, logo_url')
+          .eq('id', profile.school_id)
+          .single();
+
+        if (schoolRecord) {
+          return {
+            ...settingsData,
+            school_name: settingsData?.school_name || schoolRecord.school_name || '',
+            address: settingsData?.address || schoolRecord.address || '',
+            phone: settingsData?.phone || schoolRecord.phone || '',
+            email: settingsData?.email || schoolRecord.email || '',
+            website: settingsData?.website || schoolRecord.website || '',
+            logo_url: settingsData?.logo_url || schoolRecord.logo_url || '',
+          };
+        }
+      }
+
+      return settingsData;
     },
   });
 

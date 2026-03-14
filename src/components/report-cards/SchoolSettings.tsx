@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 const SchoolSettings = () => {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
+  const schoolId = profile?.school_id;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
@@ -23,61 +24,56 @@ const SchoolSettings = () => {
     phone: '',
     address: '',
     logo_url: '',
+    po_box: '',
   });
 
-  // Fetch school_settings, falling back to the schools table for registration data
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ['school-settings', profile?.school_id],
+  // Fetch school registration data as primary source, then overlay school_settings
+  const { data: schoolData, isLoading } = useQuery({
+    queryKey: ['school-info-for-settings', schoolId],
     queryFn: async () => {
-      const { data: settingsData, error } = await supabase
-        .from('school_settings')
-        .select('*')
-        .maybeSingle();
-      if (error) throw error;
+      if (!schoolId) throw new Error('No school ID');
 
-      // If school_settings has data, return it
-      if (settingsData && (settingsData.school_name || settingsData.address || settingsData.phone || settingsData.email)) {
-        return settingsData;
-      }
+      // Fetch both in parallel
+      const [schoolRes, settingsRes] = await Promise.all([
+        supabase.from('schools').select('school_name, address, phone, email, website, logo_url, motto, po_box').eq('id', schoolId).single(),
+        supabase.from('school_settings').select('*').eq('school_id', schoolId).maybeSingle(),
+      ]);
 
-      // Otherwise, fetch from the schools table (registration data) as fallback
-      if (profile?.school_id) {
-        const { data: schoolRecord } = await supabase
-          .from('schools')
-          .select('school_name, address, phone, email, website, logo_url')
-          .eq('id', profile.school_id)
-          .single();
+      if (schoolRes.error) throw schoolRes.error;
 
-        if (schoolRecord) {
-          return {
-            ...settingsData,
-            school_name: settingsData?.school_name || schoolRecord.school_name || '',
-            address: settingsData?.address || schoolRecord.address || '',
-            phone: settingsData?.phone || schoolRecord.phone || '',
-            email: settingsData?.email || schoolRecord.email || '',
-            website: settingsData?.website || schoolRecord.website || '',
-            logo_url: settingsData?.logo_url || schoolRecord.logo_url || '',
-          };
-        }
-      }
+      const school = schoolRes.data;
+      const settings = settingsRes.data;
 
-      return settingsData;
+      // Merge: school_settings overrides registration data when present
+      return {
+        school_name: settings?.school_name || school.school_name || '',
+        motto: settings?.motto || school.motto || '',
+        email: settings?.email || school.email || '',
+        website: settings?.website || school.website || '',
+        phone: settings?.phone || school.phone || '',
+        address: settings?.address || school.address || '',
+        logo_url: settings?.logo_url || school.logo_url || '',
+        po_box: school.po_box || '',
+        settingsId: settings?.id || null,
+      };
     },
+    enabled: !!schoolId,
   });
 
   useEffect(() => {
-    if (settings) {
+    if (schoolData) {
       setFormData({
-        school_name: settings.school_name || '',
-        motto: settings.motto || '',
-        email: settings.email || '',
-        website: settings.website || '',
-        phone: settings.phone || '',
-        address: settings.address || '',
-        logo_url: settings.logo_url || '',
+        school_name: schoolData.school_name,
+        motto: schoolData.motto,
+        email: schoolData.email,
+        website: schoolData.website,
+        phone: schoolData.phone,
+        address: schoolData.address,
+        logo_url: schoolData.logo_url,
+        po_box: schoolData.po_box,
       });
     }
-  }, [settings]);
+  }, [schoolData]);
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -124,21 +120,47 @@ const SchoolSettings = () => {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (settings?.id) {
-        const { error } = await supabase
+      if (!schoolId) throw new Error('No school ID');
+
+      const { po_box, ...settingsFields } = formData;
+
+      // Save to BOTH tables in parallel:
+      // 1. Update the schools table (registration data) so it stays in sync
+      // 2. Upsert school_settings for report card overrides
+      const schoolUpdate = supabase
+        .from('schools')
+        .update({
+          school_name: formData.school_name,
+          motto: formData.motto,
+          email: formData.email,
+          website: formData.website,
+          phone: formData.phone,
+          address: formData.address,
+          logo_url: formData.logo_url,
+          po_box: formData.po_box,
+        })
+        .eq('id', schoolId);
+
+      let settingsUpdate;
+      if (schoolData?.settingsId) {
+        settingsUpdate = supabase
           .from('school_settings')
-          .update({ ...formData, updated_at: new Date().toISOString() })
-          .eq('id', settings.id);
-        if (error) throw error;
+          .update({ ...settingsFields, updated_at: new Date().toISOString() })
+          .eq('id', schoolData.settingsId);
       } else {
-        const { error } = await supabase
+        settingsUpdate = supabase
           .from('school_settings')
-          .insert([formData]);
-        if (error) throw error;
+          .insert([{ ...settingsFields, school_id: schoolId }]);
       }
+
+      const [schoolRes, settingsRes] = await Promise.all([schoolUpdate, settingsUpdate]);
+
+      if (schoolRes.error) throw schoolRes.error;
+      if (settingsRes.error) throw settingsRes.error;
     },
     onSuccess: () => {
       toast.success('School settings saved successfully');
+      queryClient.invalidateQueries({ queryKey: ['school-info-for-settings'] });
       queryClient.invalidateQueries({ queryKey: ['school-settings'] });
     },
     onError: (error) => {
@@ -163,7 +185,7 @@ const SchoolSettings = () => {
             School Information
           </CardTitle>
           <CardDescription>
-            Configure school details that will appear on report cards
+            Edit your school details. These appear on report cards and all school documents.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -212,6 +234,15 @@ const SchoolSettings = () => {
                 value={formData.phone}
                 onChange={(e) => handleChange('phone', e.target.value)}
                 placeholder="+256 700 000 000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="po_box">P.O. Box</Label>
+              <Input
+                id="po_box"
+                value={formData.po_box}
+                onChange={(e) => handleChange('po_box', e.target.value)}
+                placeholder="P.O. Box 1234"
               />
             </div>
 
@@ -302,6 +333,7 @@ const SchoolSettings = () => {
               {formData.motto && <p className="text-sm italic text-muted-foreground">"{formData.motto}"</p>}
               <div className="text-xs text-muted-foreground space-y-0.5 mt-2">
                 {formData.address && <p>{formData.address}</p>}
+                {formData.po_box && <p>{formData.po_box}</p>}
                 <div className="flex justify-center gap-4">
                   {formData.phone && <span>Tel: {formData.phone}</span>}
                   {formData.email && <span>Email: {formData.email}</span>}

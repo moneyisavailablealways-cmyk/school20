@@ -54,7 +54,7 @@ const SchoolSignup = () => {
       school_code: '',
       motto: '',
       country: 'Uganda',
-      school_level: undefined as unknown as 'primary' | 'secondary' | 'higher_institution',
+      school_level: 'secondary',
       region: '',
       email: '',
       phone: '',
@@ -107,8 +107,17 @@ const SchoolSignup = () => {
   const onSubmit = async (data: SchoolSignupForm) => {
     setIsSubmitting(true);
     try {
-      const { data: result, error } = await supabase.functions.invoke('register-school', {
-        body: {
+      // Use fetch directly to avoid issues with expired auth sessions on the Supabase client
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/register-school`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({
           school_name: data.school_name,
           school_code: data.school_code,
           motto: data.motto || null,
@@ -124,20 +133,15 @@ const SchoolSignup = () => {
           admin_last_name: data.admin_last_name,
           admin_email: data.admin_email,
           admin_password: data.admin_password,
-        },
+        }),
       });
 
-      if (error) throw new Error(error.message || 'Registration failed');
-      if (result?.error) throw new Error(result.error);
-
-      // Upload logo if provided
-      if (logoFile && result?.school_id) {
-        const logoUrl = await uploadLogo(result.school_id);
-        if (logoUrl) {
-          // Update the school record with logo URL
-          await supabase.from('schools').update({ logo_url: logoUrl } as any).eq('id', result.school_id);
-        }
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result?.error || `Registration failed (status ${response.status})`);
       }
+      if (result?.error) throw new Error(result.error);
 
       // Auto-login the newly registered admin
       setRegisteredEmail(data.admin_email);
@@ -150,6 +154,13 @@ const SchoolSignup = () => {
         console.warn('Auto-login failed after registration:', signInError.message);
         setStep('success');
       } else {
+        // Upload logo after sign-in so we have an authenticated session
+        if (logoFile && result?.school_id) {
+          const logoUrl = await uploadLogo(result.school_id);
+          if (logoUrl) {
+            await supabase.from('schools').update({ logo_url: logoUrl } as any).eq('id', result.school_id);
+          }
+        }
         toast.success('School registered successfully! Redirecting to your dashboard...');
         navigate('/admin');
       }

@@ -54,7 +54,7 @@ const SchoolSignup = () => {
       school_code: '',
       motto: '',
       country: 'Uganda',
-      school_level: undefined as unknown as 'primary' | 'secondary' | 'higher_institution',
+      school_level: 'secondary',
       region: '',
       email: '',
       phone: '',

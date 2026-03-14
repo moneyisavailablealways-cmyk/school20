@@ -107,8 +107,17 @@ const SchoolSignup = () => {
   const onSubmit = async (data: SchoolSignupForm) => {
     setIsSubmitting(true);
     try {
-      const { data: result, error } = await supabase.functions.invoke('register-school', {
-        body: {
+      // Use fetch directly to avoid issues with expired auth sessions on the Supabase client
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/register-school`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({
           school_name: data.school_name,
           school_code: data.school_code,
           motto: data.motto || null,
@@ -124,10 +133,14 @@ const SchoolSignup = () => {
           admin_last_name: data.admin_last_name,
           admin_email: data.admin_email,
           admin_password: data.admin_password,
-        },
+        }),
       });
 
-      if (error) throw new Error(error.message || 'Registration failed');
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result?.error || `Registration failed (status ${response.status})`);
+      }
       if (result?.error) throw new Error(result.error);
 
       // Upload logo if provided

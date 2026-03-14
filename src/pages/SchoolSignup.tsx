@@ -143,15 +143,6 @@ const SchoolSignup = () => {
       }
       if (result?.error) throw new Error(result.error);
 
-      // Upload logo if provided
-      if (logoFile && result?.school_id) {
-        const logoUrl = await uploadLogo(result.school_id);
-        if (logoUrl) {
-          // Update the school record with logo URL
-          await supabase.from('schools').update({ logo_url: logoUrl } as any).eq('id', result.school_id);
-        }
-      }
-
       // Auto-login the newly registered admin
       setRegisteredEmail(data.admin_email);
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -163,6 +154,13 @@ const SchoolSignup = () => {
         console.warn('Auto-login failed after registration:', signInError.message);
         setStep('success');
       } else {
+        // Upload logo after sign-in so we have an authenticated session
+        if (logoFile && result?.school_id) {
+          const logoUrl = await uploadLogo(result.school_id);
+          if (logoUrl) {
+            await supabase.from('schools').update({ logo_url: logoUrl } as any).eq('id', result.school_id);
+          }
+        }
         toast.success('School registered successfully! Redirecting to your dashboard...');
         navigate('/admin');
       }

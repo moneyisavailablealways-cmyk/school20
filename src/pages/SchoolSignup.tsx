@@ -166,8 +166,13 @@ const SchoolSignup = () => {
       }
     } catch (error: any) {
       const msg = error.message || 'Registration failed. Please try again.';
+      console.error('School registration error:', msg);
       if (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('already')) {
         toast.error('This email is already registered. Please use a different admin email or sign in with your existing account.');
+      } else if (msg.toLowerCase().includes('code') && msg.toLowerCase().includes('already')) {
+        toast.error('This school code is already taken. Please use a different school code, or sign in if you already registered.');
+      } else if (msg.toLowerCase().includes('school') && msg.toLowerCase().includes('email') && msg.toLowerCase().includes('already')) {
+        toast.error('A school with this email already exists. Please use a different email or sign in.');
       } else {
         toast.error(msg);
       }

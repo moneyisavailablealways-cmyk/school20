@@ -258,13 +258,19 @@ serve(async (req) => {
     console.log(`Generating report for student: ${studentId}, year: ${academicYearId}, term: ${term}`);
 
     // Fetch core data in parallel
-    const [studentData, enrollment, academicYear, gradingConfig, comments, autoCommentRules] = await Promise.all([
+    const [studentData, enrollment, academicYear] = await Promise.all([
       fetchStudentData(supabase, studentId),
       fetchEnrollment(supabase, studentId, academicYearId),
       supabase.from('academic_years').select('name').eq('id', academicYearId).single().then((r: any) => r.data),
-      supabase.from('grading_config').select('*').eq('is_active', true).order('max_marks', { ascending: false }).then((r: any) => r.data),
+    ]);
+
+    const schoolId = studentData.school_id;
+
+    // Now fetch school-scoped data in parallel
+    const [gradingConfig, comments, autoCommentRules] = await Promise.all([
+      supabase.from('grading_config').select('*').eq('is_active', true).eq('school_id', schoolId).order('max_marks', { ascending: false }).then((r: any) => r.data),
       supabase.from('report_comments').select('*').eq('student_id', studentId).eq('academic_year_id', academicYearId).eq('term', term).then((r: any) => r.data),
-      supabase.from('auto_comment_rules').select('*').eq('is_active', true).order('priority', { ascending: false }).then((r: any) => r.data),
+      supabase.from('auto_comment_rules').select('*').eq('is_active', true).eq('school_id', schoolId).order('priority', { ascending: false }).then((r: any) => r.data),
     ]);
 
     const schoolId = studentData.school_id;

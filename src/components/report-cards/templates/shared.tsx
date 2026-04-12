@@ -30,9 +30,11 @@ export interface ReportData {
     admissionNo: string;
   };
   school: {
+    id?: string;
     name: string;
     motto: string;
     address: string;
+    poBox?: string;
     phone: string;
     email: string;
     website: string;

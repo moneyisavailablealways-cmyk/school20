@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
 import {
   GraduationCap,
   Search,
@@ -68,6 +69,9 @@ interface Class {
   name: string;
   level_id?: string;
   class_teacher_id?: string;
+  levels?: {
+    name: string;
+  } | null;
 }
 
 interface TeacherSpecialization {
@@ -106,10 +110,28 @@ const TeacherManagement = () => {
   const [subjectClassAssignments, setSubjectClassAssignments] = useState<{ subjectId: string; classIds: string[] }[]>([]);
   const [teacherDetailsId, setTeacherDetailsId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { schoolLevel } = useSchoolLevel();
 
   useEffect(() => {
     loadTeachers();
   }, []);
+
+  const matchesSchoolLevel = (classItem: Class) => {
+    if (!schoolLevel) return true;
+
+    const levelName = classItem.levels?.name?.toLowerCase() || '';
+    const className = classItem.name.toLowerCase();
+
+    if (schoolLevel === 'primary') {
+      return levelName.includes('primary') || /^p\d/.test(className);
+    }
+
+    if (schoolLevel === 'secondary') {
+      return levelName.includes('secondary') || /^s\d/.test(className) || className.startsWith('senior');
+    }
+
+    return true;
+  };
 
   const loadTeachers = async () => {
     try {
@@ -174,13 +196,17 @@ const TeacherManagement = () => {
       .eq('is_active', true)
       .order('name');
     if (currentSchoolId) subjectsQuery.eq('school_id', currentSchoolId);
+    if (schoolLevel) subjectsQuery.eq('education_level', schoolLevel);
 
-    const classesQuery = supabase.from('classes').select('*').order('name');
+    const classesQuery = supabase
+      .from('classes')
+      .select('id, name, level_id, class_teacher_id, levels(name)')
+      .order('name');
     if (currentSchoolId) classesQuery.eq('school_id', currentSchoolId);
 
     const [{ data: subjectsData }, { data: classesData }] = await Promise.all([subjectsQuery, classesQuery]);
     setSubjects(subjectsData || []);
-    setClasses(classesData || []);
+    setClasses((classesData || []).filter(matchesSchoolLevel));
 
     // Set selected subjects and class assignments
     if (specializations) {
@@ -309,6 +335,13 @@ const TeacherManagement = () => {
 
       // Update class teacher assignment
       if (editForm.is_class_teacher && editForm.assigned_class_id) {
+        const { error: clearClassError } = await supabase
+          .from('classes')
+          .update({ class_teacher_id: null })
+          .eq('class_teacher_id', editingTeacher.id);
+
+        if (clearClassError) throw clearClassError;
+
         const { error: classError } = await supabase
           .from('classes')
           .update({ class_teacher_id: editingTeacher.id })
@@ -795,7 +828,9 @@ const TeacherManagement = () => {
                       </SelectContent>
                     </Select>
                     <p className="text-sm text-muted-foreground">
-                      Select which class this teacher will be responsible for
+                      {classes.length > 0
+                        ? 'Select which class this teacher will be responsible for'
+                        : 'No classes found. Please create classes first.'}
                     </p>
                   </div>
                 )}
@@ -859,7 +894,7 @@ const TeacherManagement = () => {
                           </div>
                           {classes.length === 0 && (
                             <p className="text-sm text-muted-foreground ml-6">
-                              No classes available
+                              No classes found. Please create classes first.
                             </p>
                           )}
                         </div>

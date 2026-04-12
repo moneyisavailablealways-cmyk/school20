@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { FileText, Download, Eye, Printer, Package, RefreshCw, CheckCircle, AlertCircle, Share2, Pencil, Trash2, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import ReportCardPreviewDialog from './ReportCardPreviewDialog';
+import { mergeCurrentSchoolBranding } from './reportBranding';
 
 const ReportGeneration = () => {
   const { profile } = useAuth();
@@ -39,15 +40,18 @@ const ReportGeneration = () => {
 
   // Fetch classes with streams
   const { data: classes } = useQuery({
-    queryKey: ['classes-for-generation'],
+    queryKey: ['classes-for-generation', profile?.school_id],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       const { data, error } = await supabase
         .from('classes')
         .select('id, name, level_id, levels(name)')
+        .eq('school_id', profile.school_id)
         .order('name');
       if (error) throw error;
       return data;
     },
+    enabled: !!profile?.school_id,
   });
 
   // Fetch streams
@@ -273,13 +277,17 @@ const ReportGeneration = () => {
       // Try to get existing report_data first
       const { data: existing } = await supabase
         .from('generated_reports')
-        .select('report_data')
+        .select('report_data, school_id')
         .eq('student_id', student.studentId)
         .eq('term', selectedTerm)
         .maybeSingle();
 
       if (existing?.report_data) {
-        setPreviewData(existing.report_data);
+        const refreshedReportData = await mergeCurrentSchoolBranding(
+          existing.report_data,
+          existing.school_id || profile?.school_id,
+        );
+        setPreviewData(refreshedReportData);
         setPreviewStudentName(student.name);
         setPreviewOpen(true);
       } else {
@@ -293,7 +301,7 @@ const ReportGeneration = () => {
           },
         });
         if (error || !data?.success) throw new Error(data?.error || 'Failed to generate');
-        setPreviewData(data.reportData);
+        setPreviewData(await mergeCurrentSchoolBranding(data.reportData, profile?.school_id));
         setPreviewStudentName(student.name);
         setPreviewOpen(true);
         queryClient.invalidateQueries({ queryKey: ['students-for-generation'] });

@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Eye, Pencil, Printer, Download, Share2, Trash2, FileText, Search } from 'lucide-react';
 import ReportCardPreviewDialog from './ReportCardPreviewDialog';
+import { mergeCurrentSchoolBranding } from './reportBranding';
 
 const GeneratedReportCards = () => {
   const queryClient = useQueryClient();
@@ -107,7 +108,7 @@ const GeneratedReportCards = () => {
     if (existing) {
       // Always refresh signatures from the database to pick up newly added ones
       try {
-        const refreshedData = { ...existing };
+        const refreshedData = await mergeCurrentSchoolBranding({ ...existing }, report.school_id || existing?.school?.id);
         
         // Get the student's enrollment to find class_teacher_id
         const { data: enrollment } = await supabase
@@ -118,7 +119,7 @@ const GeneratedReportCards = () => {
           .maybeSingle();
 
         const classTeacherId = (enrollment?.classes as any)?.class_teacher_id;
-        const schoolId = (enrollment?.classes as any)?.school_id || existing?.school?.id;
+        const schoolId = report.school_id || (enrollment?.classes as any)?.school_id || refreshedData?.school?.id;
 
         if (schoolId) {
           const { data: allSigs } = await supabase
@@ -194,7 +195,7 @@ const GeneratedReportCards = () => {
       // Invalidate cache so the stored report_data is picked up next time
       queryClient.invalidateQueries({ queryKey: ['generated-report-cards'] });
 
-      return data.reportData;
+      return await mergeCurrentSchoolBranding(data.reportData, report.school_id);
     } catch (err: any) {
       toast.error('Failed to load report data: ' + err.message);
       return null;

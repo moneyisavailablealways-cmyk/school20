@@ -24,7 +24,7 @@ async function fetchStudentData(supabase: any, studentId: string) {
 async function fetchEnrollment(supabase: any, studentId: string, academicYearId: string) {
   const { data } = await supabase
     .from('student_enrollments')
-    .select(`class_id, stream_id, classes(id, name, level_id, class_teacher_id, levels(name)), streams(name)`)
+    .select(`class_id, stream_id, classes(id, name, level_id, class_teacher_id, school_id, levels(name)), streams(name)`)
     .eq('student_id', studentId)
     .eq('academic_year_id', academicYearId)
     .eq('status', 'active')
@@ -264,7 +264,10 @@ serve(async (req) => {
       supabase.from('academic_years').select('name').eq('id', academicYearId).single().then((r: any) => r.data),
     ]);
 
-    const schoolId = studentData.school_id;
+    const schoolId = studentData.school_id || (enrollment?.classes as any)?.school_id;
+    if (!schoolId) {
+      throw new Error('Student is not linked to a school record');
+    }
 
     // Now fetch school-scoped data in parallel
     const [gradingConfig, comments, autoCommentRules] = await Promise.all([
@@ -321,24 +324,34 @@ serve(async (req) => {
     // First fetch from schools table (registration data), then overlay school_settings if available
     const fetchSchoolSettings = async () => {
       // Always fetch the registered school record as the primary source
-      const { data: schoolRecord } = await supabase
+      const { data: schoolRecord, error: schoolError } = await supabase
         .from('schools')
-        .select('school_name, address, phone, email, website, logo_url')
+        .select('id, school_name, motto, address, phone, email, website, logo_url, po_box')
         .eq('id', schoolId)
-        .single();
+        .maybeSingle();
+
+      if (schoolError) {
+        throw new Error(`School fetch error: ${schoolError.message}`);
+      }
 
       // Then check for school_settings overrides
-      const { data: settingsOverride } = await supabase
+      const { data: settingsOverride, error: settingsError } = await supabase
         .from('school_settings')
         .select('*')
         .eq('school_id', schoolId)
         .maybeSingle();
 
+      if (settingsError) {
+        throw new Error(`School settings fetch error: ${settingsError.message}`);
+      }
+
       // Merge: school_settings values take priority when they exist, otherwise use schools table
       return {
+        id: schoolRecord?.id || schoolId,
         school_name: settingsOverride?.school_name || schoolRecord?.school_name || 'School Name',
-        motto: settingsOverride?.motto || '',
+        motto: settingsOverride?.motto || schoolRecord?.motto || '',
         address: settingsOverride?.address || schoolRecord?.address || '',
+        po_box: schoolRecord?.po_box || '',
         phone: settingsOverride?.phone || schoolRecord?.phone || '',
         email: settingsOverride?.email || schoolRecord?.email || '',
         website: settingsOverride?.website || schoolRecord?.website || '',
@@ -465,9 +478,11 @@ serve(async (req) => {
         admissionNo: studentData.student_id || '',
       },
       school: {
+        id: schoolSettings?.id || schoolId,
         name: schoolSettings?.school_name || 'School Name',
         motto: schoolSettings?.motto || '',
         address: schoolSettings?.address || '',
+        poBox: schoolSettings?.po_box || '',
         phone: schoolSettings?.phone || '',
         email: schoolSettings?.email || '',
         website: schoolSettings?.website || '',

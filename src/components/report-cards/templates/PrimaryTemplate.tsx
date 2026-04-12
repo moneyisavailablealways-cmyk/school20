@@ -75,8 +75,9 @@ const PrimaryTemplate = ({ data }: { data: ReportData }) => {
           <h1 style={{ fontSize: '18px', fontWeight: 'bold', textTransform: 'uppercase', margin: 0, letterSpacing: '1px' }}>
             {school.name}
           </h1>
+          {school.motto && <p style={{ fontSize: '10px', margin: '1px 0', fontStyle: 'italic' }}>{school.motto}</p>}
           {school.address && <p style={{ fontSize: '10px', margin: '1px 0' }}>Location: {school.address}</p>}
-          <p style={{ fontSize: '10px', margin: '1px 0' }}>P.O. Box: {school.address || '—'}</p>
+          <p style={{ fontSize: '10px', margin: '1px 0' }}>P.O. Box: {school.poBox || '—'}</p>
           {school.phone && <p style={{ fontSize: '10px', margin: '1px 0' }}>TEL: {school.phone}</p>}
           {school.email && <p style={{ fontSize: '10px', margin: '1px 0' }}>Email: {school.email}</p>}
           {school.website && <p style={{ fontSize: '10px', margin: '1px 0' }}>Website: {school.website}</p>}

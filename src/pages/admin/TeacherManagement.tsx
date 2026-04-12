@@ -113,12 +113,22 @@ const TeacherManagement = () => {
 
   const loadTeachers = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('school_id')
+        .eq('user_id', user?.id)
+        .single();
+      const currentSchoolId = profile?.school_id;
+
+      const query = supabase
         .from('profiles')
         .select('*')
         .in('role', ['teacher', 'head_teacher'])
         .order('created_at', { ascending: false });
+      if (currentSchoolId) query.eq('school_id', currentSchoolId);
 
+      const { data, error } = await query;
       if (error) throw error;
       setTeachers(data || []);
     } catch (error) {
@@ -149,21 +159,26 @@ const TeacherManagement = () => {
       .select('*')
       .eq('teacher_id', teacherDetails?.id);
 
-    // Fetch all subjects and classes
-    const { data: subjectsData } = await supabase
+    // Fetch subjects and classes filtered by school
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('school_id')
+      .eq('user_id', user?.id)
+      .single();
+    const currentSchoolId = currentProfile?.school_id;
+
+    const subjectsQuery = supabase
       .from('subjects')
-      .select(`
-        *,
-        level:levels(name)
-      `)
+      .select(`*, level:levels(name)`)
       .eq('is_active', true)
       .order('name');
+    if (currentSchoolId) subjectsQuery.eq('school_id', currentSchoolId);
 
-    const { data: classesData } = await supabase
-      .from('classes')
-      .select('*')
-      .order('name');
+    const classesQuery = supabase.from('classes').select('*').order('name');
+    if (currentSchoolId) classesQuery.eq('school_id', currentSchoolId);
 
+    const [{ data: subjectsData }, { data: classesData }] = await Promise.all([subjectsQuery, classesQuery]);
     setSubjects(subjectsData || []);
     setClasses(classesData || []);
 

@@ -108,25 +108,32 @@ const AddTeacher = () => {
 
   const fetchSubjectsAndClasses = async () => {
     try {
-      // Fetch subjects
-      const { data: subjectsData, error: subjectsError } = await supabase
+      // Get current user's school_id
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('school_id')
+        .eq('user_id', user?.id)
+        .single();
+      const currentSchoolId = profile?.school_id;
+
+      // Fetch subjects filtered by school
+      const subjectsQuery = supabase
         .from('subjects')
-        .select(`
-          *,
-          level:levels(name)
-        `)
+        .select(`*, level:levels(name)`)
         .eq('is_active', true)
         .order('name', { ascending: true });
+      if (currentSchoolId) subjectsQuery.eq('school_id', currentSchoolId);
 
+      const { data: subjectsData, error: subjectsError } = await subjectsQuery;
       if (subjectsError) throw subjectsError;
       setSubjects(subjectsData || []);
 
-      // Fetch all classes
-      const { data: classesData, error: classesError } = await supabase
-        .from('classes')
-        .select('*')
-        .order('name');
+      // Fetch classes filtered by school_id
+      const classesQuery = supabase.from('classes').select('*').order('name');
+      if (currentSchoolId) classesQuery.eq('school_id', currentSchoolId);
 
+      const { data: classesData, error: classesError } = await classesQuery;
       if (classesError) throw classesError;
       setClasses(classesData || []);
     } catch (error) {

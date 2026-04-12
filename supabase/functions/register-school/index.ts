@@ -163,6 +163,52 @@ serve(async (req) => {
       // Non-fatal — the profile trigger may not have fired yet, but we still succeed
     }
 
+    // 4. Auto-generate default academic year and classes based on school level
+    const currentYear = new Date().getFullYear();
+    const academicYearName = `${currentYear}`;
+    const { data: academicYear } = await supabaseAdmin
+      .from('academic_years')
+      .insert({
+        name: academicYearName,
+        start_date: `${currentYear}-01-01`,
+        end_date: `${currentYear}-12-31`,
+        is_current: true,
+        school_id: schoolData.id,
+      })
+      .select()
+      .single();
+
+    if (academicYear) {
+      // Create a root level
+      const levelName = (school_level === 'primary') ? 'Primary' : 'Secondary';
+      const { data: rootLevel } = await supabaseAdmin
+        .from('levels')
+        .insert({ name: levelName, school_id: schoolData.id, parent_id: null })
+        .select()
+        .single();
+
+      if (rootLevel) {
+        // Generate default classes
+        const classNames = (school_level === 'primary')
+          ? ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7']
+          : ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+
+        const classInserts = classNames.map(name => ({
+          name,
+          school_id: schoolData.id,
+          academic_year_id: academicYear.id,
+          level_id: rootLevel.id,
+        }));
+
+        const { error: classesError } = await supabaseAdmin.from('classes').insert(classInserts);
+        if (classesError) {
+          console.error('Auto-generate classes error:', classesError);
+        } else {
+          console.log(`Auto-generated ${classNames.length} classes for ${school_level} school`);
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

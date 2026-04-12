@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap, ArrowLeft, BookOpen, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
 
 const addTeacherSchema = z.object({
   // Profile fields
@@ -60,6 +61,9 @@ interface Class {
   name: string;
   level_id?: string;
   class_teacher_id?: string;
+  levels?: {
+    name: string;
+  } | null;
   max_students?: number;
   academic_year_id?: string;
   created_at?: string;
@@ -80,6 +84,7 @@ const AddTeacher = () => {
   const [isClassTeacher, setIsClassTeacher] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { schoolLevel } = useSchoolLevel();
 
   const form = useForm<AddTeacherForm>({
     resolver: zodResolver(addTeacherSchema),
@@ -104,7 +109,24 @@ const AddTeacher = () => {
 
   useEffect(() => {
     fetchSubjectsAndClasses();
-  }, []);
+  }, [schoolLevel]);
+
+  const matchesSchoolLevel = (classItem: Class) => {
+    if (!schoolLevel) return true;
+
+    const levelName = classItem.levels?.name?.toLowerCase() || '';
+    const className = classItem.name.toLowerCase();
+
+    if (schoolLevel === 'primary') {
+      return levelName.includes('primary') || /^p\d/.test(className);
+    }
+
+    if (schoolLevel === 'secondary') {
+      return levelName.includes('secondary') || /^s\d/.test(className) || className.startsWith('senior');
+    }
+
+    return true;
+  };
 
   const fetchSubjectsAndClasses = async () => {
     try {
@@ -124,18 +146,22 @@ const AddTeacher = () => {
         .eq('is_active', true)
         .order('name', { ascending: true });
       if (currentSchoolId) subjectsQuery.eq('school_id', currentSchoolId);
+      if (schoolLevel) subjectsQuery.eq('education_level', schoolLevel);
 
       const { data: subjectsData, error: subjectsError } = await subjectsQuery;
       if (subjectsError) throw subjectsError;
       setSubjects(subjectsData || []);
 
       // Fetch classes filtered by school_id
-      const classesQuery = supabase.from('classes').select('*').order('name');
+      const classesQuery = supabase
+        .from('classes')
+        .select('id, name, level_id, class_teacher_id, max_students, academic_year_id, created_at, updated_at, levels(name)')
+        .order('name');
       if (currentSchoolId) classesQuery.eq('school_id', currentSchoolId);
 
       const { data: classesData, error: classesError } = await classesQuery;
       if (classesError) throw classesError;
-      setClasses(classesData || []);
+      setClasses((classesData || []).filter(matchesSchoolLevel));
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -315,7 +341,7 @@ const AddTeacher = () => {
   };
 
   const getAvailableClassesForAssignment = () => {
-    return classes.filter(classItem => !classItem.class_teacher_id);
+    return classes;
   };
 
   const getSubjectName = (subjectId: string) => {
@@ -592,7 +618,7 @@ const AddTeacher = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Assign to Class</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select a class to assign" />
@@ -607,7 +633,9 @@ const AddTeacher = () => {
                           </SelectContent>
                         </Select>
                         <p className="text-sm text-muted-foreground">
-                          Select which class this teacher will be responsible for
+                          {getAvailableClassesForAssignment().length > 0
+                            ? 'Select which class this teacher will be responsible for'
+                            : 'No classes found. Please create classes first.'}
                         </p>
                         <FormMessage />
                       </FormItem>
@@ -675,7 +703,7 @@ const AddTeacher = () => {
                           </div>
                           {classes.length === 0 && (
                             <p className="text-sm text-muted-foreground ml-6">
-                              No classes available
+                              No classes found. Please create classes first.
                             </p>
                           )}
                         </div>

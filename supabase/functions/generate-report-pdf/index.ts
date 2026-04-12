@@ -273,7 +273,6 @@ serve(async (req) => {
       supabase.from('auto_comment_rules').select('*').eq('is_active', true).eq('school_id', schoolId).order('priority', { ascending: false }).then((r: any) => r.data),
     ]);
 
-    const schoolId = studentData.school_id;
     const classTeacherId = enrollment?.classes?.class_teacher_id || null;
     const levelName = (enrollment?.classes?.levels?.name || '').toLowerCase();
 

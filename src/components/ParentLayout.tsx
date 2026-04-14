@@ -9,7 +9,8 @@ import {
   Bell, 
   Home,
   User,
-  BookOpen
+  BookOpen,
+  UserPlus
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Reports & Grades', href: '/parent/reports', icon: FileText },
   { name: 'Fees & Payments', href: '/parent/payments', icon: CreditCard },
   { name: 'Library', href: '/parent/library', icon: BookOpen },
+  { name: 'Admissions', href: '/parent/admissions', icon: UserPlus },
   { name: 'Appointments', href: '/parent/appointments', icon: Calendar },
   { name: 'Announcements', href: '/parent/announcements', icon: Bell },
   { name: 'Profile', href: '/parent/profile', icon: User },

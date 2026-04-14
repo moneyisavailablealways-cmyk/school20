@@ -13,6 +13,8 @@ export const loadCurrentSchoolBranding = async (schoolId?: string | null) => {
       .from('school_settings')
       .select('school_name, motto, address, phone, email, website, logo_url, footer_motto')
       .eq('school_id', schoolId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .maybeSingle(),
   ]);
 

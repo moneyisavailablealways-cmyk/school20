@@ -339,6 +339,8 @@ serve(async (req) => {
         .from('school_settings')
         .select('*')
         .eq('school_id', schoolId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (settingsError) {

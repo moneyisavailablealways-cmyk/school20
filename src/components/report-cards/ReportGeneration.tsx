@@ -284,7 +284,7 @@ const ReportGeneration = () => {
 
       if (existing?.report_data) {
         const refreshedReportData = await mergeCurrentSchoolBranding(
-          existing.report_data,
+          existing.report_data as Record<string, any>,
           existing.school_id || profile?.school_id,
         );
         setPreviewData(refreshedReportData);

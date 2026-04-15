@@ -198,6 +198,7 @@ const App = () => (
               <Route path="students" element={<TeacherStudents />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="attendance" element={<TeacherAttendance />} />
+              <Route path="signature-attendance" element={<SignatureAttendance />} />
               <Route path="my-attendance" element={<TeacherMyAttendance />} />
               <Route path="appointments" element={<TeacherAppointments />} />
               <Route path="marks" element={<TeacherMarksSubmission />} />
@@ -220,6 +221,7 @@ const App = () => (
               <Route path="discipline" element={<DisciplineRecords />} />
               <Route path="timetable" element={<TimetableManagement />} />
               <Route path="attendance" element={<HeadTeacherAttendance />} />
+              <Route path="signature-attendance" element={<SignatureAttendance />} />
               <Route path="teacher-attendance" element={<HeadTeacherTeacherAttendance />} />
               <Route path="reports" element={<AcademicReports />} />
               <Route path="academic-risk" element={<HeadTeacherAcademicRisk />} />

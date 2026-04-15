@@ -53,6 +53,7 @@ import TeacherAppointments from "./pages/teacher/Appointments";
 import AdminTeacherAttendance from "./pages/admin/TeacherAttendance";
 import AdminReportCards from "./pages/admin/ReportCards";
 import AcademicRiskDetection from "./pages/admin/AcademicRiskDetection";
+import SignatureAttendance from "./pages/admin/SignatureAttendance";
 import TeacherMarksSubmission from "./pages/teacher/MarksSubmission";
 import TeacherAcademicRisk from "./pages/teacher/AcademicRisk";
 import HeadTeacherTeacherAttendance from "./pages/head-teacher/TeacherAttendance";
@@ -176,6 +177,7 @@ const App = () => (
               <Route path="teacher-attendance" element={<AdminTeacherAttendance />} />
               <Route path="report-cards" element={<AdminReportCards />} />
               <Route path="academic-risk" element={<AcademicRiskDetection />} />
+              <Route path="signature-attendance" element={<SignatureAttendance />} />
               <Route path="reports" element={<Reports />} />
               <Route path="communications" element={<Communications />} />
               <Route path="settings" element={<Settings />} />
@@ -196,6 +198,7 @@ const App = () => (
               <Route path="students" element={<TeacherStudents />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="attendance" element={<TeacherAttendance />} />
+              <Route path="signature-attendance" element={<SignatureAttendance />} />
               <Route path="my-attendance" element={<TeacherMyAttendance />} />
               <Route path="appointments" element={<TeacherAppointments />} />
               <Route path="marks" element={<TeacherMarksSubmission />} />
@@ -218,6 +221,7 @@ const App = () => (
               <Route path="discipline" element={<DisciplineRecords />} />
               <Route path="timetable" element={<TimetableManagement />} />
               <Route path="attendance" element={<HeadTeacherAttendance />} />
+              <Route path="signature-attendance" element={<SignatureAttendance />} />
               <Route path="teacher-attendance" element={<HeadTeacherTeacherAttendance />} />
               <Route path="reports" element={<AcademicReports />} />
               <Route path="academic-risk" element={<HeadTeacherAcademicRisk />} />

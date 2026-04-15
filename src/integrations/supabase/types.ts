@@ -3048,6 +3048,82 @@ export type Database = {
         }
         Relationships: []
       }
+      signature_attendance_logs: {
+        Row: {
+          check_in_time: string
+          created_at: string
+          date: string
+          id: string
+          marked_by: string | null
+          metadata: Json | null
+          notification_details: Json | null
+          parent_notified: boolean
+          school_id: string | null
+          signature_image: string
+          similarity_score: number | null
+          status: string
+          student_id: string
+          updated_at: string
+          verification_status: string
+        }
+        Insert: {
+          check_in_time?: string
+          created_at?: string
+          date?: string
+          id?: string
+          marked_by?: string | null
+          metadata?: Json | null
+          notification_details?: Json | null
+          parent_notified?: boolean
+          school_id?: string | null
+          signature_image: string
+          similarity_score?: number | null
+          status?: string
+          student_id: string
+          updated_at?: string
+          verification_status?: string
+        }
+        Update: {
+          check_in_time?: string
+          created_at?: string
+          date?: string
+          id?: string
+          marked_by?: string | null
+          metadata?: Json | null
+          notification_details?: Json | null
+          parent_notified?: boolean
+          school_id?: string | null
+          signature_image?: string
+          similarity_score?: number | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_attendance_logs_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_attendance_logs_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_attendance_logs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       streams: {
         Row: {
           class_id: string | null
@@ -3520,6 +3596,51 @@ export type Database = {
           },
           {
             foreignKeyName: "student_scholarships_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_signatures: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          school_id: string | null
+          signature_data: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          school_id?: string | null
+          signature_data: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          school_id?: string | null
+          signature_data?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_signatures_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_signatures_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"

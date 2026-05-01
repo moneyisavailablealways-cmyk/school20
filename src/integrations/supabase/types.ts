@@ -960,6 +960,77 @@ export type Database = {
           },
         ]
       }
+      fee_reminders: {
+        Row: {
+          balance_amount: number
+          channel: string
+          created_at: string
+          id: string
+          invoice_id: string | null
+          message: string
+          parent_profile_id: string | null
+          reminder_type: string
+          school_id: string
+          sent_at: string
+          student_id: string | null
+        }
+        Insert: {
+          balance_amount?: number
+          channel?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          message: string
+          parent_profile_id?: string | null
+          reminder_type?: string
+          school_id: string
+          sent_at?: string
+          student_id?: string | null
+        }
+        Update: {
+          balance_amount?: number
+          channel?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          message?: string
+          parent_profile_id?: string | null
+          reminder_type?: string
+          school_id?: string
+          sent_at?: string
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_reminders_parent_profile_id_fkey"
+            columns: ["parent_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_reminders_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_reminders_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fee_structures: {
         Row: {
           academic_year_id: string | null
@@ -2652,6 +2723,104 @@ export type Database = {
           },
         ]
       }
+      salary_payments: {
+        Row: {
+          allowances: number
+          amount_paid: number
+          base_salary: number
+          created_at: string
+          currency: string
+          deductions: number
+          id: string
+          notes: string | null
+          pay_month: number
+          pay_year: number
+          payment_date: string
+          payment_method: string
+          payslip_number: string | null
+          recorded_by: string | null
+          reference_number: string | null
+          school_id: string
+          staff_profile_id: string
+          staff_salary_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allowances?: number
+          amount_paid?: number
+          base_salary?: number
+          created_at?: string
+          currency?: string
+          deductions?: number
+          id?: string
+          notes?: string | null
+          pay_month: number
+          pay_year: number
+          payment_date?: string
+          payment_method?: string
+          payslip_number?: string | null
+          recorded_by?: string | null
+          reference_number?: string | null
+          school_id: string
+          staff_profile_id: string
+          staff_salary_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allowances?: number
+          amount_paid?: number
+          base_salary?: number
+          created_at?: string
+          currency?: string
+          deductions?: number
+          id?: string
+          notes?: string | null
+          pay_month?: number
+          pay_year?: number
+          payment_date?: string
+          payment_method?: string
+          payslip_number?: string | null
+          recorded_by?: string | null
+          reference_number?: string | null
+          school_id?: string
+          staff_profile_id?: string
+          staff_salary_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_staff_profile_id_fkey"
+            columns: ["staff_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_staff_salary_id_fkey"
+            columns: ["staff_salary_id"]
+            isOneToOne: false
+            referencedRelation: "staff_salaries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scholarships: {
         Row: {
           academic_year_id: string | null
@@ -3120,6 +3289,88 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_salaries: {
+        Row: {
+          allowance_breakdown: Json | null
+          allowances: number
+          base_salary: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          deduction_breakdown: Json | null
+          deductions: number
+          effective_from: string
+          id: string
+          is_active: boolean
+          net_salary: number | null
+          notes: string | null
+          school_id: string
+          staff_profile_id: string
+          staff_type: string
+          updated_at: string
+        }
+        Insert: {
+          allowance_breakdown?: Json | null
+          allowances?: number
+          base_salary?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          deduction_breakdown?: Json | null
+          deductions?: number
+          effective_from?: string
+          id?: string
+          is_active?: boolean
+          net_salary?: number | null
+          notes?: string | null
+          school_id: string
+          staff_profile_id: string
+          staff_type?: string
+          updated_at?: string
+        }
+        Update: {
+          allowance_breakdown?: Json | null
+          allowances?: number
+          base_salary?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          deduction_breakdown?: Json | null
+          deductions?: number
+          effective_from?: string
+          id?: string
+          is_active?: boolean
+          net_salary?: number | null
+          notes?: string | null
+          school_id?: string
+          staff_profile_id?: string
+          staff_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_salaries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_salaries_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_salaries_staff_profile_id_fkey"
+            columns: ["staff_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

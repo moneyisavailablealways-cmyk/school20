@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.resolve-school-login]
 verify_jwt = false
+
+[functions.send-fee-reminders]
+verify_jwt = false

@@ -23,7 +23,7 @@ const SalaryPayments = () => {
     queryFn: async () => {
       const { data } = await supabase.from('profiles').select('id, first_name, last_name, role')
         .eq('school_id', profile!.school_id).eq('is_active', true)
-        .in('role', ['teacher','admin','principal','head_teacher','bursar','librarian']);
+        .in('role', ['teacher','admin','principal','head_teacher','bursar','librarian'] as const);
       return (data || []).map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}`, role: p.role }));
     },
   });

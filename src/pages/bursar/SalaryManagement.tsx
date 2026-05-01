@@ -11,7 +11,7 @@ import { SalaryStructureDialog } from '@/components/bursar/SalaryStructureDialog
 import { formatUGX } from '@/lib/finance/format';
 import { toast } from 'sonner';
 
-const STAFF_ROLES = ['teacher', 'admin', 'principal', 'head_teacher', 'bursar', 'librarian'];
+const STAFF_ROLES = ['teacher', 'admin', 'principal', 'head_teacher', 'bursar', 'librarian'] as const;
 
 const SalaryManagement = () => {
   const { profile } = useAuth();

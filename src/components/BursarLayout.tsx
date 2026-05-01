@@ -11,18 +11,24 @@ import {
   Settings,
   GraduationCap,
   CalendarCheck,
-  ClipboardList
+  ClipboardList,
+  Banknote,
+  Wallet,
+  PieChart
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const navigation = [
   { name: 'Dashboard', href: '/bursar', icon: BarChart3 },
+  { name: 'Finance Dashboard', href: '/bursar/finance', icon: PieChart },
   { name: 'Fee Structures', href: '/bursar/fee-structures', icon: Settings },
   { name: 'Report Card Fees', href: '/bursar/report-card-fees', icon: ClipboardList },
   { name: 'Invoices', href: '/bursar/invoices', icon: FileText },
   { name: 'Payments', href: '/bursar/payments', icon: CreditCard },
   { name: 'Scholarships', href: '/bursar/scholarships', icon: GraduationCap },
+  { name: 'Salary Management', href: '/bursar/salaries', icon: Wallet },
+  { name: 'Salary Payments', href: '/bursar/salary-payments', icon: Banknote },
   { name: 'Reports', href: '/bursar/reports', icon: Receipt },
   { name: 'Appointments', href: '/bursar/appointments', icon: CalendarCheck },
   { name: 'Profile', href: '/bursar/profile', icon: User },

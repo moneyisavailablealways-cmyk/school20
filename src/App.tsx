@@ -90,6 +90,9 @@ import BursarReports from "./pages/bursar/Reports";
 import BursarProfile from "./pages/bursar/BursarProfile";
 import BursarAppointments from "./pages/bursar/Appointments";
 import ReportCardFees from "./pages/bursar/ReportCardFees";
+import SalaryManagement from "./pages/bursar/SalaryManagement";
+import SalaryPayments from "./pages/bursar/SalaryPayments";
+import FinanceDashboard from "./pages/bursar/FinanceDashboard";
 import ParentDashboard from './pages/parent/ParentDashboard';
 import MyChildren from './pages/parent/MyChildren';
 import Attendance from './pages/parent/Attendance';
@@ -267,6 +270,9 @@ const App = () => (
               <Route path="scholarships" element={<Scholarships />} />
               <Route path="reports" element={<BursarReports />} />
               <Route path="appointments" element={<BursarAppointments />} />
+              <Route path="salaries" element={<SalaryManagement />} />
+              <Route path="salary-payments" element={<SalaryPayments />} />
+              <Route path="finance" element={<FinanceDashboard />} />
               <Route path="profile" element={<BursarProfile />} />
             </Route>
 

@@ -25,6 +25,7 @@ const navigation = [
   { name: 'Fee Structures', href: '/bursar/fee-structures', icon: Settings },
   { name: 'Report Card Fees', href: '/bursar/report-card-fees', icon: ClipboardList },
   { name: 'Invoices', href: '/bursar/invoices', icon: FileText },
+  { name: 'Student Accounts', href: '/bursar/student-accounts', icon: Wallet },
   { name: 'Payments', href: '/bursar/payments', icon: CreditCard },
   { name: 'Scholarships', href: '/bursar/scholarships', icon: GraduationCap },
   { name: 'Salary Management', href: '/bursar/salaries', icon: Wallet },

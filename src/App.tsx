@@ -91,7 +91,7 @@ import BursarProfile from "./pages/bursar/BursarProfile";
 import BursarAppointments from "./pages/bursar/Appointments";
 import ReportCardFees from "./pages/bursar/ReportCardFees";
 import SalaryManagement from "./pages/bursar/SalaryManagement";
-import SalaryPayments from "./pages/bursar/SalaryPayments";
+
 import FinanceDashboard from "./pages/bursar/FinanceDashboard";
 import ParentDashboard from './pages/parent/ParentDashboard';
 import MyChildren from './pages/parent/MyChildren';

@@ -94,6 +94,7 @@ import SalaryManagement from "./pages/bursar/SalaryManagement";
 
 import FinanceDashboard from "./pages/bursar/FinanceDashboard";
 import StudentAccounts from "./pages/bursar/StudentAccounts";
+import FeesManagement from "./pages/bursar/FeesManagement";
 import ParentDashboard from './pages/parent/ParentDashboard';
 import MyChildren from './pages/parent/MyChildren';
 import Attendance from './pages/parent/Attendance';
@@ -274,6 +275,7 @@ const App = () => (
               <Route path="salaries" element={<SalaryManagement />} />
               <Route path="salary-payments" element={<Navigate to="/bursar/salaries" replace />} />
               <Route path="finance" element={<FinanceDashboard />} />
+              <Route path="fees" element={<FeesManagement />} />
               <Route path="student-accounts" element={<StudentAccounts />} />
               <Route path="profile" element={<BursarProfile />} />
             </Route>

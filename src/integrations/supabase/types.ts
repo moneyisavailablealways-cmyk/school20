@@ -5052,6 +5052,10 @@ export type Database = {
         Args: { p_library_item_id: string }
         Returns: undefined
       }
+      reset_school_finance_data: {
+        Args: { p_school_id: string }
+        Returns: Json
+      }
       send_term_notifications: {
         Args: {
           p_custom_message?: string

@@ -479,46 +479,93 @@ const Payments = () => {
                   <TableHead>Reference</TableHead>
                   <TableHead>Student</TableHead>
                   <TableHead>Invoice</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead>Amount Paid</TableHead>
+                  <TableHead>Balance Remaining</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       No payments found. Click "Record Payment" to add a new payment.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  payments.map((payment: any) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">{payment.payment_reference}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{payment.studentName}</div>
-                          <div className="text-sm text-muted-foreground">{payment.studentIdNumber}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{payment.invoiceNumber}</TableCell>
-                      <TableCell>{formatCurrency(Number(payment.amount))}</TableCell>
-                      <TableCell className="capitalize">{payment.payment_method?.replace('_', ' ')}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(payment.status)}>
-                          {payment.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
-                    </TableRow>
-                  ))
+                  payments.map((payment: any) => {
+                    const completed = payment.isCompleted;
+                    const partiallyPaid = !completed && payment.invoicePaid > 0 && payment.invoiceTotal > 0;
+                    let label = payment.status;
+                    let variant: any = getStatusBadgeVariant(payment.status);
+                    if (payment.status === 'completed' || payment.status === 'success') {
+                      if (completed) { label = 'Completed'; variant = 'default'; }
+                      else if (partiallyPaid) { label = 'Half Paid'; variant = 'outline'; }
+                      else { label = 'Recorded'; variant = 'secondary'; }
+                    }
+                    return (
+                      <TableRow key={payment.id}>
+                        <TableCell className="font-medium">{payment.payment_reference}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{payment.studentName}</div>
+                            <div className="text-sm text-muted-foreground">{payment.studentIdNumber}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{payment.invoiceNumber}</TableCell>
+                        <TableCell>{formatCurrency(Number(payment.amount))}</TableCell>
+                        <TableCell className={completed ? 'text-green-600' : 'text-orange-600 font-medium'}>
+                          {completed ? 'UGX 0 (cleared)' : formatCurrency(payment.invoiceBalance)}
+                        </TableCell>
+                        <TableCell className="capitalize">{payment.payment_method?.replace('_', ' ')}</TableCell>
+                        <TableCell>
+                          <Badge variant={variant}>{label}</Badge>
+                        </TableCell>
+                        <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setPaymentToDelete(payment)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!paymentToDelete} onOpenChange={(o) => !o && setPaymentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this payment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the payment of {paymentToDelete && formatCurrency(Number(paymentToDelete.amount))}{' '}
+              for invoice {paymentToDelete?.invoiceNumber}. The invoice balance will be recalculated automatically.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePayment}
+              disabled={deleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting…' : 'Delete Payment'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

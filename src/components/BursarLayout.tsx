@@ -21,7 +21,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 const navigation = [
   { name: 'Dashboard', href: '/bursar', icon: BarChart3 },
-  { name: 'Finance Dashboard', href: '/bursar/finance', icon: PieChart },
   { name: 'Fees Management', href: '/bursar/fees', icon: Wallet },
   { name: 'Salary Management', href: '/bursar/salaries', icon: Banknote },
   { name: 'Reports', href: '/bursar/reports', icon: Receipt },

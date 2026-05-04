@@ -91,7 +91,7 @@ const Payments = () => {
       // Fetch invoices
       const { data: invoices } = await supabase
         .from('invoices')
-        .select('id, invoice_number, total_amount')
+        .select('id, invoice_number, total_amount, paid_amount, balance_amount, status')
         .in('id', invoiceIds);
 
       // Create lookup maps
@@ -104,11 +104,20 @@ const Payments = () => {
         const student = studentMap.get(payment.student_id);
         const profile = student ? profileMap.get(student.profile_id) : null;
         const invoice = invoiceMap.get(payment.invoice_id);
+        const invoiceTotal = Number(invoice?.total_amount || 0);
+        const invoicePaid = Number(invoice?.paid_amount || 0);
+        const invoiceBalance = Number(invoice?.balance_amount ?? Math.max(invoiceTotal - invoicePaid, 0));
+        const isCompleted = invoiceBalance <= 0 && invoiceTotal > 0;
         return {
           ...payment,
           studentName: profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown Student',
           studentIdNumber: student?.student_id || '',
-          invoiceNumber: invoice?.invoice_number || 'N/A'
+          invoiceNumber: invoice?.invoice_number || 'N/A',
+          invoiceTotal,
+          invoicePaid,
+          invoiceBalance,
+          invoiceStatus: invoice?.status || null,
+          isCompleted,
         };
       });
 

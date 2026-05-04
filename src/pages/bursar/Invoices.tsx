@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,13 +9,44 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileText, Plus, Search, Eye, DollarSign, AlertTriangle, CheckCircle } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
+import { FileText, Plus, Search, Eye, DollarSign, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
 
 const Invoices = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteInvoice = async () => {
+    if (!invoiceToDelete) return;
+    setDeleting(true);
+    try {
+      // Order: payments -> invoice_items -> invoice
+      const { error: payErr } = await supabase.from('payments').delete().eq('invoice_id', invoiceToDelete.id);
+      if (payErr) throw payErr;
+      const { error: itemErr } = await supabase.from('invoice_items').delete().eq('invoice_id', invoiceToDelete.id);
+      if (itemErr) throw itemErr;
+      const { error: invErr } = await supabase.from('invoices').delete().eq('id', invoiceToDelete.id);
+      if (invErr) throw invErr;
+      toast.success('Invoice and related records deleted successfully.');
+      setInvoiceToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['bursar-metrics'] });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to delete invoice');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Fetch invoices with sequential pattern to avoid RLS issues
   const { data: invoices = [], isLoading } = useQuery({
@@ -272,14 +303,23 @@ const Invoices = () => {
                       </TableCell>
                       <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setSelectedInvoice(invoice)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedInvoice(invoice)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setInvoiceToDelete(invoice)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -373,6 +413,29 @@ const Invoices = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!invoiceToDelete} onOpenChange={(o) => !o && setInvoiceToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete invoice {invoiceToDelete?.invoice_number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the invoice along with all its line items and recorded payments.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteInvoice}
+              disabled={deleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting…' : 'Delete Invoice'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

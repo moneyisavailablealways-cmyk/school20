@@ -33,7 +33,6 @@ const TABS = [
   { value: 'accounts', label: 'Student Accounts', icon: Users },
   { value: 'scholarships', label: 'Scholarships / Discounts', icon: GraduationCap },
   { value: 'report-card-footer', label: 'Report Card Footer', icon: ClipboardList },
-  { value: 'adjustments', label: 'Adjustments', icon: Calculator },
 ] as const;
 
 const FeesManagement = () => {
@@ -152,11 +151,6 @@ const FeesManagement = () => {
         <TabsContent value="accounts" className="mt-2"><StudentAccounts /></TabsContent>
         <TabsContent value="scholarships" className="mt-2"><Scholarships /></TabsContent>
         <TabsContent value="report-card-footer" className="mt-2"><ReportCardFees /></TabsContent>
-        <TabsContent value="adjustments" className="mt-2">
-          {/* Adjustments live inside ReportCardFees as the "Balance Overrides" tab today.
-              Render the same component — its inner tabs include adjustments. */}
-          <ReportCardFees />
-        </TabsContent>
       </Tabs>
     </div>
   );

@@ -23,6 +23,8 @@ const Payments = () => {
   const [selectedMethod, setSelectedMethod] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const queryClient = useQueryClient();
+  const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
   const form = useForm({
     defaultValues: {
       invoice_id: '',
@@ -32,6 +34,25 @@ const Payments = () => {
       notes: ''
     }
   });
+
+  const handleDeletePayment = async () => {
+    if (!paymentToDelete) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('payments').delete().eq('id', paymentToDelete.id);
+      if (error) throw error;
+      toast.success('Payment deleted successfully. Invoice balance updated.');
+      setPaymentToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['bursar-metrics'] });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to delete payment');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Fetch payments with sequential pattern
   const { data: payments = [], isLoading } = useQuery({

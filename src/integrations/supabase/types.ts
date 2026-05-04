@@ -4970,6 +4970,10 @@ export type Database = {
         Returns: Json
       }
       delete_class: { Args: { class_id: string }; Returns: boolean }
+      delete_fee_structure_cascade: {
+        Args: { p_fee_structure_id: string }
+        Returns: Json
+      }
       delete_level: { Args: { level_id: string }; Returns: boolean }
       delete_stream: { Args: { stream_id: string }; Returns: boolean }
       expire_overdue_reservations: { Args: never; Returns: number }

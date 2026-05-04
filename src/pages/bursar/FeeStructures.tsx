@@ -188,19 +188,26 @@ const FeeStructures = () => {
   };
 
   const handleDelete = async (feeId: string) => {
-    if (!confirm('Are you sure you want to delete this fee structure?')) return;
+    if (!confirm('Delete this fee structure?\n\nThis will also remove related invoice items, empty invoices, payments, and student fee records for this fee structure (scoped to your school). This action cannot be undone.')) return;
 
     try {
-      const { error } = await supabase
-        .from('fee_structures')
-        .delete()
-        .eq('id', feeId);
+      const { data, error } = await supabase.rpc('delete_fee_structure_cascade', {
+        p_fee_structure_id: feeId,
+      });
 
       if (error) throw error;
+      const result = data as any;
+      if (result && result.success === false) {
+        throw new Error(result.error || 'Failed to delete fee structure');
+      }
+
+      const ii = result?.invoice_items_deleted ?? 0;
+      const sf = result?.student_fees_deleted ?? 0;
+      const inv = result?.invoices_deleted ?? 0;
 
       toast({
-        title: 'Success',
-        description: 'Fee structure deleted successfully',
+        title: 'Deleted',
+        description: `Fee structure and related records deleted successfully. (${sf} student fees, ${ii} invoice items, ${inv} empty invoices removed)`,
       });
       fetchData();
     } catch (error: any) {

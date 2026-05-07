@@ -31,6 +31,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useSchoolSection } from '@/hooks/useSchoolSection';
 import { format } from 'date-fns';
 
 interface AcademicYear {
@@ -133,6 +134,7 @@ const AcademicStructure = () => {
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
   const { toast } = useToast();
+  const { section } = useSchoolSection();
 
   // Add delete handlers
   const handleDelete = async () => {
@@ -420,6 +422,7 @@ const AcademicStructure = () => {
         max_students: parseInt(classForm.max_students),
         level_id: finalLevelId,
         academic_year_id: classForm.academic_year_id === 'none' ? null : classForm.academic_year_id || null,
+        level_type: section,
       };
 
       if (selectedClass) {

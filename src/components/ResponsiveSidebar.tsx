@@ -9,6 +9,7 @@ import { ConnectionStatusIndicator } from '@/components/ConnectionStatusIndicato
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { Badge } from '@/components/ui/badge';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+import { SectionToggle } from '@/components/SectionToggle';
 
 interface NavigationItem {
   name: string;
@@ -202,6 +203,9 @@ export function ResponsiveHeader({
               </p>
             )}
           </div>
+
+          {/* Section toggle (Nursery / Primary) - only renders when applicable */}
+          <SectionToggle className="hidden sm:inline-flex" />
 
           {/* Connection Status Indicator */}
           <ConnectionStatusIndicator />

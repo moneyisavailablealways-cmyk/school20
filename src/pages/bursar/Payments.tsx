@@ -17,12 +17,14 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useSchoolSection } from '@/hooks/useSchoolSection';
 
 const Payments = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMethod, setSelectedMethod] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { section } = useSchoolSection();
   const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   const form = useForm({
@@ -56,11 +58,12 @@ const Payments = () => {
 
   // Fetch payments with sequential pattern
   const { data: payments = [], isLoading } = useQuery({
-    queryKey: ['payments', searchTerm, selectedMethod],
+    queryKey: ['payments', searchTerm, selectedMethod, section],
     queryFn: async () => {
       let query = supabase
         .from('payments')
         .select('*')
+        .eq('level_type', section)
         .order('created_at', { ascending: false });
 
       if (selectedMethod !== 'all') {

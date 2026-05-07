@@ -28,9 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSchoolSection } from '@/hooks/useSchoolSection';
 
 const LibraryCatalog = () => {
   const { toast } = useToast();
+  const { section } = useSchoolSection();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [catalogItems, setCatalogItems] = useState<any[]>([]);
@@ -45,6 +47,7 @@ const LibraryCatalog = () => {
         .from('library_items')
         .select('*')
         .eq('is_active', true)
+        .eq('level_type', section)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -66,7 +69,7 @@ const LibraryCatalog = () => {
 
   useEffect(() => {
     loadCatalogItems();
-  }, []);
+  }, [section]);
 
   // Get unique categories from the actual data
   const categories = ['all', ...new Set(catalogItems.map(item => item.category))];

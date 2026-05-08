@@ -12,19 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { CreditCard, Plus, Search, DollarSign, Trash2 } from 'lucide-react';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { CreditCard, Plus, Search, DollarSign } from 'lucide-react';
 
 const Payments = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMethod, setSelectedMethod] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const queryClient = useQueryClient();
-  const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
-  const [deleting, setDeleting] = useState(false);
   const form = useForm({
     defaultValues: {
       invoice_id: '',
@@ -34,25 +28,6 @@ const Payments = () => {
       notes: ''
     }
   });
-
-  const handleDeletePayment = async () => {
-    if (!paymentToDelete) return;
-    setDeleting(true);
-    try {
-      const { error } = await supabase.from('payments').delete().eq('id', paymentToDelete.id);
-      if (error) throw error;
-      toast.success('Payment deleted successfully. Invoice balance updated.');
-      setPaymentToDelete(null);
-      queryClient.invalidateQueries({ queryKey: ['payments'] });
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['bursar-metrics'] });
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to delete payment');
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   // Fetch payments with sequential pattern
   const { data: payments = [], isLoading } = useQuery({
@@ -91,7 +66,7 @@ const Payments = () => {
       // Fetch invoices
       const { data: invoices } = await supabase
         .from('invoices')
-        .select('id, invoice_number, total_amount, paid_amount, balance_amount, status')
+        .select('id, invoice_number, total_amount')
         .in('id', invoiceIds);
 
       // Create lookup maps
@@ -104,20 +79,11 @@ const Payments = () => {
         const student = studentMap.get(payment.student_id);
         const profile = student ? profileMap.get(student.profile_id) : null;
         const invoice = invoiceMap.get(payment.invoice_id);
-        const invoiceTotal = Number(invoice?.total_amount || 0);
-        const invoicePaid = Number(invoice?.paid_amount || 0);
-        const invoiceBalance = Number(invoice?.balance_amount ?? Math.max(invoiceTotal - invoicePaid, 0));
-        const isCompleted = invoiceBalance <= 0 && invoiceTotal > 0;
         return {
           ...payment,
           studentName: profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown Student',
           studentIdNumber: student?.student_id || '',
-          invoiceNumber: invoice?.invoice_number || 'N/A',
-          invoiceTotal,
-          invoicePaid,
-          invoiceBalance,
-          invoiceStatus: invoice?.status || null,
-          isCompleted,
+          invoiceNumber: invoice?.invoice_number || 'N/A'
         };
       });
 
@@ -479,93 +445,46 @@ const Payments = () => {
                   <TableHead>Reference</TableHead>
                   <TableHead>Student</TableHead>
                   <TableHead>Invoice</TableHead>
-                  <TableHead>Amount Paid</TableHead>
-                  <TableHead>Balance Remaining</TableHead>
+                  <TableHead>Amount</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No payments found. Click "Record Payment" to add a new payment.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  payments.map((payment: any) => {
-                    const completed = payment.isCompleted;
-                    const partiallyPaid = !completed && payment.invoicePaid > 0 && payment.invoiceTotal > 0;
-                    let label = payment.status;
-                    let variant: any = getStatusBadgeVariant(payment.status);
-                    if (payment.status === 'completed' || payment.status === 'success') {
-                      if (completed) { label = 'Completed'; variant = 'default'; }
-                      else if (partiallyPaid) { label = 'Half Paid'; variant = 'outline'; }
-                      else { label = 'Recorded'; variant = 'secondary'; }
-                    }
-                    return (
-                      <TableRow key={payment.id}>
-                        <TableCell className="font-medium">{payment.payment_reference}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{payment.studentName}</div>
-                            <div className="text-sm text-muted-foreground">{payment.studentIdNumber}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{payment.invoiceNumber}</TableCell>
-                        <TableCell>{formatCurrency(Number(payment.amount))}</TableCell>
-                        <TableCell className={completed ? 'text-green-600' : 'text-orange-600 font-medium'}>
-                          {completed ? 'UGX 0 (cleared)' : formatCurrency(payment.invoiceBalance)}
-                        </TableCell>
-                        <TableCell className="capitalize">{payment.payment_method?.replace('_', ' ')}</TableCell>
-                        <TableCell>
-                          <Badge variant={variant}>{label}</Badge>
-                        </TableCell>
-                        <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setPaymentToDelete(payment)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
+                  payments.map((payment: any) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">{payment.payment_reference}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{payment.studentName}</div>
+                          <div className="text-sm text-muted-foreground">{payment.studentIdNumber}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{payment.invoiceNumber}</TableCell>
+                      <TableCell>{formatCurrency(Number(payment.amount))}</TableCell>
+                      <TableCell className="capitalize">{payment.payment_method?.replace('_', ' ')}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(payment.status)}>
+                          {payment.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
-
-      {/* Delete confirmation */}
-      <AlertDialog open={!!paymentToDelete} onOpenChange={(o) => !o && setPaymentToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this payment?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently removes the payment of {paymentToDelete && formatCurrency(Number(paymentToDelete.amount))}{' '}
-              for invoice {paymentToDelete?.invoiceNumber}. The invoice balance will be recalculated automatically.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeletePayment}
-              disabled={deleting}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {deleting ? 'Deleting…' : 'Delete Payment'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

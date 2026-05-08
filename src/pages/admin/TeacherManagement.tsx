@@ -206,7 +206,7 @@ const TeacherManagement = () => {
 
     const [{ data: subjectsData }, { data: classesData }] = await Promise.all([subjectsQuery, classesQuery]);
     setSubjects(subjectsData || []);
-    setClasses((classesData || []).filter(matchesSchoolLevel));
+    setClasses(classesData || []);
 
     // Set selected subjects and class assignments
     if (specializations) {

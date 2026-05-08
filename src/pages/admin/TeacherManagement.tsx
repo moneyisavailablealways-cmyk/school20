@@ -116,22 +116,8 @@ const TeacherManagement = () => {
     loadTeachers();
   }, []);
 
-  const matchesSchoolLevel = (classItem: Class) => {
-    if (!schoolLevel) return true;
-
-    const levelName = classItem.levels?.name?.toLowerCase() || '';
-    const className = classItem.name.toLowerCase();
-
-    if (schoolLevel === 'primary') {
-      return levelName.includes('primary') || /^p\d/.test(className);
-    }
-
-    if (schoolLevel === 'secondary') {
-      return levelName.includes('secondary') || /^s\d/.test(className) || className.startsWith('senior');
-    }
-
-    return true;
-  };
+  const getAvailableClassesForEdit = () =>
+    classes.filter((classItem) => !classItem.class_teacher_id || classItem.class_teacher_id === editingTeacher?.id);
 
   const loadTeachers = async () => {
     try {
@@ -818,9 +804,7 @@ const TeacherManagement = () => {
                         <SelectValue placeholder="Select a class to assign" />
                       </SelectTrigger>
                       <SelectContent>
-                        {classes
-                          .filter(c => !c.class_teacher_id || c.class_teacher_id === editingTeacher?.id)
-                          .map((classItem) => (
+                        {getAvailableClassesForEdit().map((classItem) => (
                             <SelectItem key={classItem.id} value={classItem.id}>
                               {classItem.name}
                             </SelectItem>
@@ -828,7 +812,7 @@ const TeacherManagement = () => {
                       </SelectContent>
                     </Select>
                     <p className="text-sm text-muted-foreground">
-                      {classes.length > 0
+                      {getAvailableClassesForEdit().length > 0
                         ? 'Select which class this teacher will be responsible for'
                         : 'No classes found. Please create classes first.'}
                     </p>

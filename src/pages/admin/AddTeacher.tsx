@@ -111,23 +111,6 @@ const AddTeacher = () => {
     fetchSubjectsAndClasses();
   }, [schoolLevel]);
 
-  const matchesSchoolLevel = (classItem: Class) => {
-    if (!schoolLevel) return true;
-
-    const levelName = classItem.levels?.name?.toLowerCase() || '';
-    const className = classItem.name.toLowerCase();
-
-    if (schoolLevel === 'primary') {
-      return levelName.includes('primary') || /^p\d/.test(className);
-    }
-
-    if (schoolLevel === 'secondary') {
-      return levelName.includes('secondary') || /^s\d/.test(className) || className.startsWith('senior');
-    }
-
-    return true;
-  };
-
   const fetchSubjectsAndClasses = async () => {
     try {
       // Get current user's school_id
@@ -340,9 +323,7 @@ const AddTeacher = () => {
     }
   };
 
-  const getAvailableClassesForAssignment = () => {
-    return classes;
-  };
+  const getAvailableClassesForAssignment = () => classes.filter((classItem) => !classItem.class_teacher_id);
 
   const getSubjectName = (subjectId: string) => {
     return subjects.find(s => s.id === subjectId)?.name || 'Unknown Subject';

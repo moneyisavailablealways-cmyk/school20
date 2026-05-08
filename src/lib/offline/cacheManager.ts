@@ -9,7 +9,7 @@ const CACHE_CONFIG: Record<string, { ttl: number; columns: string }> = {
   timetables: { ttl: 60, columns: '*' },
   profiles: { ttl: 120, columns: 'id, first_name, last_name, email, role, school_id, is_active' },
   student_enrollments: { ttl: 120, columns: 'id, student_id, class_id, stream_id, status, academic_year_id' },
-  teacher_subjects: { ttl: 240, columns: '*' },
+  teacher_specializations: { ttl: 240, columns: '*' },
 };
 
 /**

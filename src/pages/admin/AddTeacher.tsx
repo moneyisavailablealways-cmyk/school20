@@ -161,7 +161,7 @@ const AddTeacher = () => {
 
       const { data: classesData, error: classesError } = await classesQuery;
       if (classesError) throw classesError;
-      setClasses((classesData || []).filter(matchesSchoolLevel));
+      setClasses(classesData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({

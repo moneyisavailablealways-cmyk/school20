@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,15 +46,23 @@ const navigation = [
 const AdminLayout = () => {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
 
-  if (!profile || !['admin', 'principal'].includes(profile.role)) {
+  const isTeacherManagementRoute =
+    location.pathname === '/admin/teachers' || location.pathname === '/admin/add-teacher';
+  const hasTeacherManagementOnlyAccess = profile?.role === 'head_teacher' && isTeacherManagementRoute;
+  const canAccessAdminLayout = !!profile && (['admin', 'principal'].includes(profile.role) || hasTeacherManagementOnlyAccess);
+
+  if (!canAccessAdminLayout) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-destructive mb-4">Access Denied</h1>
           <p className="text-muted-foreground mb-4">
-            You need admin or principal privileges to access this area.
+            {profile?.role === 'head_teacher'
+              ? 'You can only access teacher management from this area.'
+              : 'You need admin or principal privileges to access this area.'}
           </p>
           <Button onClick={() => navigate('/dashboard')}>
             Back to Dashboard
@@ -69,6 +77,9 @@ const AdminLayout = () => {
   };
 
   const userName = profile ? `${profile.first_name} ${profile.last_name}` : undefined;
+  const activeNavigation = hasTeacherManagementOnlyAccess
+    ? navigation.filter((item) => item.href === '/admin/teachers')
+    : navigation;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -78,14 +89,14 @@ const AdminLayout = () => {
         portalIcon={School}
         userName={userName}
         onSignOut={handleSignOut}
-        navigation={navigation}
+        navigation={activeNavigation}
       />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}
         {!isMobile && (
           <ResponsiveSidebar
-            navigation={navigation}
+            navigation={activeNavigation}
             portalName="Admin Portal"
             portalIcon={School}
             userName={userName}

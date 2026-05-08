@@ -18,8 +18,6 @@ import {
   Filter
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useSchoolSection } from '@/hooks/useSchoolSection';
-import { useAuth } from '@/hooks/useAuth';
 
 interface FeeStructure {
   id: string;
@@ -38,8 +36,6 @@ interface FeeStructure {
 
 const FeeStructures = () => {
   const { toast } = useToast();
-  const { section } = useSchoolSection();
-  const { profile } = useAuth();
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -61,7 +57,7 @@ const FeeStructures = () => {
 
   useEffect(() => {
     fetchData();
-  }, [section, profile?.school_id]);
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -73,7 +69,6 @@ const FeeStructures = () => {
           academic_years (name),
           classes (name, levels!level_id(name))
         `)
-        .eq('level_type', section)
         .order('created_at', { ascending: false });
 
       // Fetch academic years
@@ -89,7 +84,6 @@ const FeeStructures = () => {
           *,
           levels!level_id(name)
         `)
-        .eq('level_type', section)
         .order('created_at', { ascending: false });
 
       if (feeError || yearError || classError) {
@@ -128,7 +122,6 @@ const FeeStructures = () => {
         due_date: formData.due_date || null,
         academic_year_id: formData.academic_year_id === "all" ? null : formData.academic_year_id || null,
         class_id: formData.class_id === "all" ? null : formData.class_id || null,
-        level_type: section,
       };
 
       if (editingFee) {

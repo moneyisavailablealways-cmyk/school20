@@ -16,7 +16,6 @@ import { toast } from 'sonner';
 import { Calendar as CalendarIcon, Lock, Unlock, Settings, Users, FileText, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
-import { useSchoolSection } from '@/hooks/useSchoolSection';
 
 interface AttendanceManagementProps {
   title?: string;
@@ -28,7 +27,6 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   description = "Manage attendance records, settings, and view reports"
 }) => {
   const { profile } = useAuth();
-  const { section } = useSchoolSection();
   const queryClient = useQueryClient();
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -37,10 +35,10 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 
   // Fetch all classes
   const { data: classes } = useQuery({
-    queryKey: ['all-classes', profile?.school_id, section],
+    queryKey: ['all-classes', profile?.school_id],
     queryFn: async () => {
       if (!profile?.school_id) return [];
-      const { data } = await supabase.from('classes').select('id, name').eq('school_id', profile.school_id).eq('level_type', section).order('name');
+      const { data } = await supabase.from('classes').select('id, name').eq('school_id', profile.school_id).order('name');
       return data || [];
     },
     enabled: !!profile?.school_id,
@@ -59,7 +57,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 
   // Fetch attendance records for date/class
   const { data: attendanceRecords, isLoading: recordsLoading } = useQuery({
-    queryKey: ['admin-attendance', selectedClass, format(selectedDate, 'yyyy-MM-dd'), section],
+    queryKey: ['admin-attendance', selectedClass, format(selectedDate, 'yyyy-MM-dd')],
     queryFn: async () => {
       let query = supabase
         .from('attendance_records')
@@ -71,8 +69,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
             profiles!inner (first_name, last_name)
           )
         `)
-        .eq('date', format(selectedDate, 'yyyy-MM-dd'))
-        .eq('level_type', section);
+        .eq('date', format(selectedDate, 'yyyy-MM-dd'));
 
       if (selectedClass) {
         query = query.eq('class_id', selectedClass);

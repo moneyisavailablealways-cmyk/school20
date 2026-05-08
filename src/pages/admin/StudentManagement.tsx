@@ -19,7 +19,6 @@ import { UserPlus, Search, Eye, Edit, Trash2, GraduationCap, Calendar, AlertTria
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import StudentForm from './StudentForm';
-import { useSchoolSection } from '@/hooks/useSchoolSection';
 
 interface Student {
   id: string;
@@ -80,11 +79,10 @@ const StudentManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const { toast } = useToast();
-  const { section } = useSchoolSection();
 
   useEffect(() => {
     fetchAllData();
-  }, [section]);
+  }, []);
 
   const fetchAllData = async () => {
     try {
@@ -94,7 +92,6 @@ const StudentManagement = () => {
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('*')
-        .eq('level_type', section)
         .order('created_at', { ascending: false });
 
       if (studentsError) throw studentsError;

@@ -13,7 +13,6 @@ import AddTimetableDialog from '@/components/AddTimetableDialog';
 import EditTimetableDialog from '@/components/EditTimetableDialog';
 import TimetableGeneratorConfig from '@/components/timetable/TimetableGeneratorConfig';
 import TimetableAutoGenerator from '@/components/timetable/TimetableAutoGenerator';
-import { useSchoolSection } from '@/hooks/useSchoolSection';
 
 interface TimetableEntry {
   id: string;
@@ -41,7 +40,6 @@ const Timetable = () => {
   const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
   const { toast } = useToast();
   const { profile } = useAuth();
-  const { section } = useSchoolSection();
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -50,7 +48,7 @@ const Timetable = () => {
     return dayNames[dayNumber] || '';
   };
 
-  useEffect(() => { if (profile?.school_id) fetchData(); }, [profile?.school_id, section]);
+  useEffect(() => { if (profile?.school_id) fetchData(); }, [profile?.school_id]);
 
   const fetchData = async () => {
     if (!profile?.school_id) return;
@@ -65,14 +63,13 @@ const Timetable = () => {
           class:classes(name)
         `)
         .eq('school_id', profile.school_id)
-        .eq('level_type', section)
         .order('day_of_week')
         .order('start_time');
 
       if (timetableError) throw timetableError;
 
       const { data: classesData, error: classesError } = await supabase
-        .from('classes').select('id, name').eq('school_id', profile.school_id).eq('level_type', section).order('name');
+        .from('classes').select('id, name').eq('school_id', profile.school_id).order('name');
       if (classesError) throw classesError;
 
       setTimetableEntries(timetableData || []);

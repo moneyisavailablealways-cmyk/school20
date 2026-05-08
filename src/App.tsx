@@ -6,9 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
-import { SchoolSectionProvider } from "@/hooks/useSchoolSection";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import NurserySettings from "./pages/admin/NurserySettings";
 import AdminLayout from "@/components/AdminLayout";
 import TeacherLayout from "@/components/TeacherLayout";
 import StudentLayout from "@/components/StudentLayout";
@@ -124,7 +122,6 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <TooltipProvider>
         <AuthProvider>
-          <SchoolSectionProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -189,7 +186,6 @@ const App = () => (
               <Route path="reports" element={<Reports />} />
               <Route path="communications" element={<Communications />} />
               <Route path="settings" element={<Settings />} />
-              <Route path="nursery-settings" element={<NurserySettings />} />
             </Route>
             
             {/* Teacher Routes */}
@@ -326,8 +322,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-          </BrowserRouter>
-          </SchoolSectionProvider>
+        </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>

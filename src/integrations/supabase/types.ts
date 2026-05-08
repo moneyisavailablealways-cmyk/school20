@@ -545,7 +545,6 @@ export type Database = {
           is_locked: boolean | null
           last_modified_at: string | null
           last_modified_by: string | null
-          level_type: Database["public"]["Enums"]["section_level_type"]
           locked_at: string | null
           locked_by: string | null
           marked_at: string | null
@@ -565,7 +564,6 @@ export type Database = {
           is_locked?: boolean | null
           last_modified_at?: string | null
           last_modified_by?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           locked_at?: string | null
           locked_by?: string | null
           marked_at?: string | null
@@ -585,7 +583,6 @@ export type Database = {
           is_locked?: boolean | null
           last_modified_at?: string | null
           last_modified_by?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           locked_at?: string | null
           locked_by?: string | null
           marked_at?: string | null
@@ -786,7 +783,6 @@ export type Database = {
           created_at: string | null
           id: string
           level_id: string | null
-          level_type: Database["public"]["Enums"]["section_level_type"]
           max_students: number | null
           name: string
           school_id: string | null
@@ -798,7 +794,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           level_id?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           max_students?: number | null
           name: string
           school_id?: string | null
@@ -810,7 +805,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           level_id?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           max_students?: number | null
           name?: string
           school_id?: string | null
@@ -1048,7 +1042,6 @@ export type Database = {
           fee_type: string
           id: string
           is_active: boolean | null
-          level_type: Database["public"]["Enums"]["section_level_type"]
           name: string
           payment_schedule: string
           school_id: string | null
@@ -1064,7 +1057,6 @@ export type Database = {
           fee_type: string
           id?: string
           is_active?: boolean | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           name: string
           payment_schedule: string
           school_id?: string | null
@@ -1080,7 +1072,6 @@ export type Database = {
           fee_type?: string
           id?: string
           is_active?: boolean | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           name?: string
           payment_schedule?: string
           school_id?: string | null
@@ -1340,7 +1331,6 @@ export type Database = {
           id: string
           invoice_number: string
           issued_date: string | null
-          level_type: Database["public"]["Enums"]["section_level_type"]
           notes: string | null
           paid_amount: number | null
           school_id: string | null
@@ -1357,7 +1347,6 @@ export type Database = {
           id?: string
           invoice_number: string
           issued_date?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           notes?: string | null
           paid_amount?: number | null
           school_id?: string | null
@@ -1374,7 +1363,6 @@ export type Database = {
           id?: string
           invoice_number?: string
           issued_date?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           notes?: string | null
           paid_amount?: number | null
           school_id?: string | null
@@ -1538,7 +1526,6 @@ export type Database = {
           isbn: string | null
           item_type: string
           language: string | null
-          level_type: Database["public"]["Enums"]["section_level_type"]
           location: string | null
           publication_year: number | null
           publisher: string | null
@@ -1562,7 +1549,6 @@ export type Database = {
           isbn?: string | null
           item_type: string
           language?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           location?: string | null
           publication_year?: number | null
           publisher?: string | null
@@ -1586,7 +1572,6 @@ export type Database = {
           isbn?: string | null
           item_type?: string
           language?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           location?: string | null
           publication_year?: number | null
           publisher?: string | null
@@ -2132,7 +2117,6 @@ export type Database = {
           created_at: string
           id: string
           invoice_id: string | null
-          level_type: Database["public"]["Enums"]["section_level_type"]
           notes: string | null
           payment_date: string | null
           payment_method: string
@@ -2149,7 +2133,6 @@ export type Database = {
           created_at?: string
           id?: string
           invoice_id?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           notes?: string | null
           payment_date?: string | null
           payment_method: string
@@ -2166,7 +2149,6 @@ export type Database = {
           created_at?: string
           id?: string
           invoice_id?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           notes?: string | null
           payment_date?: string | null
           payment_method?: string
@@ -2479,7 +2461,6 @@ export type Database = {
           id: string
           is_published: boolean | null
           issued_date: string | null
-          level_type: Database["public"]["Enums"]["section_level_type"]
           overall_grade: string | null
           overall_percentage: number | null
           principal_comments: string | null
@@ -2495,7 +2476,6 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           issued_date?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           overall_grade?: string | null
           overall_percentage?: number | null
           principal_comments?: string | null
@@ -2511,7 +2491,6 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           issued_date?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           overall_grade?: string | null
           overall_percentage?: number | null
           principal_comments?: string | null
@@ -3168,7 +3147,6 @@ export type Database = {
           country: string | null
           created_at: string
           email: string | null
-          has_nursery_section: boolean
           id: string
           logo_url: string | null
           max_students: number | null
@@ -3194,7 +3172,6 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
-          has_nursery_section?: boolean
           id?: string
           logo_url?: string | null
           max_students?: number | null
@@ -3220,7 +3197,6 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
-          has_nursery_section?: boolean
           id?: string
           logo_url?: string | null
           max_students?: number | null
@@ -3999,7 +3975,6 @@ export type Database = {
           gender: string | null
           house: string | null
           id: string
-          level_type: Database["public"]["Enums"]["section_level_type"]
           photo_url: string | null
           profile_id: string | null
           school_id: string | null
@@ -4017,7 +3992,6 @@ export type Database = {
           gender?: string | null
           house?: string | null
           id?: string
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           photo_url?: string | null
           profile_id?: string | null
           school_id?: string | null
@@ -4035,7 +4009,6 @@ export type Database = {
           gender?: string | null
           house?: string | null
           id?: string
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           photo_url?: string | null
           profile_id?: string | null
           school_id?: string | null
@@ -4246,7 +4219,6 @@ export type Database = {
           is_active: boolean | null
           is_core: boolean | null
           level_id: string | null
-          level_type: Database["public"]["Enums"]["section_level_type"]
           name: string
           school_id: string | null
           sub_level: string | null
@@ -4261,7 +4233,6 @@ export type Database = {
           is_active?: boolean | null
           is_core?: boolean | null
           level_id?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           name: string
           school_id?: string | null
           sub_level?: string | null
@@ -4276,7 +4247,6 @@ export type Database = {
           is_active?: boolean | null
           is_core?: boolean | null
           level_id?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           name?: string
           school_id?: string | null
           sub_level?: string | null
@@ -4667,7 +4637,6 @@ export type Database = {
           id: string
           is_class_teacher: boolean | null
           joining_date: string | null
-          level_type: Database["public"]["Enums"]["section_level_type"]
           profile_id: string
           qualification: string | null
           salary: number | null
@@ -4683,7 +4652,6 @@ export type Database = {
           id?: string
           is_class_teacher?: boolean | null
           joining_date?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           profile_id: string
           qualification?: string | null
           salary?: number | null
@@ -4699,7 +4667,6 @@ export type Database = {
           id?: string
           is_class_teacher?: boolean | null
           joining_date?: string | null
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           profile_id?: string
           qualification?: string | null
           salary?: number | null
@@ -4856,7 +4823,6 @@ export type Database = {
           end_time: string
           id: string
           is_locked: boolean
-          level_type: Database["public"]["Enums"]["section_level_type"]
           room_number: string | null
           school_id: string | null
           start_time: string
@@ -4872,7 +4838,6 @@ export type Database = {
           end_time: string
           id?: string
           is_locked?: boolean
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           room_number?: string | null
           school_id?: string | null
           start_time: string
@@ -4888,7 +4853,6 @@ export type Database = {
           end_time?: string
           id?: string
           is_locked?: boolean
-          level_type?: Database["public"]["Enums"]["section_level_type"]
           room_number?: string | null
           school_id?: string | null
           start_time?: string
@@ -5088,14 +5052,6 @@ export type Database = {
         Args: { p_library_item_id: string }
         Returns: undefined
       }
-      reclassify_classes_level: {
-        Args: {
-          p_class_ids: string[]
-          p_level: Database["public"]["Enums"]["section_level_type"]
-          p_school_id: string
-        }
-        Returns: Json
-      }
       reorder_reservation_queue: {
         Args: { p_library_item_id: string }
         Returns: undefined
@@ -5129,7 +5085,6 @@ export type Database = {
         | "late"
         | "excused"
         | "left_early"
-      section_level_type: "nursery" | "primary"
       teacher_attendance_status:
         | "present"
         | "absent"
@@ -5277,7 +5232,6 @@ export const Constants = {
     Enums: {
       attendance_session: ["morning", "afternoon", "full_day"],
       attendance_status: ["present", "absent", "late", "excused", "left_early"],
-      section_level_type: ["nursery", "primary"],
       teacher_attendance_status: [
         "present",
         "absent",

@@ -15,12 +15,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { FileText, Plus, Search, Eye, DollarSign, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
-import { useSchoolSection } from '@/hooks/useSchoolSection';
 
 const Invoices = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { section } = useSchoolSection();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
@@ -52,13 +50,12 @@ const Invoices = () => {
 
   // Fetch invoices with sequential pattern to avoid RLS issues
   const { data: invoices = [], isLoading } = useQuery({
-    queryKey: ['invoices', searchTerm, selectedStatus, section],
+    queryKey: ['invoices', searchTerm, selectedStatus],
     queryFn: async () => {
       // Fetch invoices
       let query = supabase
         .from('invoices')
         .select('*')
-        .eq('level_type', section)
         .order('created_at', { ascending: false });
 
       if (selectedStatus !== 'all') {

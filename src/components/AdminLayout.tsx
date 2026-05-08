@@ -19,7 +19,6 @@ import {
   FileText,
   Brain,
   PenTool,
-  Baby,
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -41,7 +40,6 @@ const navigation = [
   { name: 'Academic Risk', href: '/admin/academic-risk', icon: Brain },
   { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   { name: 'Communications', href: '/admin/communications', icon: MessageCircle },
-  { name: 'Nursery Section', href: '/admin/nursery-settings', icon: Baby },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 

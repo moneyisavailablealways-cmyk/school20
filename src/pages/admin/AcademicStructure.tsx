@@ -434,11 +434,16 @@ const AcademicStructure = () => {
         finalLevelId = classForm.level_id;
       }
 
+      if (!schoolId) {
+        toast({ title: 'Error', description: 'School context not loaded. Please refresh.', variant: 'destructive' });
+        return;
+      }
       const classData = {
         name: classForm.name,
         max_students: parseInt(classForm.max_students),
         level_id: finalLevelId,
         academic_year_id: classForm.academic_year_id === 'none' ? null : classForm.academic_year_id || null,
+        school_id: schoolId,
       };
 
       if (selectedClass) {

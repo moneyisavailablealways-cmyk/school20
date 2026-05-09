@@ -186,13 +186,18 @@ const AcademicStructure = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (schoolId) fetchData();
+  }, [schoolId]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      
+
+      if (!schoolId) {
+        setLoading(false);
+        return;
+      }
+
       // Fetch academic years
       const { data: yearsData, error: yearsError } = await supabase
         .from('academic_years')
@@ -201,15 +206,16 @@ const AcademicStructure = () => {
 
       if (yearsError) throw yearsError;
 
-      // Fetch levels
+      // Fetch levels (scoped to current school OR legacy NULL)
       const { data: levelsData, error: levelsError } = await supabase
         .from('levels')
         .select('*')
+        .or(`school_id.eq.${schoolId},school_id.is.null`)
         .order('name');
 
       if (levelsError) throw levelsError;
 
-      // Fetch classes with levels and academic years
+      // Fetch classes scoped to current school
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select(`
@@ -221,21 +227,26 @@ const AcademicStructure = () => {
           ),
           academic_years(name)
         `)
+        .eq('school_id', schoolId)
         .order('name');
 
       if (classesError) throw classesError;
 
-      // Fetch streams with class and level info
-      const { data: streamsData, error: streamsError } = await supabase
-        .from('streams')
-        .select(`
-          *,
-          classes!class_id(
-            name,
-            levels!level_id(name)
-          )
-        `)
-        .order('name');
+      // Fetch streams for this school's classes
+      const classIds = (classesData || []).map((c: any) => c.id);
+      const { data: streamsData, error: streamsError } = classIds.length
+        ? await supabase
+            .from('streams')
+            .select(`
+              *,
+              classes!class_id(
+                name,
+                levels!level_id(name)
+              )
+            `)
+            .in('class_id', classIds)
+            .order('name')
+        : { data: [], error: null };
 
       if (streamsError) throw streamsError;
 

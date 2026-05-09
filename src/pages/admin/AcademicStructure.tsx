@@ -134,6 +134,8 @@ const AcademicStructure = () => {
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
   const { toast } = useToast();
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id;
 
   // Add delete handlers
   const handleDelete = async () => {

@@ -370,9 +370,14 @@ const AcademicStructure = () => {
     }
 
     try {
-      const levelData = {
+      if (!schoolId) {
+        toast({ title: 'Error', description: 'School context not loaded. Please refresh.', variant: 'destructive' });
+        return;
+      }
+      const levelData: any = {
         name: trimmedName,
         parent_id: selectedParentId,
+        school_id: schoolId,
       };
 
       if (selectedLevel) {

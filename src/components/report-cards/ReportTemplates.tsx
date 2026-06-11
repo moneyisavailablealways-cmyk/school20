@@ -8,6 +8,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { FileText, Check, Eye, Layout, Building2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
 
 const templatePreviews: Record<string, { name: string; description: string; features: string[]; color: string }> = {
   classic: {
@@ -40,30 +42,54 @@ const templatePreviews: Record<string, { name: string; description: string; feat
     features: ['Beginning/Mid/End of Term tables', 'Subject-based grid layout', 'Conduct & Behaviour section', 'Grading key at bottom'],
     color: 'bg-green-50 border-green-200',
   },
+  primary_classic_uganda: {
+    name: 'Primary Template 1 – Classic Uganda Style',
+    description: 'Traditional Ugandan primary school report card with watermark logo, bordered tables and conduct/comments section. Primary schools only.',
+    features: ['Dashed A4 border with watermark', 'BOT / Mid-Term / EOT exam tables', 'Outstanding / Moderate / Basic remarks', 'Class & Head Teacher signature blocks', 'School grading system footer'],
+    color: 'bg-amber-50 border-amber-200',
+  },
 };
+
+// Template types that are reserved for primary-school accounts only.
+const PRIMARY_ONLY_TEMPLATES = new Set(['primary', 'primary_classic_uganda']);
 
 const ReportTemplates = () => {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
 
-  // Fetch templates
+  // Fetch templates scoped to the currently logged-in school
   const { data: templates, isLoading } = useQuery({
-    queryKey: ['report-templates'],
+    queryKey: ['report-templates', profile?.school_id],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       const { data, error } = await supabase
         .from('report_templates')
         .select('*')
+        .eq('school_id', profile.school_id)
         .order('name');
       if (error) throw error;
-      
+
       // Find currently selected template
       const defaultTemplate = data?.find(t => t.is_default);
       if (defaultTemplate) {
         setSelectedTemplate(defaultTemplate.id);
       }
-      
+
       return data;
     },
+    enabled: !!profile?.school_id,
+  });
+
+  // Hide primary-only templates from non-primary (secondary / nursery-only) accounts.
+  const visibleTemplates = (templates || []).filter(t => {
+    if (PRIMARY_ONLY_TEMPLATES.has(t.template_type)) {
+      return schoolLevel === 'primary';
+    }
+    // Hide generic secondary templates from primary accounts
+    if (schoolLevel === 'primary') return false;
+    return true;
   });
 
   // Fetch school settings for preview
@@ -140,7 +166,7 @@ const ReportTemplates = () => {
             onValueChange={setSelectedTemplate}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            {templates?.map(template => {
+            {visibleTemplates.map(template => {
               const preview = templatePreviews[template.template_type as keyof typeof templatePreviews];
               const isDefault = template.is_default;
 

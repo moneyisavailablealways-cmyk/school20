@@ -166,7 +166,7 @@ const ReportTemplates = () => {
             onValueChange={setSelectedTemplate}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            {templates?.map(template => {
+            {visibleTemplates.map(template => {
               const preview = templatePreviews[template.template_type as keyof typeof templatePreviews];
               const isDefault = template.is_default;
 

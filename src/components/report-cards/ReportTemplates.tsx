@@ -206,6 +206,19 @@ const ReportTemplates = () => {
                           ))}
                         </ul>
                       )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewTpl({ type: template.template_type, name: template.name });
+                        }}
+                      >
+                        <Eye className="h-3.5 w-3.5 mr-1" />
+                        Preview with real student data
+                      </Button>
                     </div>
                     <FileText className="h-12 w-12 text-muted-foreground/50" />
                   </div>
@@ -215,6 +228,15 @@ const ReportTemplates = () => {
           </RadioGroup>
         </CardContent>
       </Card>
+
+      {previewTpl && (
+        <TemplatePreviewWithDataDialog
+          open={!!previewTpl}
+          onOpenChange={(o) => { if (!o) setPreviewTpl(null); }}
+          templateType={previewTpl.type}
+          templateName={previewTpl.name}
+        />
+      )}
 
       {/* Template Preview */}
       {selectedTemplate && (

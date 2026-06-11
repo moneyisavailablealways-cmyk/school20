@@ -67,17 +67,29 @@ const ReportTemplates = () => {
       const { data, error } = await supabase
         .from('report_templates')
         .select('*')
+        .eq('school_id', profile.school_id)
         .order('name');
       if (error) throw error;
-      
+
       // Find currently selected template
       const defaultTemplate = data?.find(t => t.is_default);
       if (defaultTemplate) {
         setSelectedTemplate(defaultTemplate.id);
       }
-      
+
       return data;
     },
+    enabled: !!profile?.school_id,
+  });
+
+  // Hide primary-only templates from non-primary (secondary / nursery-only) accounts.
+  const visibleTemplates = (templates || []).filter(t => {
+    if (PRIMARY_ONLY_TEMPLATES.has(t.template_type)) {
+      return schoolLevel === 'primary';
+    }
+    // Hide generic secondary templates from primary accounts
+    if (schoolLevel === 'primary') return false;
+    return true;
   });
 
   // Fetch school settings for preview

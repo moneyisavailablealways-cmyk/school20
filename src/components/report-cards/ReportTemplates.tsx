@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { FileText, Check, Eye, Layout, Building2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+import TemplatePreviewWithDataDialog from './TemplatePreviewWithDataDialog';
 
 const templatePreviews: Record<string, { name: string; description: string; features: string[]; color: string }> = {
   classic: {

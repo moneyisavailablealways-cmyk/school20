@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { FileText, Check, Eye, Layout, Building2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+import TemplatePreviewWithDataDialog from './TemplatePreviewWithDataDialog';
 
 const templatePreviews: Record<string, { name: string; description: string; features: string[]; color: string }> = {
   classic: {
@@ -58,6 +59,7 @@ const ReportTemplates = () => {
   const { profile } = useAuth();
   const { schoolLevel } = useSchoolLevel();
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [previewTpl, setPreviewTpl] = useState<{ type: string; name: string } | null>(null);
 
   // Fetch templates scoped to the currently logged-in school
   const { data: templates, isLoading } = useQuery({
@@ -204,6 +206,19 @@ const ReportTemplates = () => {
                           ))}
                         </ul>
                       )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewTpl({ type: template.template_type, name: template.name });
+                        }}
+                      >
+                        <Eye className="h-3.5 w-3.5 mr-1" />
+                        Preview with real student data
+                      </Button>
                     </div>
                     <FileText className="h-12 w-12 text-muted-foreground/50" />
                   </div>
@@ -213,6 +228,15 @@ const ReportTemplates = () => {
           </RadioGroup>
         </CardContent>
       </Card>
+
+      {previewTpl && (
+        <TemplatePreviewWithDataDialog
+          open={!!previewTpl}
+          onOpenChange={(o) => { if (!o) setPreviewTpl(null); }}
+          templateType={previewTpl.type}
+          templateName={previewTpl.name}
+        />
+      )}
 
       {/* Template Preview */}
       {selectedTemplate && (

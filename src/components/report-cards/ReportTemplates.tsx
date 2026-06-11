@@ -59,6 +59,7 @@ const ReportTemplates = () => {
   const { profile } = useAuth();
   const { schoolLevel } = useSchoolLevel();
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [previewTpl, setPreviewTpl] = useState<{ type: string; name: string } | null>(null);
 
   // Fetch templates scoped to the currently logged-in school
   const { data: templates, isLoading } = useQuery({

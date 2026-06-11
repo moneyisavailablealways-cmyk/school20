@@ -3,6 +3,7 @@ import ModernTemplate from './templates/ModernTemplate';
 import MinimalTemplate from './templates/MinimalTemplate';
 import ColorfulTemplate from './templates/ColorfulTemplate';
 import PrimaryTemplate from './templates/PrimaryTemplate';
+import PrimaryClassicUgandaTemplate from './templates/PrimaryClassicUgandaTemplate';
 
 interface ReportCardPreviewProps {
   data: any;
@@ -22,6 +23,8 @@ const ReportCardPreview = ({ data }: ReportCardPreviewProps) => {
       return <ColorfulTemplate data={data} />;
     case 'primary':
       return <PrimaryTemplate data={data} />;
+    case 'primary_classic_uganda':
+      return <PrimaryClassicUgandaTemplate data={data} />;
     case 'classic':
     default:
       return <ClassicTemplate data={data} />;

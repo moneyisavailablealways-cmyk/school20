@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Send, Plus, X, Trash2, Check, PenTool } from 'lucide-react';
 import MySubmissions from '@/components/teacher/MySubmissions';
+import BulkMarksEntry from '@/components/teacher/BulkMarksEntry';
 import SignaturePad from '@/components/report-cards/SignaturePad';
 import TypeToSign from '@/components/report-cards/TypeToSign';
 

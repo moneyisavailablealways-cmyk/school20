@@ -801,6 +801,19 @@ const MarksSubmission = () => {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Mark Submission Form</h1>
 
+      <Tabs defaultValue="bulk" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="bulk">Spreadsheet (Whole Class)</TabsTrigger>
+          <TabsTrigger value="single">Per-Student Entry</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="bulk" className="space-y-4">
+          <BulkMarksEntry />
+        </TabsContent>
+
+        <TabsContent value="single" className="space-y-6">
+        {/* === Original per-student flow === */}
+
       {/* Row 1: Class + Term */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1">

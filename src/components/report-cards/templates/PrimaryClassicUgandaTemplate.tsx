@@ -11,14 +11,14 @@ const PrimaryClassicUgandaTemplate = ({ data }: { data: ReportData }) => {
   const { student, school, term, subjects, summary, gradingScale, signatures, stampUrl, stampConfig } = data;
 
   const border = '1px solid #000';
-  const cell: React.CSSProperties = { border, padding: '3px 6px', fontSize: '10px', verticalAlign: 'middle' };
+  const cell: React.CSSProperties = { border, padding: '2px 5px', fontSize: '9.5px', verticalAlign: 'middle' };
   const cellC: React.CSSProperties = { ...cell, textAlign: 'center' };
   const cellB: React.CSSProperties = { ...cell, fontWeight: 'bold' };
   const cellBC: React.CSSProperties = { ...cellC, fontWeight: 'bold' };
   const sectionBar: React.CSSProperties = {
-    textAlign: 'center', fontWeight: 'bold', fontSize: '11px',
-    textTransform: 'uppercase', padding: '3px 0', margin: '6px 0 0',
-    letterSpacing: '0.6px',
+    textAlign: 'center', fontWeight: 'bold', fontSize: '10.5px',
+    textTransform: 'uppercase', padding: '3px 0', margin: '4px 0 2px',
+    letterSpacing: '0.6px', border, background: '#fff',
   };
 
   // Build a lookup by uppercased subject name

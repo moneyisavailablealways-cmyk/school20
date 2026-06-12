@@ -134,14 +134,34 @@ export const FooterCell = ({ label, value, last = false }: { label: string; valu
 
 export const SignatureRenderer = ({ sig }: { sig: any }) => {
   if (!sig) return null;
-  if (sig.signatureType === 'typed') {
+  const data: string = sig.signatureData || sig.signature_data || '';
+  if (!data) return null;
+
+  // If we already have an image (data URL or http(s) URL), render it directly,
+  // regardless of the stored signature_type. This avoids the "base64 text appears
+  // instead of the signature image" bug.
+  const isImage =
+    data.startsWith('data:image') ||
+    data.startsWith('http://') ||
+    data.startsWith('https://') ||
+    data.startsWith('/');
+
+  if (isImage) {
     return (
-      <span style={{ fontFamily: sig.fontFamily || 'cursive', fontSize: '18px', fontWeight: 'bold' }}>
-        {sig.signatureData}
-      </span>
+      <img
+        src={data}
+        alt="Signature"
+        style={{ height: '40px', maxWidth: '160px', objectFit: 'contain' }}
+      />
     );
   }
-  return <img src={sig.signatureData} alt="Signature" style={{ height: '40px', objectFit: 'contain' }} />;
+
+  // Fallback: render as a typed/cursive signature
+  return (
+    <span style={{ fontFamily: sig.fontFamily || sig.font_family || 'cursive', fontSize: '18px', fontWeight: 'bold' }}>
+      {data}
+    </span>
+  );
 };
 
 const SIZE_SCALES: Record<string, number> = { small: 60, medium: 100, large: 150 };

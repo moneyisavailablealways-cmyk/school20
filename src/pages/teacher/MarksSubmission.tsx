@@ -911,6 +911,8 @@ const MarksSubmission = () => {
           selectedTerm={selectedTerm}
         />
       )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

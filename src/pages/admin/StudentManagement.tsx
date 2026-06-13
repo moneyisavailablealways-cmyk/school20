@@ -15,10 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { UserPlus, Search, Eye, Edit, Trash2, GraduationCap, Calendar, AlertTriangle } from 'lucide-react';
+import { UserPlus, Search, Eye, Edit, Trash2, GraduationCap, Calendar, AlertTriangle, ArrowUpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import StudentForm from './StudentForm';
+import PromoteStudentsDialog from '@/components/student/PromoteStudentsDialog';
+import { useAuth } from '@/hooks/useAuth';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
 
 interface Student {
   id: string;
@@ -78,11 +81,31 @@ const StudentManagement = () => {
   const [classFilter, setClassFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  const [allClasses, setAllClasses] = useState<ClassInfo[]>([]);
+  const { profile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
+  const isPrimary = schoolLevel === 'primary';
+  const noun = isPrimary ? 'Learner' : 'Student';
+  const nounPlural = isPrimary ? 'Learners' : 'Students';
   const { toast } = useToast();
 
   useEffect(() => {
     fetchAllData();
   }, []);
+
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      if (!profile?.school_id) return;
+      const { data } = await supabase
+        .from('classes')
+        .select('id, name')
+        .eq('school_id', profile.school_id);
+      setAllClasses(data || []);
+    };
+    loadClasses();
+  }, [profile?.school_id]);
 
   const fetchAllData = async () => {
     try {
@@ -276,7 +299,7 @@ const StudentManagement = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading students...</p>
+          <p className="text-muted-foreground">Loading {nounPlural.toLowerCase()}...</p>
         </div>
       </div>
     );
@@ -287,22 +310,28 @@ const StudentManagement = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Student Management</h1>
+          <h1 className="text-3xl font-bold">{noun} Management</h1>
           <p className="text-muted-foreground">
-            Manage student records, enrollments, and relationships
+            Manage {nounPlural.toLowerCase()} records, enrollments, and relationships
           </p>
         </div>
-        <Button onClick={() => { setSelectedStudent(null); setIsDialogOpen(true); }}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add New Student
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setPromoteOpen(true)}>
+            <ArrowUpCircle className="mr-2 h-4 w-4" />
+            Promote {nounPlural}
+          </Button>
+          <Button onClick={() => { setSelectedStudent(null); setIsDialogOpen(true); }}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add New {noun}
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+            <CardTitle className="text-sm font-medium">Total {nounPlural}</CardTitle>
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -311,7 +340,7 @@ const StudentManagement = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Students</CardTitle>
+            <CardTitle className="text-sm font-medium">Active {nounPlural}</CardTitle>
             <div className="h-4 w-4 rounded-full bg-accent"></div>
           </CardHeader>
           <CardContent>
@@ -354,9 +383,9 @@ const StudentManagement = () => {
       {/* Filters and Search */}
       <Card>
         <CardHeader>
-          <CardTitle>Students</CardTitle>
+          <CardTitle>{nounPlural}</CardTitle>
           <CardDescription>
-            View and manage all student records with complete relationship tracking
+            View and manage all {nounPlural.toLowerCase()} records with complete relationship tracking
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -371,7 +400,7 @@ const StudentManagement = () => {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -382,14 +411,27 @@ const StudentManagement = () => {
                 <SelectItem value="transferred">Transferred</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={classFilter} onValueChange={setClassFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter by class" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {[...allClasses]
+                  .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+                  .map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Student ID</TableHead>
+                  <TableHead>{noun}</TableHead>
+                  <TableHead>{noun} ID</TableHead>
                   <TableHead>Class & Stream</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Age</TableHead>
@@ -404,7 +446,7 @@ const StudentManagement = () => {
                 {filteredStudents.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-8">
-                      <p className="text-muted-foreground">No students found</p>
+                      <p className="text-muted-foreground">No {nounPlural.toLowerCase()} found</p>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -524,7 +566,7 @@ const StudentManagement = () => {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedStudent ? 'Edit Student' : 'Add New Student'}
+              {selectedStudent ? `Edit ${noun}` : `Add New ${noun}`}
             </DialogTitle>
           </DialogHeader>
           <StudentForm
@@ -534,6 +576,14 @@ const StudentManagement = () => {
           />
         </DialogContent>
       </Dialog>
+
+      <PromoteStudentsDialog
+        open={promoteOpen}
+        onOpenChange={setPromoteOpen}
+        schoolId={profile?.school_id || ''}
+        schoolLevel={schoolLevel}
+        onComplete={fetchAllData}
+      />
     </div>
   );
 };

@@ -94,9 +94,6 @@ const StudentManagement = () => {
     fetchAllData();
   }, []);
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
 
   useEffect(() => {
     const loadClasses = async () => {

@@ -94,6 +94,22 @@ const StudentManagement = () => {
     fetchAllData();
   }, []);
 
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      if (!profile?.school_id) return;
+      const { data } = await supabase
+        .from('classes')
+        .select('id, name')
+        .eq('school_id', profile.school_id);
+      setAllClasses(data || []);
+    };
+    loadClasses();
+  }, [profile?.school_id]);
+
   const fetchAllData = async () => {
     try {
       setLoading(true);

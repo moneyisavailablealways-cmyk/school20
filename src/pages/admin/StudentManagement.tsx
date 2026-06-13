@@ -81,6 +81,13 @@ const StudentManagement = () => {
   const [classFilter, setClassFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  const [allClasses, setAllClasses] = useState<ClassInfo[]>([]);
+  const { profile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
+  const isPrimary = schoolLevel === 'primary';
+  const noun = isPrimary ? 'Learner' : 'Student';
+  const nounPlural = isPrimary ? 'Learners' : 'Students';
   const { toast } = useToast();
 
   useEffect(() => {

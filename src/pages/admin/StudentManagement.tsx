@@ -566,7 +566,7 @@ const StudentManagement = () => {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedStudent ? 'Edit Student' : 'Add New Student'}
+              {selectedStudent ? `Edit ${noun}` : `Add New ${noun}`}
             </DialogTitle>
           </DialogHeader>
           <StudentForm
@@ -576,6 +576,14 @@ const StudentManagement = () => {
           />
         </DialogContent>
       </Dialog>
+
+      <PromoteStudentsDialog
+        open={promoteOpen}
+        onOpenChange={setPromoteOpen}
+        schoolId={profile?.school_id || ''}
+        schoolLevel={schoolLevel}
+        onComplete={fetchAllData}
+      />
     </div>
   );
 };

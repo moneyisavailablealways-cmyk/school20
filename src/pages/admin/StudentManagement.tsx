@@ -383,9 +383,9 @@ const StudentManagement = () => {
       {/* Filters and Search */}
       <Card>
         <CardHeader>
-          <CardTitle>Students</CardTitle>
+          <CardTitle>{nounPlural}</CardTitle>
           <CardDescription>
-            View and manage all student records with complete relationship tracking
+            View and manage all {nounPlural.toLowerCase()} records with complete relationship tracking
           </CardDescription>
         </CardHeader>
         <CardContent>

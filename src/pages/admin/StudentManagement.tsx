@@ -430,8 +430,8 @@ const StudentManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Student ID</TableHead>
+                  <TableHead>{noun}</TableHead>
+                  <TableHead>{noun} ID</TableHead>
                   <TableHead>Class & Stream</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Age</TableHead>

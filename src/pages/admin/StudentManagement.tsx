@@ -310,15 +310,21 @@ const StudentManagement = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Student Management</h1>
+          <h1 className="text-3xl font-bold">{noun} Management</h1>
           <p className="text-muted-foreground">
-            Manage student records, enrollments, and relationships
+            Manage {nounPlural.toLowerCase()} records, enrollments, and relationships
           </p>
         </div>
-        <Button onClick={() => { setSelectedStudent(null); setIsDialogOpen(true); }}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add New Student
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setPromoteOpen(true)}>
+            <ArrowUpCircle className="mr-2 h-4 w-4" />
+            Promote {nounPlural}
+          </Button>
+          <Button onClick={() => { setSelectedStudent(null); setIsDialogOpen(true); }}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add New {noun}
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}

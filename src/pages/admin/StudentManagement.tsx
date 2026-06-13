@@ -15,10 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { UserPlus, Search, Eye, Edit, Trash2, GraduationCap, Calendar, AlertTriangle } from 'lucide-react';
+import { UserPlus, Search, Eye, Edit, Trash2, GraduationCap, Calendar, AlertTriangle, ArrowUpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import StudentForm from './StudentForm';
+import PromoteStudentsDialog from '@/components/student/PromoteStudentsDialog';
+import { useAuth } from '@/hooks/useAuth';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
 
 interface Student {
   id: string;

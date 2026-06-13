@@ -446,7 +446,7 @@ const StudentManagement = () => {
                 {filteredStudents.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-8">
-                      <p className="text-muted-foreground">No students found</p>
+                      <p className="text-muted-foreground">No {nounPlural.toLowerCase()} found</p>
                     </TableCell>
                   </TableRow>
                 ) : (

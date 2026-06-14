@@ -449,6 +449,12 @@ const AcademicStructure = () => {
       return;
     }
 
+    const nameError = validateClassNameForLevel(classForm.name, schoolLevel);
+    if (nameError) {
+      toast({ title: 'Invalid class name', description: nameError, variant: 'destructive' });
+      return;
+    }
+
     try {
       // Determine the final level_id based on whether sub_level is selected
       let finalLevelId = null;

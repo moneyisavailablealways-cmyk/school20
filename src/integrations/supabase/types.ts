@@ -3463,6 +3463,7 @@ export type Database = {
           created_at: string
           id: string
           is_primary_contact: boolean | null
+          school_id: string | null
           student_id: string
           updated_at: string
         }
@@ -3474,6 +3475,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_primary_contact?: boolean | null
+          school_id?: string | null
           student_id: string
           updated_at?: string
         }
@@ -3485,6 +3487,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_primary_contact?: boolean | null
+          school_id?: string | null
           student_id?: string
           updated_at?: string
         }
@@ -3701,6 +3704,7 @@ export type Database = {
           id: string
           medical_conditions: string | null
           medications: string | null
+          school_id: string | null
           special_needs: string | null
           student_id: string
           updated_at: string
@@ -3712,6 +3716,7 @@ export type Database = {
           id?: string
           medical_conditions?: string | null
           medications?: string | null
+          school_id?: string | null
           special_needs?: string | null
           student_id: string
           updated_at?: string
@@ -3723,6 +3728,7 @@ export type Database = {
           id?: string
           medical_conditions?: string | null
           medications?: string | null
+          school_id?: string | null
           special_needs?: string | null
           student_id?: string
           updated_at?: string
@@ -4670,7 +4676,6 @@ export type Database = {
           level_type: Database["public"]["Enums"]["section_level_type"]
           profile_id: string
           qualification: string | null
-          salary: number | null
           school_id: string | null
           specialization: string | null
           updated_at: string
@@ -4686,7 +4691,6 @@ export type Database = {
           level_type?: Database["public"]["Enums"]["section_level_type"]
           profile_id: string
           qualification?: string | null
-          salary?: number | null
           school_id?: string | null
           specialization?: string | null
           updated_at?: string
@@ -4702,7 +4706,6 @@ export type Database = {
           level_type?: Database["public"]["Enums"]["section_level_type"]
           profile_id?: string
           qualification?: string | null
-          salary?: number | null
           school_id?: string | null
           specialization?: string | null
           updated_at?: string

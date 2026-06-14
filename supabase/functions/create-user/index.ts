@@ -183,8 +183,8 @@ serve(async (req) => {
           experience_years: teacherDetails.experienceYears,
           joining_date: teacherDetails.joiningDate,
           department: teacherDetails.department,
-          salary: teacherDetails.salary,
           is_class_teacher: teacherDetails.isClassTeacher || false,
+
         })
         .select('id')
         .single()

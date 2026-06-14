@@ -32,6 +32,29 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+
+// Validate a class name against the school level.
+// Returns an error message string when invalid, otherwise null.
+function validateClassNameForLevel(
+  name: string,
+  level: 'primary' | 'secondary' | 'higher_institution' | null,
+): string | null {
+  const n = name.trim().toLowerCase();
+  if (!n) return 'Class name is required';
+  const secondaryPattern = /(^|\b)(s|senior|form)\s*\d+|^s\d+$/i;
+  const primaryPattern = /(^|\b)(p|primary)\s*\d+|^p\d+$/i;
+  if (level === 'primary') {
+    if (secondaryPattern.test(n) || /\b(senior|form)\b/.test(n)) {
+      return 'Secondary-style names (S1, Senior 1, Form 1) are not allowed in a Primary school.';
+    }
+  } else if (level === 'secondary') {
+    if (primaryPattern.test(n) || /\bprimary\b/.test(n)) {
+      return 'Primary-style names (P1, P2, Primary) are not allowed in a Secondary school.';
+    }
+  }
+  return null;
+}
 import { format } from 'date-fns';
 
 interface AcademicYear {
@@ -135,6 +158,7 @@ const AcademicStructure = () => {
 
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
   const schoolId = profile?.school_id;
 
   // Add delete handlers
@@ -422,6 +446,12 @@ const AcademicStructure = () => {
         description: 'Please fill in all required fields',
         variant: 'destructive',
       });
+      return;
+    }
+
+    const nameError = validateClassNameForLevel(classForm.name, schoolLevel);
+    if (nameError) {
+      toast({ title: 'Invalid class name', description: nameError, variant: 'destructive' });
       return;
     }
 

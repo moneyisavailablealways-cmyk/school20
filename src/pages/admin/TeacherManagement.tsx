@@ -767,17 +767,8 @@ const TeacherManagement = () => {
                       onChange={(e) => setEditForm({ ...editForm, joining_date: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="salary">Salary (Optional)</Label>
-                    <Input
-                      id="salary"
-                      type="number"
-                      placeholder="50000"
-                      value={editForm.salary || ''}
-                      onChange={(e) => setEditForm({ ...editForm, salary: parseFloat(e.target.value) || undefined })}
-                    />
-                  </div>
                 </div>
+
 
                 <div className="flex items-start space-x-3 space-y-0">
                   <Checkbox

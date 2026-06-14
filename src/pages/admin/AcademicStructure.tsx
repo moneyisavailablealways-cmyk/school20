@@ -158,6 +158,7 @@ const AcademicStructure = () => {
 
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
   const schoolId = profile?.school_id;
 
   // Add delete handlers

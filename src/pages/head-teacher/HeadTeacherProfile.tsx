@@ -18,8 +18,8 @@ interface TeacherDetails {
   qualification: string;
   specialization: string;
   experience_years: number;
-  salary: number;
   joining_date: string;
+
   is_class_teacher: boolean;
 }
 

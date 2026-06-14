@@ -31,8 +31,8 @@ const addTeacherSchema = z.object({
   experienceYears: z.number().min(0, 'Experience years must be 0 or more'),
   joiningDate: z.string().min(1, 'Joining date is required'),
   department: z.string().min(1, 'Department is required'),
-  salary: z.number().optional(),
   isClassTeacher: z.boolean().optional(),
+
   assignedClassId: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -101,8 +101,8 @@ const AddTeacher = () => {
       experienceYears: 0,
       joiningDate: new Date().toISOString().split('T')[0],
       department: '',
-      salary: undefined,
       isClassTeacher: false,
+
       assignedClassId: '',
     },
   });
@@ -221,8 +221,8 @@ const AddTeacher = () => {
             experienceYears: data.experienceYears,
             joiningDate: data.joiningDate,
             department: data.department,
-            salary: data.salary,
             isClassTeacher: data.isClassTeacher,
+
           },
         }),
       });
@@ -548,25 +548,8 @@ const AddTeacher = () => {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="salary"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Salary (Optional)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="50000" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
+
 
                 <FormField
                   control={form.control}

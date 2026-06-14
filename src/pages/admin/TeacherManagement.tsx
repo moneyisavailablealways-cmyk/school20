@@ -47,8 +47,8 @@ interface TeacherDetails {
   experience_years?: number;
   joining_date?: string;
   department?: string;
-  salary?: number;
   is_class_teacher?: boolean;
+
 }
 
 interface Subject {
@@ -100,8 +100,8 @@ const TeacherManagement = () => {
     experience_years: 0,
     joining_date: '',
     department: '',
-    salary: undefined as number | undefined,
     is_class_teacher: false,
+
     assigned_class_id: ''
   });
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -224,8 +224,8 @@ const TeacherManagement = () => {
       experience_years: teacherDetails?.experience_years || 0,
       joining_date: teacherDetails?.joining_date || new Date().toISOString().split('T')[0],
       department: teacherDetails?.department || '',
-      salary: teacherDetails?.salary,
       is_class_teacher: teacherDetails?.is_class_teacher || false,
+
       assigned_class_id: classesData?.find(c => c.class_teacher_id === teacher.id)?.id || ''
     });
     setEditDialogOpen(true);
@@ -294,8 +294,8 @@ const TeacherManagement = () => {
         experience_years: editForm.experience_years,
         joining_date: editForm.joining_date,
         department: editForm.department,
-        salary: editForm.salary,
         is_class_teacher: editForm.is_class_teacher,
+
         specialization: selectedSubjects.map(id => subjects.find(s => s.id === id)?.name).join(', ')
       };
 
@@ -767,17 +767,8 @@ const TeacherManagement = () => {
                       onChange={(e) => setEditForm({ ...editForm, joining_date: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="salary">Salary (Optional)</Label>
-                    <Input
-                      id="salary"
-                      type="number"
-                      placeholder="50000"
-                      value={editForm.salary || ''}
-                      onChange={(e) => setEditForm({ ...editForm, salary: parseFloat(e.target.value) || undefined })}
-                    />
-                  </div>
                 </div>
+
 
                 <div className="flex items-start space-x-3 space-y-0">
                   <Checkbox

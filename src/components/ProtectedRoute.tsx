@@ -18,7 +18,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, profile, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  // Wait until BOTH the auth session and the profile (when a user exists)
+  // are fully resolved before evaluating role guards. Without this, profile
+  // is briefly null on first render and shows a false Access Denied.
+  if (loading || (user && !profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -42,6 +45,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       </div>
     );
   }
+
 
   return <>{children}</>;
 };

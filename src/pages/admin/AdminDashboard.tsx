@@ -243,12 +243,13 @@ const AdminDashboard = () => {
       color: 'text-pink-600',
     },
     {
-      title: 'Enroll Student',
-      description: 'Add new student to the system',
+      title: `Enroll ${studentWord}`,
+      description: `Add new ${studentWord.toLowerCase()} to the system`,
       icon: UserPlus,
       action: () => window.location.href = '/admin/students',
       color: 'text-green-600',
     },
+
     {
       title: 'Create Class',
       description: 'Set up new classes and sections',

@@ -685,7 +685,149 @@ const UserManagement = () => {
                   )}
                 />
 
+                {watchedRole === 'student' && (
+                  <div className="space-y-4 border-t pt-4">
+                    <div className="text-sm font-semibold text-muted-foreground">
+                      {studentWord} Details
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="admissionNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Admission Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. ADM/2026/001" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="gender"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Gender</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="dateOfBirth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date of Birth</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="classId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Class</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select class" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {classes.map((c) => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="streamId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stream (Optional)</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={!streams.length}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder={streams.length ? 'Select stream' : 'No streams'} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {streams.map((s) => (
+                                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="house"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>House (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. Red" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="lin"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>LIN Number (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="LIN" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Home address" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2">
+
                   <Button
                     type="button"
                     variant="outline"

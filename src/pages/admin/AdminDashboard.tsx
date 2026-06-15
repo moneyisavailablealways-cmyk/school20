@@ -34,6 +34,11 @@ interface DashboardStats {
 
 const AdminDashboard = () => {
   const { profile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
+  const isPrimary = schoolLevel === 'primary';
+  const studentWord = isPrimary ? 'Learner' : 'Student';
+  const studentWordPlural = isPrimary ? 'Learners' : 'Students';
+
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalStudents: 0,

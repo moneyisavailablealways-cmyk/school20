@@ -53,6 +53,9 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { schoolLevel } = useSchoolLevel();
+
+
 
   // CRITICAL: wait for both auth + profile to fully resolve before running
   // any authorization checks. Without this, profile is briefly null on first

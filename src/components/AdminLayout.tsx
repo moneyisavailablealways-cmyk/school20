@@ -44,10 +44,21 @@ const navigation = [
 ];
 
 const AdminLayout = () => {
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+
+  // CRITICAL: wait for both auth + profile to fully resolve before running
+  // any authorization checks. Without this, profile is briefly null on first
+  // render and produces a false "Access Denied" popup for admins.
+  if (loading || (user && !profile)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const isTeacherManagementRoute =
     location.pathname === '/admin/teachers' || location.pathname === '/admin/add-teacher';
@@ -71,6 +82,7 @@ const AdminLayout = () => {
       </div>
     );
   }
+
 
   const handleSignOut = async () => {
     await signOut();

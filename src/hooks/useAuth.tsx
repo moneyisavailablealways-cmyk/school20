@@ -240,23 +240,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    console.log('[Auth] signOut initiated', {
+      userId: user?.id,
+      hasSession: !!session,
+    });
+    // Immediately tear down client state so the UI cannot re-render the
+    // previous dashboard while the network call completes.
+    setProfile(null);
+    setUser(null);
+    setSession(null);
+
     try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setSession(null);
-      setProfile(null);
-      toast({
-        title: "Signed Out",
-        description: "You have been signed out successfully.",
-      });
+      await supabase.auth.signOut({ scope: 'global' });
     } catch (error: any) {
-      toast({
-        title: "Sign Out Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      console.warn('[Auth] supabase signOut error (continuing):', error?.message);
     }
+
+    // Aggressively purge any cached Supabase auth tokens from storage so a
+    // stale session cannot rehydrate on the next render.
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('sb-') || key.toLowerCase().includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn('[Auth] storage clear failed', e);
+    }
+
+    console.log('[Auth] signOut complete, redirecting to /auth');
+    // Hard redirect — guarantees every React tree, query cache and portal
+    // state is wiped before the login page mounts.
+    window.location.replace('/auth');
   };
+
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') };

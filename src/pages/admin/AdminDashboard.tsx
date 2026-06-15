@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+
 import QuickSetupDialog from '@/components/QuickSetupDialog';
 import {
   Users,
@@ -32,6 +34,11 @@ interface DashboardStats {
 
 const AdminDashboard = () => {
   const { profile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
+  const isPrimary = schoolLevel === 'primary';
+  const studentWord = isPrimary ? 'Learner' : 'Student';
+  const studentWordPlural = isPrimary ? 'Learners' : 'Students';
+
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalStudents: 0,
@@ -236,12 +243,13 @@ const AdminDashboard = () => {
       color: 'text-pink-600',
     },
     {
-      title: 'Enroll Student',
-      description: 'Add new student to the system',
+      title: `Enroll ${studentWord}`,
+      description: `Add new ${studentWord.toLowerCase()} to the system`,
       icon: UserPlus,
       action: () => window.location.href = '/admin/students',
       color: 'text-green-600',
     },
+
     {
       title: 'Create Class',
       description: 'Set up new classes and sections',
@@ -300,14 +308,15 @@ const AdminDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Students</CardTitle>
+            <CardTitle className="text-sm font-medium">{studentWordPlural}</CardTitle>
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalStudents}</div>
             <p className="text-xs text-muted-foreground">
-              Enrolled students
+              Enrolled {studentWordPlural.toLowerCase()}
             </p>
+
           </CardContent>
         </Card>
 

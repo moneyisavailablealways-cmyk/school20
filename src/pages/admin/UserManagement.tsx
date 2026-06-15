@@ -13,6 +13,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
 import {
   Users,
   UserPlus,
@@ -30,6 +32,7 @@ import {
   Camera,
   X,
 } from 'lucide-react';
+
 
 type UserRole = 'admin' | 'principal' | 'head_teacher' | 'teacher' | 'bursar' | 'librarian' | 'student' | 'parent' | 'super_admin';
 
@@ -76,10 +79,31 @@ const createUserSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Please confirm your password'),
   role: z.enum(['admin', 'principal', 'head_teacher', 'teacher', 'bursar', 'librarian', 'student', 'parent', 'super_admin']),
+  // Extra fields used only when role === 'student'. Validated conditionally below.
+  admissionNumber: z.string().optional(),
+  gender: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  classId: z.string().optional(),
+  streamId: z.string().optional(),
+  house: z.string().optional(),
+  address: z.string().optional(),
+  lin: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
-});
+}).refine(
+  (d) => d.role !== 'student' || (d.admissionNumber && d.admissionNumber.trim().length > 0),
+  { message: 'Admission number is required', path: ['admissionNumber'] },
+).refine(
+  (d) => d.role !== 'student' || (d.gender && d.gender.length > 0),
+  { message: 'Gender is required', path: ['gender'] },
+).refine(
+  (d) => d.role !== 'student' || (d.dateOfBirth && d.dateOfBirth.length > 0),
+  { message: 'Date of birth is required', path: ['dateOfBirth'] },
+).refine(
+  (d) => d.role !== 'student' || (d.classId && d.classId.length > 0),
+  { message: 'Class is required', path: ['classId'] },
+);
 
 const editUserSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -88,6 +112,7 @@ const editUserSchema = z.object({
   role: z.enum(['admin', 'principal', 'head_teacher', 'teacher', 'bursar', 'librarian', 'student', 'parent', 'super_admin']),
   is_active: z.boolean(),
 });
+
 
 type CreateUserForm = z.infer<typeof createUserSchema>;
 type EditUserForm = z.infer<typeof editUserSchema>;
@@ -108,6 +133,14 @@ const UserManagement = () => {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const editAvatarInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { profile: adminProfile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
+  const isPrimary = schoolLevel === 'primary';
+  const studentWord = isPrimary ? 'Learner' : 'Student';
+
+  // Classes/streams for the learner/student extra fields
+  const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
+  const [streams, setStreams] = useState<{ id: string; name: string; class_id: string }[]>([]);
 
   const form = useForm<CreateUserForm>({
     resolver: zodResolver(createUserSchema),
@@ -119,8 +152,19 @@ const UserManagement = () => {
       password: '',
       confirmPassword: '',
       role: 'student',
+      admissionNumber: '',
+      gender: '',
+      dateOfBirth: '',
+      classId: '',
+      streamId: '',
+      house: '',
+      address: '',
+      lin: '',
     },
   });
+
+  const watchedRole = form.watch('role');
+  const watchedClassId = form.watch('classId');
 
   const editForm = useForm<EditUserForm>({
     resolver: zodResolver(editUserSchema),
@@ -135,7 +179,35 @@ const UserManagement = () => {
 
   useEffect(() => {
     loadUsers();
+    loadClasses();
   }, []);
+
+  const loadClasses = async () => {
+    if (!adminProfile?.school_id) return;
+    const { data } = await supabase
+      .from('classes')
+      .select('id, name')
+      .eq('school_id', adminProfile.school_id)
+      .order('name');
+    setClasses(data || []);
+  };
+
+  useEffect(() => {
+    const loadStreams = async () => {
+      if (!watchedClassId) {
+        setStreams([]);
+        return;
+      }
+      const { data } = await supabase
+        .from('streams')
+        .select('id, name, class_id')
+        .eq('class_id', watchedClassId)
+        .order('name');
+      setStreams(data || []);
+    };
+    loadStreams();
+  }, [watchedClassId]);
+
 
   const loadUsers = async () => {
     try {
@@ -236,15 +308,71 @@ const UserManagement = () => {
         setUploadingAvatar(false);
       }
 
+      // If the new user is a student/learner, also create the matching
+      // student record + active enrollment so they appear immediately in
+      // Student/Learner Management. School_id and level_type are inherited
+      // from the logged-in admin's school.
+      if (data.role === 'student' && result?.profile_id) {
+        const photoUrl = avatarFile && result.profile_id
+          ? (await supabase.storage.from('avatars').getPublicUrl(
+              `${result.profile_id}/`,
+            )).data.publicUrl
+          : null;
+
+        const { data: studentRow, error: studentError } = await supabase
+          .from('students')
+          .insert({
+            student_id: data.admissionNumber!.trim(),
+            admission_number: data.admissionNumber!.trim(),
+            profile_id: result.profile_id,
+            date_of_birth: data.dateOfBirth!,
+            admission_date: new Date().toISOString().slice(0, 10),
+            gender: data.gender || null,
+            address: data.address || null,
+            house: data.house || null,
+            photo_url: photoUrl,
+            school_id: adminProfile?.school_id || null,
+            level_type: (isPrimary ? 'primary' : 'secondary') as any,
+          })
+          .select('id')
+          .single();
+
+        if (studentError) {
+          console.error('Error creating student record:', studentError);
+          toast({
+            title: 'Warning',
+            description: `User created but ${studentWord.toLowerCase()} record failed: ${studentError.message}`,
+            variant: 'destructive',
+          });
+        } else if (studentRow && data.classId) {
+          // Active enrollment for current academic year (if available)
+          const { data: ay } = await supabase
+            .from('academic_years')
+            .select('id')
+            .eq('school_id', adminProfile?.school_id)
+            .eq('is_current', true)
+            .maybeSingle();
+
+          await supabase.from('student_enrollments').insert({
+            student_id: studentRow.id,
+            class_id: data.classId,
+            stream_id: data.streamId || null,
+            academic_year_id: ay?.id || null,
+            status: 'active',
+          });
+        }
+      }
+
       toast({
         title: 'Success',
-        description: 'User created successfully with login credentials',
+        description: `${data.role === 'student' ? studentWord : 'User'} created successfully with login credentials`,
       });
 
       setIsCreateDialogOpen(false);
       form.reset();
       clearAvatar();
       loadUsers();
+
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast({
@@ -541,7 +669,8 @@ const UserManagement = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="student">{studentWord}</SelectItem>
+
                           <SelectItem value="parent">Parent</SelectItem>
                           <SelectItem value="teacher">Teacher</SelectItem>
                           <SelectItem value="head_teacher">Head Teacher</SelectItem>
@@ -556,7 +685,149 @@ const UserManagement = () => {
                   )}
                 />
 
+                {watchedRole === 'student' && (
+                  <div className="space-y-4 border-t pt-4">
+                    <div className="text-sm font-semibold text-muted-foreground">
+                      {studentWord} Details
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="admissionNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Admission Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. ADM/2026/001" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="gender"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Gender</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="dateOfBirth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date of Birth</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="classId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Class</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select class" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {classes.map((c) => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="streamId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stream (Optional)</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={!streams.length}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder={streams.length ? 'Select stream' : 'No streams'} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {streams.map((s) => (
+                                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="house"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>House (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. Red" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="lin"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>LIN Number (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="LIN" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Home address" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2">
+
                   <Button
                     type="button"
                     variant="outline"
@@ -679,7 +950,8 @@ const UserManagement = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="student">{studentWord}</SelectItem>
+
                           <SelectItem value="parent">Parent</SelectItem>
                           <SelectItem value="teacher">Teacher</SelectItem>
                           <SelectItem value="head_teacher">Head Teacher</SelectItem>
@@ -766,7 +1038,7 @@ const UserManagement = () => {
                 <SelectItem value="teacher">Teacher</SelectItem>
                 <SelectItem value="bursar">Bursar</SelectItem>
                 <SelectItem value="librarian">Librarian</SelectItem>
-                <SelectItem value="student">Student</SelectItem>
+                <SelectItem value="student">{studentWord}</SelectItem>
                 <SelectItem value="parent">Parent</SelectItem>
               </SelectContent>
             </Select>
@@ -821,7 +1093,7 @@ const UserManagement = () => {
                     <TableCell>
                       <Badge variant={roleColors[user.role]} className="gap-1">
                         <RoleIcon className="h-3 w-3" />
-                        {user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {user.role === 'student' ? studentWord : user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </Badge>
                     </TableCell>
                     <TableCell>

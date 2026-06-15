@@ -22,32 +22,51 @@ import {
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
 
-const navigation = [
-  { name: 'Dashboard', href: '/admin', icon: Home },
-  { name: 'User Management', href: '/admin/users', icon: Users },
-  { name: 'Teacher Management', href: '/admin/teachers', icon: GraduationCap },
-  { name: 'Parent Management', href: '/admin/parents', icon: Heart },
-  { name: 'Student Management', href: '/admin/students', icon: GraduationCap },
-  { name: 'Academic Structure', href: '/admin/academic', icon: Building },
-  { name: 'Subject Management', href: '/admin/subjects', icon: BookOpen },
-  { name: 'Admissions', href: '/admin/admissions', icon: UserPlus },
-  { name: 'Timetable', href: '/admin/timetable', icon: Calendar },
-  { name: 'Student Attendance', href: '/admin/attendance', icon: ClipboardCheck },
-  { name: 'Signature Attendance', href: '/admin/signature-attendance', icon: PenTool },
-  { name: 'Teacher Attendance', href: '/admin/teacher-attendance', icon: Users },
-  { name: 'Report Cards', href: '/admin/report-cards', icon: FileText },
-  { name: 'Academic Risk', href: '/admin/academic-risk', icon: Brain },
-  { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
-  { name: 'Communications', href: '/admin/communications', icon: MessageCircle },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
-];
+const buildNavigation = (isPrimary: boolean) => {
+  const studentWord = isPrimary ? 'Learner' : 'Student';
+  return [
+    { name: 'Dashboard', href: '/admin', icon: Home },
+    { name: 'User Management', href: '/admin/users', icon: Users },
+    { name: 'Teacher Management', href: '/admin/teachers', icon: GraduationCap },
+    { name: 'Parent Management', href: '/admin/parents', icon: Heart },
+    { name: `${studentWord} Management`, href: '/admin/students', icon: GraduationCap },
+    { name: 'Academic Structure', href: '/admin/academic', icon: Building },
+    { name: 'Subject Management', href: '/admin/subjects', icon: BookOpen },
+    { name: 'Admissions', href: '/admin/admissions', icon: UserPlus },
+    { name: 'Timetable', href: '/admin/timetable', icon: Calendar },
+    { name: `${studentWord} Attendance`, href: '/admin/attendance', icon: ClipboardCheck },
+    { name: 'Signature Attendance', href: '/admin/signature-attendance', icon: PenTool },
+    { name: 'Teacher Attendance', href: '/admin/teacher-attendance', icon: Users },
+    { name: 'Report Cards', href: '/admin/report-cards', icon: FileText },
+    { name: 'Academic Risk', href: '/admin/academic-risk', icon: Brain },
+    { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
+    { name: 'Communications', href: '/admin/communications', icon: MessageCircle },
+    { name: 'Settings', href: '/admin/settings', icon: Settings },
+  ];
+};
+
 
 const AdminLayout = () => {
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { schoolLevel } = useSchoolLevel();
+
+
+
+  // CRITICAL: wait for both auth + profile to fully resolve before running
+  // any authorization checks. Without this, profile is briefly null on first
+  // render and produces a false "Access Denied" popup for admins.
+  if (loading || (user && !profile)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const isTeacherManagementRoute =
     location.pathname === '/admin/teachers' || location.pathname === '/admin/add-teacher';
@@ -72,14 +91,18 @@ const AdminLayout = () => {
     );
   }
 
+
   const handleSignOut = async () => {
     await signOut();
   };
+
+  const navigation = buildNavigation(schoolLevel === 'primary');
 
   const userName = profile ? `${profile.first_name} ${profile.last_name}` : undefined;
   const activeNavigation = hasTeacherManagementOnlyAccess
     ? navigation.filter((item) => item.href === '/admin/teachers')
     : navigation;
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

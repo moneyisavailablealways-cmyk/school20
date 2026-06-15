@@ -1093,7 +1093,7 @@ const UserManagement = () => {
                     <TableCell>
                       <Badge variant={roleColors[user.role]} className="gap-1">
                         <RoleIcon className="h-3 w-3" />
-                        {user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {user.role === 'student' ? studentWord : user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </Badge>
                     </TableCell>
                     <TableCell>

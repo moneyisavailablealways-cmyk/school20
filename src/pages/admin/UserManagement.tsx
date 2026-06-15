@@ -308,15 +308,71 @@ const UserManagement = () => {
         setUploadingAvatar(false);
       }
 
+      // If the new user is a student/learner, also create the matching
+      // student record + active enrollment so they appear immediately in
+      // Student/Learner Management. School_id and level_type are inherited
+      // from the logged-in admin's school.
+      if (data.role === 'student' && result?.profile_id) {
+        const photoUrl = avatarFile && result.profile_id
+          ? (await supabase.storage.from('avatars').getPublicUrl(
+              `${result.profile_id}/`,
+            )).data.publicUrl
+          : null;
+
+        const { data: studentRow, error: studentError } = await supabase
+          .from('students')
+          .insert({
+            student_id: data.admissionNumber!.trim(),
+            admission_number: data.admissionNumber!.trim(),
+            profile_id: result.profile_id,
+            date_of_birth: data.dateOfBirth!,
+            admission_date: new Date().toISOString().slice(0, 10),
+            gender: data.gender || null,
+            address: data.address || null,
+            house: data.house || null,
+            photo_url: photoUrl,
+            school_id: adminProfile?.school_id || null,
+            level_type: (isPrimary ? 'primary' : 'secondary') as any,
+          })
+          .select('id')
+          .single();
+
+        if (studentError) {
+          console.error('Error creating student record:', studentError);
+          toast({
+            title: 'Warning',
+            description: `User created but ${studentWord.toLowerCase()} record failed: ${studentError.message}`,
+            variant: 'destructive',
+          });
+        } else if (studentRow && data.classId) {
+          // Active enrollment for current academic year (if available)
+          const { data: ay } = await supabase
+            .from('academic_years')
+            .select('id')
+            .eq('school_id', adminProfile?.school_id)
+            .eq('is_current', true)
+            .maybeSingle();
+
+          await supabase.from('student_enrollments').insert({
+            student_id: studentRow.id,
+            class_id: data.classId,
+            stream_id: data.streamId || null,
+            academic_year_id: ay?.id || null,
+            status: 'active',
+          });
+        }
+      }
+
       toast({
         title: 'Success',
-        description: 'User created successfully with login credentials',
+        description: `${data.role === 'student' ? studentWord : 'User'} created successfully with login credentials`,
       });
 
       setIsCreateDialogOpen(false);
       form.reset();
       clearAvatar();
       loadUsers();
+
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast({

@@ -93,10 +93,13 @@ const AdminLayout = () => {
     await signOut();
   };
 
+  const { schoolLevel } = useSchoolLevel();
+  const navigation = buildNavigation(schoolLevel === 'primary');
   const userName = profile ? `${profile.first_name} ${profile.last_name}` : undefined;
   const activeNavigation = hasTeacherManagementOnlyAccess
     ? navigation.filter((item) => item.href === '/admin/teachers')
     : navigation;
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

@@ -133,6 +133,14 @@ const UserManagement = () => {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const editAvatarInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { profile: adminProfile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
+  const isPrimary = schoolLevel === 'primary';
+  const studentWord = isPrimary ? 'Learner' : 'Student';
+
+  // Classes/streams for the learner/student extra fields
+  const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
+  const [streams, setStreams] = useState<{ id: string; name: string; class_id: string }[]>([]);
 
   const form = useForm<CreateUserForm>({
     resolver: zodResolver(createUserSchema),
@@ -144,8 +152,19 @@ const UserManagement = () => {
       password: '',
       confirmPassword: '',
       role: 'student',
+      admissionNumber: '',
+      gender: '',
+      dateOfBirth: '',
+      classId: '',
+      streamId: '',
+      house: '',
+      address: '',
+      lin: '',
     },
   });
+
+  const watchedRole = form.watch('role');
+  const watchedClassId = form.watch('classId');
 
   const editForm = useForm<EditUserForm>({
     resolver: zodResolver(editUserSchema),
@@ -160,7 +179,35 @@ const UserManagement = () => {
 
   useEffect(() => {
     loadUsers();
+    loadClasses();
   }, []);
+
+  const loadClasses = async () => {
+    if (!adminProfile?.school_id) return;
+    const { data } = await supabase
+      .from('classes')
+      .select('id, name')
+      .eq('school_id', adminProfile.school_id)
+      .order('name');
+    setClasses(data || []);
+  };
+
+  useEffect(() => {
+    const loadStreams = async () => {
+      if (!watchedClassId) {
+        setStreams([]);
+        return;
+      }
+      const { data } = await supabase
+        .from('streams')
+        .select('id, name, class_id')
+        .eq('class_id', watchedClassId)
+        .order('name');
+      setStreams(data || []);
+    };
+    loadStreams();
+  }, [watchedClassId]);
+
 
   const loadUsers = async () => {
     try {

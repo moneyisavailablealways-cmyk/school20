@@ -79,10 +79,31 @@ const createUserSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Please confirm your password'),
   role: z.enum(['admin', 'principal', 'head_teacher', 'teacher', 'bursar', 'librarian', 'student', 'parent', 'super_admin']),
+  // Extra fields used only when role === 'student'. Validated conditionally below.
+  admissionNumber: z.string().optional(),
+  gender: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  classId: z.string().optional(),
+  streamId: z.string().optional(),
+  house: z.string().optional(),
+  address: z.string().optional(),
+  lin: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
-});
+}).refine(
+  (d) => d.role !== 'student' || (d.admissionNumber && d.admissionNumber.trim().length > 0),
+  { message: 'Admission number is required', path: ['admissionNumber'] },
+).refine(
+  (d) => d.role !== 'student' || (d.gender && d.gender.length > 0),
+  { message: 'Gender is required', path: ['gender'] },
+).refine(
+  (d) => d.role !== 'student' || (d.dateOfBirth && d.dateOfBirth.length > 0),
+  { message: 'Date of birth is required', path: ['dateOfBirth'] },
+).refine(
+  (d) => d.role !== 'student' || (d.classId && d.classId.length > 0),
+  { message: 'Class is required', path: ['classId'] },
+);
 
 const editUserSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -91,6 +112,7 @@ const editUserSchema = z.object({
   role: z.enum(['admin', 'principal', 'head_teacher', 'teacher', 'bursar', 'librarian', 'student', 'parent', 'super_admin']),
   is_active: z.boolean(),
 });
+
 
 type CreateUserForm = z.infer<typeof createUserSchema>;
 type EditUserForm = z.infer<typeof editUserSchema>;

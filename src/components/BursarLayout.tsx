@@ -1,29 +1,17 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  DollarSign, 
-  FileText, 
-  Receipt, 
-  CreditCard, 
-  BarChart3,
-  User,
-  Settings,
-  GraduationCap,
-  CalendarCheck,
-  ClipboardList,
-  Banknote,
+import {
+  DollarSign,
   Wallet,
-  PieChart
+  CalendarCheck,
+  User,
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const navigation = [
-  { name: 'Dashboard', href: '/bursar', icon: BarChart3 },
-  { name: 'Fees Management', href: '/bursar/fees', icon: Wallet },
-  { name: 'Salary Management', href: '/bursar/salaries', icon: Banknote },
-  { name: 'Reports', href: '/bursar/reports', icon: Receipt },
+  { name: 'Finance Workspace', href: '/bursar', icon: Wallet },
   { name: 'Appointments', href: '/bursar/appointments', icon: CalendarCheck },
   { name: 'Profile', href: '/bursar/profile', icon: User },
 ];
@@ -40,7 +28,6 @@ const BursarLayout = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <ResponsiveHeader
         portalName="Bursar Portal"
         portalIcon={DollarSign}
@@ -50,7 +37,6 @@ const BursarLayout = () => {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar */}
         {!isMobile && (
           <ResponsiveSidebar
             navigation={navigation}
@@ -61,7 +47,6 @@ const BursarLayout = () => {
           />
         )}
 
-        {/* Main Content */}
         <main className="flex-1 overflow-auto p-4 md:p-6">
           <Outlet />
         </main>

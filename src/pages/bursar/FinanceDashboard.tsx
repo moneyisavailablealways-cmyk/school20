@@ -11,7 +11,11 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, L
 import { toast } from 'sonner';
 import { useState } from 'react';
 
-const FinanceDashboard = () => {
+interface FinanceDashboardProps {
+  onNavigateTab?: (tab: string) => void;
+}
+
+const FinanceDashboard = ({ onNavigateTab }: FinanceDashboardProps = {}) => {
   const { profile } = useAuth();
   const schoolId = profile?.school_id;
   const [sendingReminders, setSendingReminders] = useState(false);

@@ -79,18 +79,12 @@ import AcademicReports from "./pages/head-teacher/AcademicReports";
 import HeadTeacherProfile from "./pages/head-teacher/HeadTeacherProfile";
 import HeadTeacherAppointments from "./pages/head-teacher/Appointments";
 import HeadTeacherAttendance from "./pages/head-teacher/Attendance";
-import BursarDashboard from "./pages/bursar/BursarDashboard";
-import FeeStructures from "./pages/bursar/FeeStructures";
 import Invoices from "./pages/bursar/Invoices";
 import CreateInvoice from "./pages/bursar/CreateInvoice";
 import Payments from "./pages/bursar/Payments";
 import RecordPayment from "./pages/bursar/RecordPayment";
-import Scholarships from "./pages/bursar/Scholarships";
-import BursarReports from "./pages/bursar/Reports";
 import BursarProfile from "./pages/bursar/BursarProfile";
 import BursarAppointments from "./pages/bursar/Appointments";
-import ReportCardFees from "./pages/bursar/ReportCardFees";
-import SalaryManagement from "./pages/bursar/SalaryManagement";
 
 import FinanceDashboard from "./pages/bursar/FinanceDashboard";
 import StudentAccounts from "./pages/bursar/StudentAccounts";

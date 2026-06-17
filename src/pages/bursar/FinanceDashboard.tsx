@@ -114,9 +114,21 @@ const FinanceDashboard = ({ onNavigateTab }: FinanceDashboardProps = {}) => {
       const paidInvoices = invoices.filter(i => i.status === 'paid').length;
       const partial = invoices.filter(i => i.status === 'partially_paid').length;
       const pending = invoices.filter(i => i.status === 'pending').length;
+      const totalExpected = invoices.reduce((s, i) => s + Number(i.total_amount || 0), 0);
+      const collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
+      const defaulters = new Set(
+        invoices.filter(i => Number(i.balance_amount || 0) > 0).map(i => i.student_id)
+      ).size;
+
+      // Recent transactions (last 8 completed payments)
+      const recent = [...(paymentsAll || [])]
+        .filter(p => !p.invoice_id || invoiceIds.includes(p.invoice_id as string))
+        .sort((a, b) => new Date(b.payment_date || 0).getTime() - new Date(a.payment_date || 0).getTime())
+        .slice(0, 8);
 
       return {
         totalCollected, outstanding, totalSalaries, netIncome,
+        totalExpected, collectionRate, defaulters, recent,
         trend: months,
         invoiceStatus: [
           { name: 'Paid', value: paidInvoices },

@@ -94,7 +94,7 @@ import SalaryManagement from "./pages/bursar/SalaryManagement";
 
 import FinanceDashboard from "./pages/bursar/FinanceDashboard";
 import StudentAccounts from "./pages/bursar/StudentAccounts";
-import FeesManagement from "./pages/bursar/FeesManagement";
+import FinanceWorkspace from "./pages/bursar/FinanceWorkspace";
 import ParentDashboard from './pages/parent/ParentDashboard';
 import MyChildren from './pages/parent/MyChildren';
 import Attendance from './pages/parent/Attendance';

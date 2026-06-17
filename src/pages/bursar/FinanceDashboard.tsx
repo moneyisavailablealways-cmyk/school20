@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { formatUGX, MONTHS } from '@/lib/finance/format';
-import { TrendingUp, TrendingDown, Wallet, Banknote, AlertTriangle, BellRing } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Banknote, AlertTriangle, BellRing, FileText } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { toast } from 'sonner';
 import { useState } from 'react';

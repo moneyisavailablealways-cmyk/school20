@@ -172,7 +172,10 @@ const Reports = () => {
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1'];
 
   const formatCurrency = (amount: number) => {
-    return 'UGX ' + new Intl.NumberFormat('en-UG', { maximumFractionDigits: 0 }).format(amount || 0);
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
   };
 
   const handleExport = () => {

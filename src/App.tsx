@@ -86,8 +86,6 @@ import RecordPayment from "./pages/bursar/RecordPayment";
 import BursarProfile from "./pages/bursar/BursarProfile";
 import BursarAppointments from "./pages/bursar/Appointments";
 
-import FinanceDashboard from "./pages/bursar/FinanceDashboard";
-import StudentAccounts from "./pages/bursar/StudentAccounts";
 import FinanceWorkspace from "./pages/bursar/FinanceWorkspace";
 import ParentDashboard from './pages/parent/ParentDashboard';
 import MyChildren from './pages/parent/MyChildren';

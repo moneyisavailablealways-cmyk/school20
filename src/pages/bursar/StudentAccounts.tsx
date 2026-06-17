@@ -1,20 +1,26 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useTermLabel } from '@/hooks/useTermLabel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { formatUGX } from '@/lib/finance/format';
-import { Search, Wallet } from 'lucide-react';
+import { Search, Wallet, Plus, Receipt, Printer, AlertTriangle } from 'lucide-react';
 
 const StudentAccounts = () => {
   const { profile } = useAuth();
   const schoolId = profile?.school_id;
+  const navigate = useNavigate();
+  const { singular, plural } = useTermLabel();
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: classes } = useQuery({
     queryKey: ['bursar-classes', schoolId],

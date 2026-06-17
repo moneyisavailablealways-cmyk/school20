@@ -152,17 +152,21 @@ const FinanceDashboard = ({ onNavigateTab }: FinanceDashboardProps = {}) => {
   if (isLoading || !data) return <div className="py-12 text-center text-muted-foreground">Loading finance dashboard...</div>;
 
   const cards = [
-    { title: 'Total Fees Collected', value: formatUGX(data.totalCollected), icon: Wallet, color: 'text-green-600' },
-    { title: 'Outstanding Balances', value: formatUGX(data.outstanding), icon: AlertTriangle, color: 'text-orange-600' },
-    { title: 'Salary Expenses', value: formatUGX(data.totalSalaries), icon: Banknote, color: 'text-blue-600' },
-    { title: 'Net Income', value: formatUGX(data.netIncome), icon: data.netIncome >= 0 ? TrendingUp : TrendingDown, color: data.netIncome >= 0 ? 'text-green-600' : 'text-red-600' },
+    { title: 'Total Fees Expected', value: formatUGX(data.totalExpected), icon: FileText, color: 'text-purple-600', tab: 'invoices' },
+    { title: 'Total Fees Collected', value: formatUGX(data.totalCollected), icon: Wallet, color: 'text-green-600', tab: 'payments' },
+    { title: 'Outstanding Balances', value: formatUGX(data.outstanding), icon: AlertTriangle, color: 'text-orange-600', tab: 'accounts' },
+    { title: 'Collection Rate', value: `${data.collectionRate.toFixed(1)}%`, icon: TrendingUp, color: 'text-blue-600', tab: 'invoices' },
+    { title: 'Net Income', value: formatUGX(data.netIncome), icon: data.netIncome >= 0 ? TrendingUp : TrendingDown, color: data.netIncome >= 0 ? 'text-green-600' : 'text-red-600', tab: 'reports' },
+    { title: 'Salary Expenses', value: formatUGX(data.totalSalaries), icon: Banknote, color: 'text-blue-600', tab: 'salaries' },
+    { title: 'Defaulters', value: String(data.defaulters), icon: AlertTriangle, color: 'text-red-600', tab: 'accounts' },
+    { title: 'Recent Payments', value: String(data.recent.length), icon: Wallet, color: 'text-emerald-600', tab: 'payments' },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Finance Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">Real-time view of fees, salaries, and net income</p>
         </div>
         <Button onClick={sendReminders} disabled={sendingReminders}>
@@ -206,9 +210,13 @@ const FinanceDashboard = ({ onNavigateTab }: FinanceDashboardProps = {}) => {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {cards.map(c => (
-          <Card key={c.title}>
+          <Card
+            key={c.title}
+            className={onNavigateTab ? 'cursor-pointer transition-colors hover:bg-muted/50' : ''}
+            onClick={() => onNavigateTab?.(c.tab)}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{c.title}</CardTitle>
               <c.icon className={`h-4 w-4 ${c.color}`} />

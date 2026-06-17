@@ -262,21 +262,21 @@ const App = () => (
                 </ProtectedRoute>
               }
             >
-              <Route index element={<BursarDashboard />} />
-              <Route path="fee-structures" element={<FeeStructures />} />
-              <Route path="report-card-fees" element={<ReportCardFees />} />
+              <Route index element={<FinanceWorkspace />} />
+              <Route path="fee-structures" element={<Navigate to="/bursar?tab=fee-structure" replace />} />
+              <Route path="report-card-fees" element={<Navigate to="/bursar?tab=footer" replace />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="invoices/create" element={<CreateInvoice />} />
               <Route path="payments" element={<Payments />} />
               <Route path="payments/new" element={<RecordPayment />} />
-              <Route path="scholarships" element={<Scholarships />} />
-              <Route path="reports" element={<BursarReports />} />
+              <Route path="scholarships" element={<Navigate to="/bursar?tab=adjustments" replace />} />
+              <Route path="reports" element={<Navigate to="/bursar?tab=reports" replace />} />
               <Route path="appointments" element={<BursarAppointments />} />
-              <Route path="salaries" element={<SalaryManagement />} />
-              <Route path="salary-payments" element={<Navigate to="/bursar/salaries" replace />} />
-              <Route path="finance" element={<FinanceDashboard />} />
-              <Route path="fees" element={<FeesManagement />} />
-              <Route path="student-accounts" element={<StudentAccounts />} />
+              <Route path="salaries" element={<Navigate to="/bursar?tab=salaries" replace />} />
+              <Route path="salary-payments" element={<Navigate to="/bursar?tab=salaries" replace />} />
+              <Route path="finance" element={<Navigate to="/bursar" replace />} />
+              <Route path="fees" element={<Navigate to="/bursar" replace />} />
+              <Route path="student-accounts" element={<Navigate to="/bursar?tab=accounts" replace />} />
               <Route path="profile" element={<BursarProfile />} />
             </Route>
 

@@ -14,14 +14,15 @@ import {
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useTerminology } from '@/hooks/useTerminology';
 
-const navigation = [
+const buildNavigation = (t: { Students: string; studentAttendance: string }) => [
   { name: 'Dashboard', href: '/teacher', icon: BookOpen },
   { name: 'My Classes', href: '/teacher/classes', icon: Users },
-  { name: 'Students', href: '/teacher/students', icon: GraduationCap },
+  { name: t.Students, href: '/teacher/students', icon: GraduationCap },
   { name: 'Schedule', href: '/teacher/schedule', icon: Calendar },
-  { name: 'Student Attendance', href: '/teacher/attendance', icon: ClipboardCheck },
-  
+  { name: t.studentAttendance, href: '/teacher/attendance', icon: ClipboardCheck },
+
   { name: 'My Attendance', href: '/teacher/my-attendance', icon: User },
   { name: 'Submit Marks', href: '/teacher/marks', icon: FileText },
   { name: 'Academic Risk', href: '/teacher/academic-risk', icon: Brain },
@@ -32,12 +33,15 @@ const navigation = [
 const TeacherLayout = () => {
   const { signOut, profile } = useAuth();
   const isMobile = useIsMobile();
+  const t = useTerminology();
+  const navigation = buildNavigation(t);
 
   const handleSignOut = async () => {
     await signOut();
   };
 
   const userName = profile ? `${profile.first_name} ${profile.last_name}` : undefined;
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

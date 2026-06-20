@@ -16,15 +16,16 @@ import {
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useTerminology } from '@/hooks/useTerminology';
 
-const navigation = [
+const buildNavigation = (t: { studentAttendance: string }) => [
   { name: 'Dashboard', href: '/head-teacher', icon: BarChart3 },
   { name: 'Teacher Supervision', href: '/head-teacher/supervision', icon: Users },
   { name: 'Marks Approval', href: '/head-teacher/marks', icon: FileCheck },
   { name: 'Discipline Records', href: '/head-teacher/discipline', icon: AlertTriangle },
   { name: 'Timetable Management', href: '/head-teacher/timetable', icon: Calendar },
-  { name: 'Student Attendance', href: '/head-teacher/attendance', icon: UserCheck },
-  
+  { name: t.studentAttendance, href: '/head-teacher/attendance', icon: UserCheck },
+
   { name: 'Teacher Attendance', href: '/head-teacher/teacher-attendance', icon: Users },
   { name: 'Academic Reports', href: '/head-teacher/reports', icon: ClipboardCheck },
   { name: 'Academic Risk', href: '/head-teacher/academic-risk', icon: Brain },
@@ -35,6 +36,8 @@ const navigation = [
 const HeadTeacherLayout = () => {
   const { signOut, profile } = useAuth();
   const isMobile = useIsMobile();
+  const t = useTerminology();
+  const navigation = buildNavigation(t);
 
   const handleSignOut = async () => {
     await signOut();

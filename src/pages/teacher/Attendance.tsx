@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { Calendar as CalendarIcon, Users, Check, X, Clock, AlertCircle, Lock, Save, CheckCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useTerminology } from '@/hooks/useTerminology';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused' | 'left_early';
 
@@ -28,6 +29,7 @@ interface StudentAttendance {
 const TeacherAttendance = () => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const t = useTerminology();
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSession, setSelectedSession] = useState<string>('full_day');
@@ -393,7 +395,7 @@ const TeacherAttendance = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Students ({students?.length || 0})
+              {t.Students} ({students?.length || 0})
             </CardTitle>
             <CardDescription>
               Click on status buttons to mark attendance
@@ -451,7 +453,7 @@ const TeacherAttendance = () => {
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No students found in this class</p>
+                <p>No {t.students} found in this class</p>
               </div>
             )}
           </CardContent>

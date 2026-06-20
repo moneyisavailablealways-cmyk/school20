@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Users, BookOpen, Calendar, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTerminology } from '@/hooks/useTerminology';
 
 const TeacherDashboard = () => {
   const { profile } = useAuth();
+  const t = useTerminology();
   const [stats, setStats] = React.useState({
     totalClasses: 0,
     totalStudents: 0,
@@ -118,8 +120,8 @@ const TeacherDashboard = () => {
       color: 'text-blue-600',
     },
     {
-      title: 'View Students',
-      description: 'See all students in your classes',
+      title: t.viewStudents,
+      description: `See all ${t.students} in your classes`,
       icon: Users,
       href: '/teacher/students',
       color: 'text-green-600',
@@ -141,7 +143,7 @@ const TeacherDashboard = () => {
       color: 'text-blue-600',
     },
     {
-      title: 'Total Students',
+      title: t.totalStudents,
       value: loading ? '...' : stats.totalStudents.toString(),
       icon: Users,
       color: 'text-green-600',

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Users, Search, Phone, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTerminology } from '@/hooks/useTerminology';
 
 interface StudentData {
   id: string;
@@ -33,6 +34,7 @@ const ClassStudents = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { toast } = useToast();
+  const t = useTerminology();
   const [students, setStudents] = useState<StudentData[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<StudentData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -190,8 +192,8 @@ const ClassStudents = () => {
       // Show success toast when students are loaded
       if (formattedStudents.length > 0) {
         toast({
-          title: 'Student list updated',
-          description: `Found ${formattedStudents.length} student${formattedStudents.length > 1 ? 's' : ''}`,
+          title: `${t.Student} list updated`,
+          description: `Found ${formattedStudents.length} ${formattedStudents.length > 1 ? t.students : t.student}`,
         });
       }
     } catch (error: any) {
@@ -271,10 +273,10 @@ const ClassStudents = () => {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {className} Students
+            {className} {t.Students}
           </h1>
           <p className="text-muted-foreground">
-            Students enrolled in this class
+            {t.Students} enrolled in this class
           </p>
         </div>
       </div>
@@ -284,7 +286,7 @@ const ClassStudents = () => {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
-            placeholder="Search students..."
+            placeholder={`Search ${t.students}...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -311,12 +313,12 @@ const ClassStudents = () => {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">
-              {searchTerm ? 'No students found' : 'No students enrolled'}
+              {searchTerm ? t.noStudents : `No ${t.students} enrolled`}
             </h3>
             <p className="text-muted-foreground text-center">
-              {searchTerm 
-                ? 'Try adjusting your search criteria.' 
-                : 'No students have been enrolled in this class yet.'
+              {searchTerm
+                ? 'Try adjusting your search criteria.'
+                : `No ${t.students} have been enrolled in this class yet.`
               }
             </p>
           </CardContent>
@@ -341,7 +343,7 @@ const ClassStudents = () => {
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
                           <div>
-                            <span className="text-muted-foreground">Student ID:</span>
+                            <span className="text-muted-foreground">{t.Student} ID:</span>
                             <div className="font-medium">{student.student_id}</div>
                           </div>
                           <div>

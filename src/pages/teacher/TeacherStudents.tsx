@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { useTerminology } from '@/hooks/useTerminology';
 
 interface StudentProfile {
   first_name: string;
@@ -33,6 +34,7 @@ interface ClassData {
 const TeacherStudents = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const t = useTerminology();
   const [classesData, setClassesData] = useState<ClassData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -284,7 +286,7 @@ const TeacherStudents = () => {
       console.error('Error fetching teacher students:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch students data',
+        description: `Failed to fetch ${t.students} data`,
         variant: 'destructive',
       });
     } finally {
@@ -305,7 +307,7 @@ const TeacherStudents = () => {
     
     acc[classKey].subjects.push({
       subjectId: item.subject_id || 'all',
-      subjectName: item.subject_name || 'All Students',
+      subjectName: item.subject_name || `All ${t.Students}`,
       students: item.students
     });
     
@@ -324,7 +326,7 @@ const TeacherStudents = () => {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold tracking-tight text-foreground">My Students</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground">{t.myStudents}</h1>
       </div>
 
       {/* Classes and Students */}
@@ -332,7 +334,7 @@ const TeacherStudents = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <p className="text-muted-foreground text-center text-lg">
-              No classes or students are assigned to you yet.
+              No classes or {t.students} are assigned to you yet.
             </p>
           </CardContent>
         </Card>

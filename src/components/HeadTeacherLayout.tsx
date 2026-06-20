@@ -12,8 +12,7 @@ import {
   ClipboardCheck,
   CalendarCheck,
   UserCheck,
-  Brain,
-  PenTool
+  Brain
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -25,7 +24,7 @@ const navigation = [
   { name: 'Discipline Records', href: '/head-teacher/discipline', icon: AlertTriangle },
   { name: 'Timetable Management', href: '/head-teacher/timetable', icon: Calendar },
   { name: 'Student Attendance', href: '/head-teacher/attendance', icon: UserCheck },
-  { name: 'Signature Attendance', href: '/head-teacher/signature-attendance', icon: PenTool },
+  
   { name: 'Teacher Attendance', href: '/head-teacher/teacher-attendance', icon: Users },
   { name: 'Academic Reports', href: '/head-teacher/reports', icon: ClipboardCheck },
   { name: 'Academic Risk', href: '/head-teacher/academic-risk', icon: Brain },

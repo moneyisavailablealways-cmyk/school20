@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Users, Eye, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import { useTerminology } from '@/hooks/useTerminology';
 
 interface StreamData {
   id: string;
@@ -32,6 +33,7 @@ interface ClassData {
 const MyClasses = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const t = useTerminology();
   const [classes, setClasses] = useState<(ClassData & { teacherRole: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -260,7 +262,7 @@ const MyClasses = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Students:</span>
+                  <span className="text-muted-foreground">{t.Students}:</span>
                   <span className="font-medium">{classData.studentCount || 0}</span>
                 </div>
 
@@ -297,7 +299,7 @@ const MyClasses = () => {
                   <Button asChild variant="outline" size="sm" className="flex-1">
                     <Link to={`/teacher/classes/${classData.id}/students`}>
                       <Users className="h-4 w-4 mr-1" />
-                      View Students
+                      {t.viewStudents}
                     </Link>
                   </Button>
                 </div>

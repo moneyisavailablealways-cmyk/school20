@@ -374,6 +374,16 @@ const AddTeacher = () => {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(createTeacher)} className="space-y-6">
+              {/* Profile Photo */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Profile Photo</h3>
+                <PhotoUpload
+                  file={photoFile}
+                  onFileSelected={setPhotoFile}
+                  fallback={`${(form.watch('firstName') || 'T')[0]}${(form.watch('lastName') || '')[0] || ''}`}
+                />
+              </div>
+
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Basic Information</h3>

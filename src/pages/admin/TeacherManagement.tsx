@@ -215,6 +215,7 @@ const TeacherManagement = () => {
     }
 
     setTeacherDetailsId(teacherDetails?.id || null);
+    setEditPhotoFile(null);
     setEditForm({
       first_name: teacher.first_name,
       last_name: teacher.last_name,

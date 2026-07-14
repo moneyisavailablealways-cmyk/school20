@@ -12,6 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Heart, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import PhotoUpload from '@/components/PhotoUpload';
+import { uploadAvatarForProfile } from '@/lib/uploadAvatar';
 
 const addParentSchema = z.object({
   // Profile fields

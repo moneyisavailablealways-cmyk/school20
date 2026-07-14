@@ -84,6 +84,7 @@ const AddTeacher = () => {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [subjectClassAssignments, setSubjectClassAssignments] = useState<SubjectClassAssignment[]>([]);
   const [isClassTeacher, setIsClassTeacher] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { schoolLevel } = useSchoolLevel();

@@ -303,6 +303,20 @@ const AddTeacher = () => {
         }
       }
 
+      // Upload profile photo if provided
+      if (photoFile && result.profile_id) {
+        try {
+          await uploadAvatarForProfile(result.profile_id, photoFile);
+        } catch (e) {
+          console.error('Photo upload failed:', e);
+          toast({
+            title: 'Warning',
+            description: 'Teacher created, but profile photo upload failed.',
+            variant: 'destructive',
+          });
+        }
+      }
+
       toast({
         title: 'Success',
         description: 'Teacher created successfully with specializations',

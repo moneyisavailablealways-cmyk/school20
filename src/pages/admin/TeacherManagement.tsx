@@ -13,6 +13,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+import PhotoUpload from '@/components/PhotoUpload';
+import { uploadAvatarForProfile } from '@/lib/uploadAvatar';
 import {
   GraduationCap,
   Search,

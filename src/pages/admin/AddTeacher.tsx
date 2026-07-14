@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { GraduationCap, ArrowLeft, BookOpen, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+import PhotoUpload from '@/components/PhotoUpload';
+import { uploadAvatarForProfile } from '@/lib/uploadAvatar';
 
 const addTeacherSchema = z.object({
   // Profile fields

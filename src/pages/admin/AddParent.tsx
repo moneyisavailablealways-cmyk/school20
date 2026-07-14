@@ -114,6 +114,20 @@ const AddParent = () => {
         throw new Error(result.error);
       }
 
+      // Upload profile photo if provided
+      if (photoFile && result.profile_id) {
+        try {
+          await uploadAvatarForProfile(result.profile_id, photoFile);
+        } catch (e) {
+          console.error('Photo upload failed:', e);
+          toast({
+            title: 'Warning',
+            description: 'Parent created, but profile photo upload failed.',
+            variant: 'destructive',
+          });
+        }
+      }
+
       toast({
         title: 'Success',
         description: 'Parent created successfully with login credentials',

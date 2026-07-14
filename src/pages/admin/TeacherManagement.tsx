@@ -290,6 +290,15 @@ const TeacherManagement = () => {
 
       if (profileError) throw profileError;
 
+      // Upload new profile photo if selected
+      if (editPhotoFile) {
+        try {
+          await uploadAvatarForProfile(editingTeacher.id, editPhotoFile);
+        } catch (e) {
+          console.error('Photo upload failed:', e);
+        }
+      }
+
       // Update or insert teacher details
       const teacherDetailsData = {
         profile_id: editingTeacher.id,

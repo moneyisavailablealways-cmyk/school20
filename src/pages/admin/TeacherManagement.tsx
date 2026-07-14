@@ -656,6 +656,17 @@ const TeacherManagement = () => {
           
           <ScrollArea className="max-h-[calc(90vh-180px)] pr-4">
             <div className="space-y-6 py-4">
+              {/* Profile Photo */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Profile Photo</h3>
+                <PhotoUpload
+                  value={editingTeacher?.avatar_url}
+                  file={editPhotoFile}
+                  onFileSelected={setEditPhotoFile}
+                  fallback={`${(editForm.first_name || 'T')[0]}${(editForm.last_name || '')[0] || ''}`}
+                />
+              </div>
+
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Basic Information</h3>

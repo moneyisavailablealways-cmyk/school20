@@ -111,6 +111,7 @@ const TeacherManagement = () => {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [subjectClassAssignments, setSubjectClassAssignments] = useState<{ subjectId: string; classIds: string[] }[]>([]);
   const [teacherDetailsId, setTeacherDetailsId] = useState<string | null>(null);
+  const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null);
   const { toast } = useToast();
   const { schoolLevel } = useSchoolLevel();
 

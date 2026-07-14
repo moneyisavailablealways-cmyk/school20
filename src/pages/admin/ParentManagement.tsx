@@ -6,8 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import PhotoUpload from '@/components/PhotoUpload';
+import { uploadAvatarForProfile } from '@/lib/uploadAvatar';
 import {
   Heart,
   Search,
@@ -35,11 +41,44 @@ interface Parent {
   children_count?: number;
 }
 
+interface ParentDetails {
+  id: string;
+  profile_id: string;
+  occupation?: string | null;
+  workplace?: string | null;
+  national_id?: string | null;
+  address?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  emergency_contact_relationship?: string | null;
+  preferred_contact_method?: string | null;
+}
+
 const ParentManagement = () => {
   const [parents, setParents] = useState<Parent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingParent, setEditingParent] = useState<Parent | null>(null);
+  const [parentDetailsId, setParentDetailsId] = useState<string | null>(null);
+  const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    is_active: true,
+    occupation: '',
+    workplace: '',
+    national_id: '',
+    address: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    emergency_contact_relationship: '',
+    preferred_contact_method: 'email',
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,7 +87,6 @@ const ParentManagement = () => {
 
   const loadParents = async () => {
     try {
-      // Get parents with count of their children
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -59,12 +97,12 @@ const ParentManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      const parentsWithChildrenCount = (data || []).map(parent => ({
+
+      const parentsWithChildrenCount = (data || []).map((parent: any) => ({
         ...parent,
-        children_count: parent.parent_relationships?.[0]?.count || 0
+        children_count: parent.parent_relationships?.[0]?.count || 0,
       }));
-      
+
       setParents(parentsWithChildrenCount);
     } catch (error) {
       console.error('Error loading parents:', error);
@@ -75,6 +113,106 @@ const ParentManagement = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openEditDialog = async (parent: Parent) => {
+    setEditingParent(parent);
+    setEditPhotoFile(null);
+
+    // Load parent-specific details
+    const { data: details } = await supabase
+      .from('parents')
+      .select('*')
+      .eq('profile_id', parent.id)
+      .maybeSingle();
+
+    const d = (details || {}) as Partial<ParentDetails>;
+    setParentDetailsId(d.id || null);
+
+    setEditForm({
+      first_name: parent.first_name,
+      last_name: parent.last_name,
+      email: parent.email,
+      phone: parent.phone || '',
+      is_active: parent.is_active,
+      occupation: d.occupation || '',
+      workplace: d.workplace || '',
+      national_id: d.national_id || '',
+      address: d.address || '',
+      emergency_contact_name: d.emergency_contact_name || '',
+      emergency_contact_phone: d.emergency_contact_phone || '',
+      emergency_contact_relationship: d.emergency_contact_relationship || '',
+      preferred_contact_method: d.preferred_contact_method || 'email',
+    });
+
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingParent) return;
+    setSavingEdit(true);
+    try {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          first_name: editForm.first_name,
+          last_name: editForm.last_name,
+          email: editForm.email,
+          phone: editForm.phone || null,
+          is_active: editForm.is_active,
+        })
+        .eq('user_id', editingParent.user_id);
+
+      if (profileError) throw profileError;
+
+      // Upload new photo if selected
+      if (editPhotoFile) {
+        try {
+          await uploadAvatarForProfile(editingParent.id, editPhotoFile);
+        } catch (e) {
+          console.error('Photo upload failed:', e);
+        }
+      }
+
+      // Upsert parent details
+      const parentDetailsData = {
+        profile_id: editingParent.id,
+        occupation: editForm.occupation || null,
+        workplace: editForm.workplace || null,
+        national_id: editForm.national_id || null,
+        address: editForm.address || null,
+        emergency_contact_name: editForm.emergency_contact_name || null,
+        emergency_contact_phone: editForm.emergency_contact_phone || null,
+        emergency_contact_relationship: editForm.emergency_contact_relationship || null,
+        preferred_contact_method: editForm.preferred_contact_method || null,
+      };
+
+      if (parentDetailsId) {
+        const { error } = await supabase
+          .from('parents')
+          .update(parentDetailsData)
+          .eq('id', parentDetailsId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('parents').insert(parentDetailsData);
+        if (error) throw error;
+      }
+
+      toast({ title: 'Success', description: 'Parent updated successfully' });
+      setEditDialogOpen(false);
+      setEditingParent(null);
+      loadParents();
+    } catch (error: any) {
+      console.error('Error updating parent:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update parent',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -108,15 +246,15 @@ const ParentManagement = () => {
   };
 
   const filteredParents = parents.filter(parent => {
-    const matchesSearch = 
+    const matchesSearch =
       parent.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       parent.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       parent.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || 
+
+    const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'active' && parent.is_active) ||
       (statusFilter === 'inactive' && !parent.is_active);
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -130,7 +268,6 @@ const ParentManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Parent Management</h1>
@@ -144,7 +281,6 @@ const ParentManagement = () => {
         </Button>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -177,7 +313,6 @@ const ParentManagement = () => {
         </Card>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardContent className="p-4">
           <div className="flex gap-4">
@@ -207,7 +342,6 @@ const ParentManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Parents Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -284,7 +418,7 @@ const ParentManagement = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={() => openEditDialog(parent)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
@@ -300,7 +434,7 @@ const ParentManagement = () => {
               ))}
             </TableBody>
           </Table>
-          
+
           {filteredParents.length === 0 && (
             <div className="text-center py-8">
               <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -309,6 +443,175 @@ const ParentManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Parent Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5" />
+              Edit Parent
+            </DialogTitle>
+            <DialogDescription>
+              Update parent contact information, occupation, and emergency contact details
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[calc(90vh-180px)] pr-4">
+            <div className="space-y-6 py-4">
+              {/* Photo */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Profile Photo</h3>
+                <PhotoUpload
+                  value={editingParent?.avatar_url}
+                  file={editPhotoFile}
+                  onFileSelected={setEditPhotoFile}
+                  fallback={`${(editForm.first_name || 'P')[0]}${(editForm.last_name || '')[0] || ''}`}
+                />
+              </div>
+
+              {/* Basic Info */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Basic Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>First Name</Label>
+                    <Input
+                      value={editForm.first_name}
+                      onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Name</Label>
+                    <Input
+                      value={editForm.last_name}
+                      onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone</Label>
+                    <Input
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={editForm.is_active ? 'active' : 'inactive'}
+                    onValueChange={(v) => setEditForm({ ...editForm, is_active: v === 'active' })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Professional Info */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Professional Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Occupation</Label>
+                    <Input
+                      value={editForm.occupation}
+                      onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Workplace</Label>
+                    <Input
+                      value={editForm.workplace}
+                      onChange={(e) => setEditForm({ ...editForm, workplace: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>National ID</Label>
+                  <Input
+                    value={editForm.national_id}
+                    onChange={(e) => setEditForm({ ...editForm, national_id: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Address</Label>
+                  <Textarea
+                    value={editForm.address}
+                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Emergency Contact */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Emergency Contact</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Contact Name</Label>
+                    <Input
+                      value={editForm.emergency_contact_name}
+                      onChange={(e) => setEditForm({ ...editForm, emergency_contact_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Contact Phone</Label>
+                    <Input
+                      value={editForm.emergency_contact_phone}
+                      onChange={(e) => setEditForm({ ...editForm, emergency_contact_phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Relationship</Label>
+                    <Input
+                      value={editForm.emergency_contact_relationship}
+                      onChange={(e) => setEditForm({ ...editForm, emergency_contact_relationship: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Preferred Contact Method</Label>
+                    <Select
+                      value={editForm.preferred_contact_method}
+                      onValueChange={(v) => setEditForm({ ...editForm, preferred_contact_method: v })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="phone">Phone Call</SelectItem>
+                        <SelectItem value="sms">SMS</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={savingEdit}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSubmit} disabled={savingEdit}>
+              {savingEdit ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

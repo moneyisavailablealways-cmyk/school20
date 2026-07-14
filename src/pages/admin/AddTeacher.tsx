@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { GraduationCap, ArrowLeft, BookOpen, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+import PhotoUpload from '@/components/PhotoUpload';
+import { uploadAvatarForProfile } from '@/lib/uploadAvatar';
 
 const addTeacherSchema = z.object({
   // Profile fields
@@ -82,6 +84,7 @@ const AddTeacher = () => {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [subjectClassAssignments, setSubjectClassAssignments] = useState<SubjectClassAssignment[]>([]);
   const [isClassTeacher, setIsClassTeacher] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { schoolLevel } = useSchoolLevel();
@@ -300,6 +303,20 @@ const AddTeacher = () => {
         }
       }
 
+      // Upload profile photo if provided
+      if (photoFile && result.profile_id) {
+        try {
+          await uploadAvatarForProfile(result.profile_id, photoFile);
+        } catch (e) {
+          console.error('Photo upload failed:', e);
+          toast({
+            title: 'Warning',
+            description: 'Teacher created, but profile photo upload failed.',
+            variant: 'destructive',
+          });
+        }
+      }
+
       toast({
         title: 'Success',
         description: 'Teacher created successfully with specializations',
@@ -357,6 +374,16 @@ const AddTeacher = () => {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(createTeacher)} className="space-y-6">
+              {/* Profile Photo */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Profile Photo</h3>
+                <PhotoUpload
+                  file={photoFile}
+                  onFileSelected={setPhotoFile}
+                  fallback={`${(form.watch('firstName') || 'T')[0]}${(form.watch('lastName') || '')[0] || ''}`}
+                />
+              </div>
+
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Basic Information</h3>

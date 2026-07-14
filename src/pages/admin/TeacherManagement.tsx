@@ -13,6 +13,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+import PhotoUpload from '@/components/PhotoUpload';
+import { uploadAvatarForProfile } from '@/lib/uploadAvatar';
 import {
   GraduationCap,
   Search,
@@ -109,6 +111,7 @@ const TeacherManagement = () => {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [subjectClassAssignments, setSubjectClassAssignments] = useState<{ subjectId: string; classIds: string[] }[]>([]);
   const [teacherDetailsId, setTeacherDetailsId] = useState<string | null>(null);
+  const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null);
   const { toast } = useToast();
   const { schoolLevel } = useSchoolLevel();
 
@@ -212,6 +215,7 @@ const TeacherManagement = () => {
     }
 
     setTeacherDetailsId(teacherDetails?.id || null);
+    setEditPhotoFile(null);
     setEditForm({
       first_name: teacher.first_name,
       last_name: teacher.last_name,
@@ -285,6 +289,15 @@ const TeacherManagement = () => {
         .eq('user_id', editingTeacher.user_id);
 
       if (profileError) throw profileError;
+
+      // Upload new profile photo if selected
+      if (editPhotoFile) {
+        try {
+          await uploadAvatarForProfile(editingTeacher.id, editPhotoFile);
+        } catch (e) {
+          console.error('Photo upload failed:', e);
+        }
+      }
 
       // Update or insert teacher details
       const teacherDetailsData = {
@@ -643,6 +656,17 @@ const TeacherManagement = () => {
           
           <ScrollArea className="max-h-[calc(90vh-180px)] pr-4">
             <div className="space-y-6 py-4">
+              {/* Profile Photo */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Profile Photo</h3>
+                <PhotoUpload
+                  value={editingTeacher?.avatar_url}
+                  file={editPhotoFile}
+                  onFileSelected={setEditPhotoFile}
+                  fallback={`${(editForm.first_name || 'T')[0]}${(editForm.last_name || '')[0] || ''}`}
+                />
+              </div>
+
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Basic Information</h3>

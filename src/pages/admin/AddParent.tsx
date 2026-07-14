@@ -42,6 +42,7 @@ type AddParentForm = z.infer<typeof addParentSchema>;
 
 const AddParent = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 

@@ -900,6 +900,24 @@ const AcademicStructure = () => {
                           />
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <Label>Current Academic Year</Label>
+                        <Select
+                          value={yearForm.is_current ? 'yes' : 'no'}
+                          onValueChange={(v) => setYearForm(prev => ({ ...prev, is_current: v === 'yes' }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="yes">Yes — mark this as the Current Academic Year</SelectItem>
+                            <SelectItem value="no">No</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Only one academic year can be marked as Current. Setting this to Yes will automatically unset any previously current year.
+                        </p>
+                      </div>
                       <div className="flex justify-end gap-3">
                         <Button
                           type="button"

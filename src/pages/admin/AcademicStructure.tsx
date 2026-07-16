@@ -572,11 +572,12 @@ const AcademicStructure = () => {
 
   const handleSetCurrentYear = async (yearId: string) => {
     try {
-      // First, set all years to non-current
+      // First, unset current for all years in THIS school only
       await supabase
         .from('academic_years')
         .update({ is_current: false })
-        .neq('id', '');
+        .eq('school_id', schoolId!)
+        .eq('is_current', true);
 
       // Then set the selected year as current
       const { error } = await supabase

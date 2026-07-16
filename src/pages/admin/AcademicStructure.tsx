@@ -223,10 +223,11 @@ const AcademicStructure = () => {
         return;
       }
 
-      // Fetch academic years
+      // Fetch academic years scoped to the logged-in school
       const { data: yearsData, error: yearsError } = await supabase
         .from('academic_years')
         .select('*')
+        .eq('school_id', schoolId)
         .order('start_date', { ascending: false });
 
       if (yearsError) throw yearsError;

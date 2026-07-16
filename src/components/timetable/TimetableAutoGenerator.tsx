@@ -22,6 +22,8 @@ const DAYS = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 
 const TimetableAutoGenerator = () => {
   const { profile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
+  const schoolId = profile?.school_id;
   const queryClient = useQueryClient();
   const [generatedEntries, setGeneratedEntries] = useState<GeneratedEntry[]>([]);
   const [warnings, setWarnings] = useState<ConflictWarning[]>([]);
@@ -30,55 +32,88 @@ const TimetableAutoGenerator = () => {
   const [filterClass, setFilterClass] = useState<string>('all');
   const [showClearDialog, setShowClearDialog] = useState(false);
 
-  // Fetch config
+  // Fetch config (school-scoped)
   const { data: config, isLoading: configLoading } = useQuery({
-    queryKey: ['timetable-gen-config', profile?.school_id],
+    queryKey: ['timetable-gen-config', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('timetable_generation_config')
         .select('*')
-        .eq('school_id', profile?.school_id)
+        .eq('school_id', schoolId!)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.school_id,
+    enabled: !!schoolId,
   });
 
-  // Fetch subject period configs
+  // Classes belonging to THIS school only — the exact names the admin created.
+  const { data: schoolClasses } = useQuery({
+    queryKey: ['timetable-school-classes', schoolId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, name')
+        .eq('school_id', schoolId!)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolId,
+  });
+
+  // Subjects belonging to THIS school only.
+  const { data: schoolSubjects } = useQuery({
+    queryKey: ['timetable-school-subjects', schoolId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('school_id', schoolId!);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolId,
+  });
+
+  // Subject period configs — school-scoped.
   const { data: periodConfigs } = useQuery({
-    queryKey: ['subject-period-configs', profile?.school_id],
+    queryKey: ['subject-period-configs', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subject_period_config')
-        .select('*');
+        .select('*')
+        .eq('school_id', schoolId!);
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.school_id,
+    enabled: !!schoolId,
   });
 
-  // Fetch teacher-subject-class assignments
+  // Teacher specializations — filter via inner join on classes.school_id
+  // (teacher_specializations has no school_id column).
   const { data: specializations } = useQuery({
-    queryKey: ['teacher-specs-for-gen', profile?.school_id],
+    queryKey: ['teacher-specs-for-gen', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('teacher_specializations')
         .select(`
           class_id, subject_id, teacher_id,
-          classes:class_id(id, name),
-          subjects:subject_id(id, name, code),
+          classes:class_id!inner(id, name, school_id),
+          subjects:subject_id!inner(id, name, code, school_id),
           teachers:teacher_id(id, profile_id, profiles:profile_id(first_name, last_name))
-        `);
+        `)
+        .eq('classes.school_id', schoolId!)
+        .eq('subjects.school_id', schoolId!);
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.school_id,
+    enabled: !!schoolId,
   });
 
-  // Fetch existing locked entries
+  // Existing locked entries — school-scoped.
   const { data: lockedEntries } = useQuery({
-    queryKey: ['locked-timetable-entries', profile?.school_id],
+    queryKey: ['locked-timetable-entries', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('timetables')
@@ -86,24 +121,16 @@ const TimetableAutoGenerator = () => {
           *, class:classes(name), subject:subjects(name, code),
           teacher:profiles!timetables_teacher_id_fkey(first_name, last_name)
         `)
+        .eq('school_id', schoolId!)
         .eq('is_locked', true);
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.school_id,
+    enabled: !!schoolId,
   });
 
-  // Fetch classes for filter
-  const { data: classes } = useQuery({
-    queryKey: ['classes-for-gen-filter', profile?.school_id],
-    queryFn: async () => {
-      if (!profile?.school_id) return [];
-      const { data, error } = await supabase.from('classes').select('id, name').eq('school_id', profile.school_id).order('name');
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profile?.school_id,
-  });
+  // Classes for filter — same school-scoped list used for validation.
+  const classes = schoolClasses;
 
   const handleGenerate = () => {
     if (!config || !specializations || !periodConfigs) {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useSchoolLevel } from '@/hooks/useSchoolLevel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,8 @@ const DAYS = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 
 const TimetableAutoGenerator = () => {
   const { profile } = useAuth();
+  const { schoolLevel } = useSchoolLevel();
+  const schoolId = profile?.school_id;
   const queryClient = useQueryClient();
   const [generatedEntries, setGeneratedEntries] = useState<GeneratedEntry[]>([]);
   const [warnings, setWarnings] = useState<ConflictWarning[]>([]);
@@ -29,55 +32,88 @@ const TimetableAutoGenerator = () => {
   const [filterClass, setFilterClass] = useState<string>('all');
   const [showClearDialog, setShowClearDialog] = useState(false);
 
-  // Fetch config
+  // Fetch config (school-scoped)
   const { data: config, isLoading: configLoading } = useQuery({
-    queryKey: ['timetable-gen-config', profile?.school_id],
+    queryKey: ['timetable-gen-config', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('timetable_generation_config')
         .select('*')
-        .eq('school_id', profile?.school_id)
+        .eq('school_id', schoolId!)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.school_id,
+    enabled: !!schoolId,
   });
 
-  // Fetch subject period configs
+  // Classes belonging to THIS school only — the exact names the admin created.
+  const { data: schoolClasses } = useQuery({
+    queryKey: ['timetable-school-classes', schoolId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, name')
+        .eq('school_id', schoolId!)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolId,
+  });
+
+  // Subjects belonging to THIS school only.
+  const { data: schoolSubjects } = useQuery({
+    queryKey: ['timetable-school-subjects', schoolId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('school_id', schoolId!);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolId,
+  });
+
+  // Subject period configs — school-scoped.
   const { data: periodConfigs } = useQuery({
-    queryKey: ['subject-period-configs', profile?.school_id],
+    queryKey: ['subject-period-configs', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subject_period_config')
-        .select('*');
+        .select('*')
+        .eq('school_id', schoolId!);
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.school_id,
+    enabled: !!schoolId,
   });
 
-  // Fetch teacher-subject-class assignments
+  // Teacher specializations — filter via inner join on classes.school_id
+  // (teacher_specializations has no school_id column).
   const { data: specializations } = useQuery({
-    queryKey: ['teacher-specs-for-gen', profile?.school_id],
+    queryKey: ['teacher-specs-for-gen', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('teacher_specializations')
         .select(`
           class_id, subject_id, teacher_id,
-          classes:class_id(id, name),
-          subjects:subject_id(id, name, code),
+          classes:class_id!inner(id, name, school_id),
+          subjects:subject_id!inner(id, name, code, school_id),
           teachers:teacher_id(id, profile_id, profiles:profile_id(first_name, last_name))
-        `);
+        `)
+        .eq('classes.school_id', schoolId!)
+        .eq('subjects.school_id', schoolId!);
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.school_id,
+    enabled: !!schoolId,
   });
 
-  // Fetch existing locked entries
+  // Existing locked entries — school-scoped.
   const { data: lockedEntries } = useQuery({
-    queryKey: ['locked-timetable-entries', profile?.school_id],
+    queryKey: ['locked-timetable-entries', schoolId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('timetables')
@@ -85,43 +121,54 @@ const TimetableAutoGenerator = () => {
           *, class:classes(name), subject:subjects(name, code),
           teacher:profiles!timetables_teacher_id_fkey(first_name, last_name)
         `)
+        .eq('school_id', schoolId!)
         .eq('is_locked', true);
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.school_id,
+    enabled: !!schoolId,
   });
 
-  // Fetch classes for filter
-  const { data: classes } = useQuery({
-    queryKey: ['classes-for-gen-filter', profile?.school_id],
-    queryFn: async () => {
-      if (!profile?.school_id) return [];
-      const { data, error } = await supabase.from('classes').select('id, name').eq('school_id', profile.school_id).order('name');
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profile?.school_id,
-  });
+  // Classes for filter — same school-scoped list used for validation.
+  const classes = schoolClasses;
 
   const handleGenerate = () => {
-    if (!config || !specializations || !periodConfigs) {
-      toast.error('Please save configuration first');
+    // Pre-flight validation — surface exactly what is missing.
+    const missing: string[] = [];
+    if (!config) missing.push('timetable configuration (open the Configuration tab and save)');
+    if (!schoolClasses || schoolClasses.length === 0) missing.push('classes for this school (create them in Academic Structure)');
+    if (!schoolSubjects || schoolSubjects.length === 0) missing.push('subjects for this school');
+    if (!specializations || specializations.length === 0) missing.push('teacher-subject-class assignments');
+    if (!periodConfigs || periodConfigs.length === 0) missing.push('periods per subject per week');
+    if (missing.length > 0) {
+      toast.error(`Cannot generate: missing ${missing.join('; ')}.`);
       return;
     }
 
     const timeSlots = buildTimeSlots(
-      config.day_start_time,
-      config.periods_per_day,
-      config.period_duration,
-      config.break_after_period || [],
-      config.break_duration || [],
+      config!.day_start_time,
+      config!.periods_per_day,
+      config!.period_duration,
+      config!.break_after_period || [],
+      config!.break_duration || [],
     );
 
-    // Build requirements
-    const requirements: SubjectRequirement[] = specializations.map((spec: any) => {
-      const periodConfig = periodConfigs.find(
-        (pc: any) => pc.class_id === spec.class_id && pc.subject_id === spec.subject_id
+    // Restrict to specializations whose class + subject actually belong to this school.
+    const validClassIds = new Set((schoolClasses || []).map((c) => c.id));
+    const validSubjectIds = new Set((schoolSubjects || []).map((s) => s.id));
+    const scoped = (specializations || []).filter(
+      (spec: any) => validClassIds.has(spec.class_id) && validSubjectIds.has(spec.subject_id),
+    );
+
+    if (scoped.length === 0) {
+      toast.error('No teacher-subject-class assignments found for this school\'s classes.');
+      return;
+    }
+
+    // Build requirements — preserve the EXACT class name entered by the admin.
+    const requirements: SubjectRequirement[] = scoped.map((spec: any) => {
+      const periodConfig = periodConfigs!.find(
+        (pc: any) => pc.class_id === spec.class_id && pc.subject_id === spec.subject_id,
       );
       return {
         classId: spec.class_id,
@@ -152,7 +199,7 @@ const TimetableAutoGenerator = () => {
     }));
 
     const result = generateTimetable({
-      schoolDays: config.school_days || [1, 2, 3, 4, 5],
+      schoolDays: config!.school_days || [1, 2, 3, 4, 5],
       timeSlots,
       requirements,
       lockedEntries: locked,
@@ -163,7 +210,7 @@ const TimetableAutoGenerator = () => {
     setHasGenerated(true);
 
     if (result.success) {
-      toast.success(`Generated ${result.entries.length} timetable entries successfully!`);
+      toast.success(`Generated ${result.entries.length} timetable entries for ${schoolLevel || 'this'} school.`);
     } else {
       toast.warning(`Generated with ${result.warnings.length} warning(s). Review conflicts below.`);
     }

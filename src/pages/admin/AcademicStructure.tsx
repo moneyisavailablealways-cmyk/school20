@@ -127,6 +127,7 @@ const AcademicStructure = () => {
     name: '',
     start_date: '',
     end_date: '',
+    is_current: false,
   });
 
   const [levelForm, setLevelForm] = useState({
@@ -222,10 +223,11 @@ const AcademicStructure = () => {
         return;
       }
 
-      // Fetch academic years
+      // Fetch academic years scoped to the logged-in school
       const { data: yearsData, error: yearsError } = await supabase
         .from('academic_years')
         .select('*')
+        .eq('school_id', schoolId)
         .order('start_date', { ascending: false });
 
       if (yearsError) throw yearsError;
@@ -326,7 +328,7 @@ const AcademicStructure = () => {
 
   const handleSaveYear = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!yearForm.name || !yearForm.start_date || !yearForm.end_date) {
       toast({
         title: 'Validation Error',
@@ -336,11 +338,25 @@ const AcademicStructure = () => {
       return;
     }
 
+    if (!schoolId) {
+      toast({ title: 'Error', description: 'School context not loaded. Please refresh.', variant: 'destructive' });
+      return;
+    }
+
     try {
+      // If marking this year as current, unset any other current year for this school.
+      if (yearForm.is_current) {
+        await supabase
+          .from('academic_years')
+          .update({ is_current: false })
+          .eq('school_id', schoolId)
+          .eq('is_current', true);
+      }
+
       if (selectedYear) {
         const { error } = await supabase
           .from('academic_years')
-          .update(yearForm)
+          .update({ ...yearForm })
           .eq('id', selectedYear.id);
 
         if (error) throw error;
@@ -348,7 +364,7 @@ const AcademicStructure = () => {
       } else {
         const { error } = await supabase
           .from('academic_years')
-          .insert([yearForm]);
+          .insert([{ ...yearForm, school_id: schoolId }]);
 
         if (error) throw error;
         toast({ title: 'Success', description: 'Academic year created successfully' });
@@ -556,11 +572,12 @@ const AcademicStructure = () => {
 
   const handleSetCurrentYear = async (yearId: string) => {
     try {
-      // First, set all years to non-current
+      // First, unset current for all years in THIS school only
       await supabase
         .from('academic_years')
         .update({ is_current: false })
-        .neq('id', '');
+        .eq('school_id', schoolId!)
+        .eq('is_current', true);
 
       // Then set the selected year as current
       const { error } = await supabase
@@ -587,7 +604,7 @@ const AcademicStructure = () => {
   };
 
   const resetYearForm = () => {
-    setYearForm({ name: '', start_date: '', end_date: '' });
+    setYearForm({ name: '', start_date: '', end_date: '', is_current: false });
     setSelectedYear(null);
   };
 
@@ -618,6 +635,7 @@ const AcademicStructure = () => {
       name: year.name,
       start_date: year.start_date,
       end_date: year.end_date,
+      is_current: !!year.is_current,
     });
     setIsYearDialogOpen(true);
   };
@@ -883,6 +901,24 @@ const AcademicStructure = () => {
                           />
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <Label>Current Academic Year</Label>
+                        <Select
+                          value={yearForm.is_current ? 'yes' : 'no'}
+                          onValueChange={(v) => setYearForm(prev => ({ ...prev, is_current: v === 'yes' }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="yes">Yes — mark this as the Current Academic Year</SelectItem>
+                            <SelectItem value="no">No</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Only one academic year can be marked as Current. Setting this to Yes will automatically unset any previously current year.
+                        </p>
+                      </div>
                       <div className="flex justify-end gap-3">
                         <Button
                           type="button"
@@ -912,7 +948,7 @@ const AcademicStructure = () => {
                 </TableHeader>
                 <TableBody>
                   {academicYears.map((year) => (
-                    <TableRow key={year.id}>
+                    <TableRow key={year.id} className={!year.is_current ? 'opacity-60' : ''}>
                       <TableCell className="font-medium">{year.name}</TableCell>
                       <TableCell>
                         {format(new Date(year.start_date), 'MMM dd, yyyy')} -{' '}
@@ -925,13 +961,16 @@ const AcademicStructure = () => {
                             Current
                           </Badge>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSetCurrentYear(year.id)}
-                          >
-                            Set as Current
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSetCurrentYear(year.id)}
+                            >
+                              Set as Current
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>
@@ -943,15 +982,13 @@ const AcademicStructure = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          {!year.is_current && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDeleteDialog('year', year)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog('year', year)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

@@ -52,7 +52,7 @@ const TimetableGeneratorConfig = ({ onConfigReady }: TimetableGeneratorConfigPro
     enabled: !!profile?.school_id,
   });
 
-  // Fetch classes with subjects from teacher_specializations
+  // Fetch classes with subjects from teacher_specializations (school-scoped via joins)
   const { data: classSubjects, isLoading: csLoading } = useQuery({
     queryKey: ['class-subject-requirements', profile?.school_id],
     queryFn: async () => {
@@ -62,10 +62,12 @@ const TimetableGeneratorConfig = ({ onConfigReady }: TimetableGeneratorConfigPro
           class_id,
           subject_id,
           teacher_id,
-          classes:class_id(id, name),
-          subjects:subject_id(id, name, code),
+          classes:class_id!inner(id, name, school_id),
+          subjects:subject_id!inner(id, name, code, school_id),
           teachers:teacher_id(id, profile_id, profiles:profile_id(first_name, last_name))
         `)
+        .eq('classes.school_id', profile?.school_id!)
+        .eq('subjects.school_id', profile?.school_id!)
         .order('class_id');
       if (error) throw error;
       return data;
@@ -73,13 +75,14 @@ const TimetableGeneratorConfig = ({ onConfigReady }: TimetableGeneratorConfigPro
     enabled: !!profile?.school_id,
   });
 
-  // Fetch existing subject period configs
+  // Fetch existing subject period configs (school-scoped)
   const { data: periodConfigs } = useQuery({
     queryKey: ['subject-period-configs', profile?.school_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subject_period_config')
-        .select('*');
+        .select('*')
+        .eq('school_id', profile?.school_id!);
       if (error) throw error;
       return data;
     },

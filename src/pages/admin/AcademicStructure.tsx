@@ -947,7 +947,7 @@ const AcademicStructure = () => {
                 </TableHeader>
                 <TableBody>
                   {academicYears.map((year) => (
-                    <TableRow key={year.id}>
+                    <TableRow key={year.id} className={!year.is_current ? 'opacity-60' : ''}>
                       <TableCell className="font-medium">{year.name}</TableCell>
                       <TableCell>
                         {format(new Date(year.start_date), 'MMM dd, yyyy')} -{' '}
@@ -960,13 +960,16 @@ const AcademicStructure = () => {
                             Current
                           </Badge>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSetCurrentYear(year.id)}
-                          >
-                            Set as Current
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSetCurrentYear(year.id)}
+                            >
+                              Set as Current
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>
@@ -978,15 +981,13 @@ const AcademicStructure = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          {!year.is_current && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDeleteDialog('year', year)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog('year', year)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

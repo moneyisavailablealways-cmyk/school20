@@ -327,7 +327,7 @@ const AcademicStructure = () => {
 
   const handleSaveYear = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!yearForm.name || !yearForm.start_date || !yearForm.end_date) {
       toast({
         title: 'Validation Error',
@@ -337,11 +337,25 @@ const AcademicStructure = () => {
       return;
     }
 
+    if (!schoolId) {
+      toast({ title: 'Error', description: 'School context not loaded. Please refresh.', variant: 'destructive' });
+      return;
+    }
+
     try {
+      // If marking this year as current, unset any other current year for this school.
+      if (yearForm.is_current) {
+        await supabase
+          .from('academic_years')
+          .update({ is_current: false })
+          .eq('school_id', schoolId)
+          .eq('is_current', true);
+      }
+
       if (selectedYear) {
         const { error } = await supabase
           .from('academic_years')
-          .update(yearForm)
+          .update({ ...yearForm })
           .eq('id', selectedYear.id);
 
         if (error) throw error;
@@ -349,7 +363,7 @@ const AcademicStructure = () => {
       } else {
         const { error } = await supabase
           .from('academic_years')
-          .insert([yearForm]);
+          .insert([{ ...yearForm, school_id: schoolId }]);
 
         if (error) throw error;
         toast({ title: 'Success', description: 'Academic year created successfully' });

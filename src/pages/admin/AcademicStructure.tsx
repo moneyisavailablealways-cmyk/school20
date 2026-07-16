@@ -127,6 +127,7 @@ const AcademicStructure = () => {
     name: '',
     start_date: '',
     end_date: '',
+    is_current: false,
   });
 
   const [levelForm, setLevelForm] = useState({

@@ -633,6 +633,7 @@ const AcademicStructure = () => {
       name: year.name,
       start_date: year.start_date,
       end_date: year.end_date,
+      is_current: !!year.is_current,
     });
     setIsYearDialogOpen(true);
   };

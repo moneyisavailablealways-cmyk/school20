@@ -602,7 +602,7 @@ const AcademicStructure = () => {
   };
 
   const resetYearForm = () => {
-    setYearForm({ name: '', start_date: '', end_date: '' });
+    setYearForm({ name: '', start_date: '', end_date: '', is_current: false });
     setSelectedYear(null);
   };
 

@@ -133,23 +133,42 @@ const TimetableAutoGenerator = () => {
   const classes = schoolClasses;
 
   const handleGenerate = () => {
-    if (!config || !specializations || !periodConfigs) {
-      toast.error('Please save configuration first');
+    // Pre-flight validation — surface exactly what is missing.
+    const missing: string[] = [];
+    if (!config) missing.push('timetable configuration (open the Configuration tab and save)');
+    if (!schoolClasses || schoolClasses.length === 0) missing.push('classes for this school (create them in Academic Structure)');
+    if (!schoolSubjects || schoolSubjects.length === 0) missing.push('subjects for this school');
+    if (!specializations || specializations.length === 0) missing.push('teacher-subject-class assignments');
+    if (!periodConfigs || periodConfigs.length === 0) missing.push('periods per subject per week');
+    if (missing.length > 0) {
+      toast.error(`Cannot generate: missing ${missing.join('; ')}.`);
       return;
     }
 
     const timeSlots = buildTimeSlots(
-      config.day_start_time,
-      config.periods_per_day,
-      config.period_duration,
-      config.break_after_period || [],
-      config.break_duration || [],
+      config!.day_start_time,
+      config!.periods_per_day,
+      config!.period_duration,
+      config!.break_after_period || [],
+      config!.break_duration || [],
     );
 
-    // Build requirements
-    const requirements: SubjectRequirement[] = specializations.map((spec: any) => {
-      const periodConfig = periodConfigs.find(
-        (pc: any) => pc.class_id === spec.class_id && pc.subject_id === spec.subject_id
+    // Restrict to specializations whose class + subject actually belong to this school.
+    const validClassIds = new Set((schoolClasses || []).map((c) => c.id));
+    const validSubjectIds = new Set((schoolSubjects || []).map((s) => s.id));
+    const scoped = (specializations || []).filter(
+      (spec: any) => validClassIds.has(spec.class_id) && validSubjectIds.has(spec.subject_id),
+    );
+
+    if (scoped.length === 0) {
+      toast.error('No teacher-subject-class assignments found for this school\'s classes.');
+      return;
+    }
+
+    // Build requirements — preserve the EXACT class name entered by the admin.
+    const requirements: SubjectRequirement[] = scoped.map((spec: any) => {
+      const periodConfig = periodConfigs!.find(
+        (pc: any) => pc.class_id === spec.class_id && pc.subject_id === spec.subject_id,
       );
       return {
         classId: spec.class_id,
@@ -180,7 +199,7 @@ const TimetableAutoGenerator = () => {
     }));
 
     const result = generateTimetable({
-      schoolDays: config.school_days || [1, 2, 3, 4, 5],
+      schoolDays: config!.school_days || [1, 2, 3, 4, 5],
       timeSlots,
       requirements,
       lockedEntries: locked,
@@ -191,7 +210,7 @@ const TimetableAutoGenerator = () => {
     setHasGenerated(true);
 
     if (result.success) {
-      toast.success(`Generated ${result.entries.length} timetable entries successfully!`);
+      toast.success(`Generated ${result.entries.length} timetable entries for ${schoolLevel || 'this'} school.`);
     } else {
       toast.warning(`Generated with ${result.warnings.length} warning(s). Review conflicts below.`);
     }

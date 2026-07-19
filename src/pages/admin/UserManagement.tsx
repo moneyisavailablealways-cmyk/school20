@@ -151,7 +151,7 @@ const UserManagement = () => {
       phone: '',
       password: '',
       confirmPassword: '',
-      role: 'student',
+      role: 'admin',
       admissionNumber: '',
       gender: '',
       dateOfBirth: '',
@@ -172,7 +172,7 @@ const UserManagement = () => {
       firstName: '',
       lastName: '',
       phone: '',
-      role: 'student',
+      role: 'admin',
       is_active: true,
     },
   });
@@ -531,9 +531,11 @@ const UserManagement = () => {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
+              <DialogTitle>Create New Staff Account</DialogTitle>
               <DialogDescription>
-                Add a new user to the system with appropriate role and permissions.
+                Create login accounts for administrative staff only.
+                To add teachers, learners, students or parents, use <strong>Admissions</strong> or the
+                relevant management page — accounts for those roles are created automatically after approval.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -669,15 +671,11 @@ const UserManagement = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="student">{studentWord}</SelectItem>
-
-                          <SelectItem value="parent">Parent</SelectItem>
-                          <SelectItem value="teacher">Teacher</SelectItem>
-                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                          <SelectItem value="librarian">Librarian</SelectItem>
-                          <SelectItem value="bursar">Bursar</SelectItem>
-                          <SelectItem value="principal">Principal</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="principal">Principal</SelectItem>
+                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                          <SelectItem value="bursar">Bursar</SelectItem>
+                          <SelectItem value="librarian">Librarian</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -950,15 +948,15 @@ const UserManagement = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="student">{studentWord}</SelectItem>
-
-                          <SelectItem value="parent">Parent</SelectItem>
-                          <SelectItem value="teacher">Teacher</SelectItem>
-                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                          <SelectItem value="librarian">Librarian</SelectItem>
-                          <SelectItem value="bursar">Bursar</SelectItem>
-                          <SelectItem value="principal">Principal</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="principal">Principal</SelectItem>
+                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                          <SelectItem value="bursar">Bursar</SelectItem>
+                          <SelectItem value="librarian">Librarian</SelectItem>
+                          {/* legacy roles retained read-only for existing accounts */}
+                          {['student','parent','teacher'].map((r) => (
+                            <SelectItem key={r} value={r} disabled>{r} (managed elsewhere)</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

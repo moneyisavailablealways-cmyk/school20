@@ -129,6 +129,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/school-signup" element={<SchoolSignup />} />
+            <Route path="/apply/:schoolSlug" element={<PublicApply />} />
+            <Route path="/apply/:schoolSlug/status" element={<PublicApplicationStatus />} />
 
             {/* Super Admin Routes */}
             <Route

@@ -18,6 +18,8 @@ import LibrarianLayout from "@/components/LibrarianLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import SchoolSignup from "./pages/SchoolSignup";
+import PublicApply from "./pages/public/Apply";
+import PublicApplicationStatus from "./pages/public/ApplicationStatus";
 import Dashboard from "./pages/Dashboard";
 import SuperAdminLayout from "@/components/SuperAdminLayout";
 import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";

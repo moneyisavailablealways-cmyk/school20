@@ -531,9 +531,11 @@ const UserManagement = () => {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
+              <DialogTitle>Create New Staff Account</DialogTitle>
               <DialogDescription>
-                Add a new user to the system with appropriate role and permissions.
+                Create login accounts for administrative staff only.
+                To add teachers, learners, students or parents, use <strong>Admissions</strong> or the
+                relevant management page — accounts for those roles are created automatically after approval.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>

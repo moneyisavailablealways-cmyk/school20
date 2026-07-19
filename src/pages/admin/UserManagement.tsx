@@ -669,15 +669,11 @@ const UserManagement = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="student">{studentWord}</SelectItem>
-
-                          <SelectItem value="parent">Parent</SelectItem>
-                          <SelectItem value="teacher">Teacher</SelectItem>
-                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                          <SelectItem value="librarian">Librarian</SelectItem>
-                          <SelectItem value="bursar">Bursar</SelectItem>
-                          <SelectItem value="principal">Principal</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="principal">Principal</SelectItem>
+                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                          <SelectItem value="bursar">Bursar</SelectItem>
+                          <SelectItem value="librarian">Librarian</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

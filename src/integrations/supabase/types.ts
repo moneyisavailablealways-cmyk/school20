@@ -173,21 +173,41 @@ export type Database = {
         Row: {
           address: string | null
           application_date: string
+          application_number: string | null
+          application_type: string
+          birth_certificate_number: string | null
           class_applying_for: string
           created_at: string | null
           created_by: string | null
+          created_learner_id: string | null
+          created_parent_id: string | null
+          created_teacher_id: string | null
           date_of_birth: string | null
+          documents: Json
           documents_submitted: boolean | null
+          emergency_contacts: Json
+          exam_score: number | null
           gender: string | null
           id: string
+          interview_at: string | null
           interview_date: string | null
           interview_scheduled: boolean | null
+          medical_info: Json
+          national_id: string | null
           notes: string | null
           parent_email: string | null
           parent_name: string
+          parent_national_id: string | null
           parent_phone: string | null
+          parent_relationship: string | null
+          photo_url: string | null
           previous_school: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
           school_id: string
+          source: string
+          staff_details: Json
+          stage: string
           status: string
           student_name: string
           updated_at: string | null
@@ -195,21 +215,41 @@ export type Database = {
         Insert: {
           address?: string | null
           application_date?: string
+          application_number?: string | null
+          application_type?: string
+          birth_certificate_number?: string | null
           class_applying_for: string
           created_at?: string | null
           created_by?: string | null
+          created_learner_id?: string | null
+          created_parent_id?: string | null
+          created_teacher_id?: string | null
           date_of_birth?: string | null
+          documents?: Json
           documents_submitted?: boolean | null
+          emergency_contacts?: Json
+          exam_score?: number | null
           gender?: string | null
           id?: string
+          interview_at?: string | null
           interview_date?: string | null
           interview_scheduled?: boolean | null
+          medical_info?: Json
+          national_id?: string | null
           notes?: string | null
           parent_email?: string | null
           parent_name: string
+          parent_national_id?: string | null
           parent_phone?: string | null
+          parent_relationship?: string | null
+          photo_url?: string | null
           previous_school?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
           school_id: string
+          source?: string
+          staff_details?: Json
+          stage?: string
           status?: string
           student_name: string
           updated_at?: string | null
@@ -217,21 +257,41 @@ export type Database = {
         Update: {
           address?: string | null
           application_date?: string
+          application_number?: string | null
+          application_type?: string
+          birth_certificate_number?: string | null
           class_applying_for?: string
           created_at?: string | null
           created_by?: string | null
+          created_learner_id?: string | null
+          created_parent_id?: string | null
+          created_teacher_id?: string | null
           date_of_birth?: string | null
+          documents?: Json
           documents_submitted?: boolean | null
+          emergency_contacts?: Json
+          exam_score?: number | null
           gender?: string | null
           id?: string
+          interview_at?: string | null
           interview_date?: string | null
           interview_scheduled?: boolean | null
+          medical_info?: Json
+          national_id?: string | null
           notes?: string | null
           parent_email?: string | null
           parent_name?: string
+          parent_national_id?: string | null
           parent_phone?: string | null
+          parent_relationship?: string | null
+          photo_url?: string | null
           previous_school?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
           school_id?: string
+          source?: string
+          staff_details?: Json
+          stage?: string
           status?: string
           student_name?: string
           updated_at?: string | null
@@ -302,6 +362,94 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_documents: {
+        Row: {
+          application_id: string
+          created_at: string
+          document_type: string | null
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string | null
+          school_id: string
+          size_bytes: number | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          document_type?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type?: string | null
+          school_id: string
+          size_bytes?: number | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          document_type?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string | null
+          school_id?: string
+          size_bytes?: number | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "admission_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_status_history: {
+        Row: {
+          application_id: string
+          changed_by: string | null
+          created_at: string
+          from_stage: string | null
+          id: string
+          reason: string | null
+          school_id: string
+          to_stage: string
+        }
+        Insert: {
+          application_id: string
+          changed_by?: string | null
+          created_at?: string
+          from_stage?: string | null
+          id?: string
+          reason?: string | null
+          school_id: string
+          to_stage: string
+        }
+        Update: {
+          application_id?: string
+          changed_by?: string | null
+          created_at?: string
+          from_stage?: string | null
+          id?: string
+          reason?: string | null
+          school_id?: string
+          to_stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_status_history_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "admission_applications"
             referencedColumns: ["id"]
           },
         ]
@@ -3032,6 +3180,10 @@ export type Database = {
       school_settings: {
         Row: {
           address: string | null
+          admissions_mode: string
+          auto_create_learner_login: boolean
+          auto_create_parent_login: boolean
+          auto_create_teacher_login: boolean
           created_at: string | null
           description: string | null
           email: string | null
@@ -3050,6 +3202,10 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          admissions_mode?: string
+          auto_create_learner_login?: boolean
+          auto_create_parent_login?: boolean
+          auto_create_teacher_login?: boolean
           created_at?: string | null
           description?: string | null
           email?: string | null
@@ -3068,6 +3224,10 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          admissions_mode?: string
+          auto_create_learner_login?: boolean
+          auto_create_parent_login?: boolean
+          auto_create_teacher_login?: boolean
           created_at?: string | null
           description?: string | null
           email?: string | null

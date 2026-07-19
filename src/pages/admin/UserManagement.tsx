@@ -946,15 +946,15 @@ const UserManagement = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="student">{studentWord}</SelectItem>
-
-                          <SelectItem value="parent">Parent</SelectItem>
-                          <SelectItem value="teacher">Teacher</SelectItem>
-                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                          <SelectItem value="librarian">Librarian</SelectItem>
-                          <SelectItem value="bursar">Bursar</SelectItem>
-                          <SelectItem value="principal">Principal</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="principal">Principal</SelectItem>
+                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                          <SelectItem value="bursar">Bursar</SelectItem>
+                          <SelectItem value="librarian">Librarian</SelectItem>
+                          {/* legacy roles retained read-only for existing accounts */}
+                          {['student','parent','teacher'].map((r) => (
+                            <SelectItem key={r} value={r} disabled>{r} (managed elsewhere)</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

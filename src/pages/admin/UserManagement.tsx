@@ -151,7 +151,7 @@ const UserManagement = () => {
       phone: '',
       password: '',
       confirmPassword: '',
-      role: 'student',
+      role: 'admin',
       admissionNumber: '',
       gender: '',
       dateOfBirth: '',
@@ -172,7 +172,7 @@ const UserManagement = () => {
       firstName: '',
       lastName: '',
       phone: '',
-      role: 'student',
+      role: 'admin',
       is_active: true,
     },
   });

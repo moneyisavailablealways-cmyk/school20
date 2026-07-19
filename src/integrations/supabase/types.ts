@@ -4981,6 +4981,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_admission_application: {
+        Args: { p_app_id: string; p_class_id?: string; p_stream_id?: string }
+        Returns: Json
+      }
       calculate_grade: {
         Args: { p_marks: number }
         Returns: {
@@ -5058,6 +5062,14 @@ export type Database = {
       fulfill_library_reservation: {
         Args: { p_reservation_id: string }
         Returns: Json
+      }
+      generate_admission_number: {
+        Args: { p_school_id: string }
+        Returns: string
+      }
+      generate_employee_number: {
+        Args: { p_school_id: string }
+        Returns: string
       }
       generate_invoice_number: { Args: never; Returns: string }
       get_auto_comment: {
@@ -5161,6 +5173,10 @@ export type Database = {
       teacher_can_view_enrollment: {
         Args: { enrollment_class_id: string; enrollment_stream_id: string }
         Returns: boolean
+      }
+      transition_application: {
+        Args: { p_app_id: string; p_new_stage: string; p_reason?: string }
+        Returns: Json
       }
     }
     Enums: {

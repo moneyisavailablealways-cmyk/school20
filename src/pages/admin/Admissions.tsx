@@ -42,7 +42,7 @@ const stageBadge = (stage: string) => {
     cancelled: 'bg-gray-200 text-gray-700',
     enrolled: 'bg-green-100 text-green-800',
   };
-  return <Badge className={map[stage] || 'bg-gray-100'}>{stage.replaceAll('_', ' ')}</Badge>;
+  return <Badge className={map[stage] || 'bg-gray-100'}>{stage.replace(/_/g, ' ')}</Badge>;
 };
 
 type ApplicationType = 'learner' | 'staff';
@@ -492,7 +492,7 @@ const Admissions = () => {
                 {['under_review', 'interview_scheduled', 'entrance_exam', 'waiting_list', 'cancelled'].map((s) => (
                   <Button key={s} size="sm" variant="outline"
                     onClick={() => transitionMutation.mutate({ id: viewApp.id, stage: s })}>
-                    Move to {s.replaceAll('_', ' ')}
+                    Move to {s.replace(/_/g, ' ')}
                   </Button>
                 ))}
               </div>

@@ -52,7 +52,7 @@ const ApplicationStatus: React.FC = () => {
                 <div key={r.application_number} className="border rounded p-3 text-sm">
                   <div className="flex justify-between">
                     <span className="font-mono">{r.application_number}</span>
-                    <Badge>{r.stage?.replaceAll('_', ' ')}</Badge>
+                    <Badge>{r.stage?.replace(/_/g, ' ')}</Badge>
                   </div>
                   <div className="text-muted-foreground">{r.student_name} — {r.class_applying_for}</div>
                   {r.interview_at && <div className="text-xs mt-1">Interview: {new Date(r.interview_at).toLocaleString()}</div>}

@@ -5187,7 +5187,11 @@ export type Database = {
         | "late"
         | "excused"
         | "left_early"
-      section_level_type: "nursery" | "primary"
+      section_level_type:
+        | "nursery"
+        | "primary"
+        | "secondary"
+        | "higher_institution"
       teacher_attendance_status:
         | "present"
         | "absent"
@@ -5335,7 +5339,12 @@ export const Constants = {
     Enums: {
       attendance_session: ["morning", "afternoon", "full_day"],
       attendance_status: ["present", "absent", "late", "excused", "left_early"],
-      section_level_type: ["nursery", "primary"],
+      section_level_type: [
+        "nursery",
+        "primary",
+        "secondary",
+        "higher_institution",
+      ],
       teacher_attendance_status: [
         "present",
         "absent",

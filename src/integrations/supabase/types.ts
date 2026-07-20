@@ -2370,7 +2370,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
           school_id: string | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -2384,7 +2384,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
           school_id?: string | null
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -2398,7 +2398,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           school_id?: string | null
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -4038,13 +4038,16 @@ export type Database = {
           address: string | null
           admission_date: string
           admission_number: string | null
+          birth_certificate_number: string | null
           created_at: string | null
+          current_class_id: string | null
           date_of_birth: string
           enrollment_status: string | null
           gender: string | null
           house: string | null
           id: string
           level_type: Database["public"]["Enums"]["section_level_type"]
+          national_id: string | null
           photo_url: string | null
           profile_id: string | null
           school_id: string | null
@@ -4056,13 +4059,16 @@ export type Database = {
           address?: string | null
           admission_date: string
           admission_number?: string | null
+          birth_certificate_number?: string | null
           created_at?: string | null
+          current_class_id?: string | null
           date_of_birth: string
           enrollment_status?: string | null
           gender?: string | null
           house?: string | null
           id?: string
           level_type?: Database["public"]["Enums"]["section_level_type"]
+          national_id?: string | null
           photo_url?: string | null
           profile_id?: string | null
           school_id?: string | null
@@ -4074,13 +4080,16 @@ export type Database = {
           address?: string | null
           admission_date?: string
           admission_number?: string | null
+          birth_certificate_number?: string | null
           created_at?: string | null
+          current_class_id?: string | null
           date_of_birth?: string
           enrollment_status?: string | null
           gender?: string | null
           house?: string | null
           id?: string
           level_type?: Database["public"]["Enums"]["section_level_type"]
+          national_id?: string | null
           photo_url?: string | null
           profile_id?: string | null
           school_id?: string | null
@@ -4089,6 +4098,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "students_current_class_id_fkey"
+            columns: ["current_class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "students_profile_id_fkey"
             columns: ["profile_id"]

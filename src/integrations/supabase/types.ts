@@ -5075,6 +5075,17 @@ export type Database = {
       delete_level: { Args: { level_id: string }; Returns: boolean }
       delete_stream: { Args: { stream_id: string }; Returns: boolean }
       expire_overdue_reservations: { Args: never; Returns: number }
+      finalize_admission_approval: {
+        Args: {
+          p_actor_user_id?: string
+          p_app_id: string
+          p_auth_user_id: string
+          p_class_id?: string
+          p_parent_auth_user_id?: string
+          p_stream_id?: string
+        }
+        Returns: Json
+      }
       fulfill_library_reservation: {
         Args: { p_reservation_id: string }
         Returns: Json

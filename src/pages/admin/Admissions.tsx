@@ -174,10 +174,12 @@ const Admissions = () => {
 
   const approveMutation = useMutation({
     mutationFn: async ({ id, classId }: { id: string; classId?: string }) => {
-      const { data, error } = await supabase.rpc('approve_admission_application', {
-        p_app_id: id,
-        p_class_id: classId || null,
-        p_stream_id: null,
+      const { data, error } = await supabase.functions.invoke('approve-admission', {
+        body: {
+          applicationId: id,
+          classId: classId || null,
+          streamId: null,
+        },
       });
       if (error) throw error;
       if (!(data as any)?.success) throw new Error((data as any)?.error || 'Approval failed');

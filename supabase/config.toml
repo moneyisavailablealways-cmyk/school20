@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.send-fee-reminders]
 verify_jwt = false
+
+[functions.approve-admission]
+verify_jwt = true

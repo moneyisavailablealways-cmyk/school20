@@ -143,7 +143,8 @@ serve(async (req) => {
         if (existingProfile && existingProfile.school_id && existingProfile.school_id !== application.school_id) {
           throw new Error(`The account ${email} belongs to another school`);
         }
-        if (existingProfile && !allowExistingRoles.includes(existingProfile.role)) {
+        const isUnassignedAuthTriggerProfile = existingProfile && !existingProfile.school_id && existingProfile.role === 'student';
+        if (existingProfile && !isUnassignedAuthTriggerProfile && !allowExistingRoles.includes(existingProfile.role)) {
           throw new Error(`The account ${email} is already assigned as ${existingProfile.role}`);
         }
 

@@ -181,7 +181,13 @@ const Admissions = () => {
           streamId: null,
         },
       });
-      if (error) throw error;
+      if (error) {
+        const response = (error as any).context;
+        const body = response instanceof Response
+          ? await response.clone().json().catch(() => null)
+          : null;
+        throw new Error(body?.error || error.message || 'Approval failed');
+      }
       if (!(data as any)?.success) throw new Error((data as any)?.error || 'Approval failed');
       return data;
     },

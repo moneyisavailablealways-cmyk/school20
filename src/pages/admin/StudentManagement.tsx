@@ -92,7 +92,7 @@ const StudentManagement = () => {
 
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [profile?.school_id]);
 
 
   useEffect(() => {
@@ -109,12 +109,14 @@ const StudentManagement = () => {
 
   const fetchAllData = async () => {
     try {
+      if (!profile?.school_id) return;
       setLoading(true);
 
       // Fetch students
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('*')
+        .eq('school_id', profile.school_id)
         .order('created_at', { ascending: false });
 
       if (studentsError) throw studentsError;

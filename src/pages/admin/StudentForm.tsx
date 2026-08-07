@@ -16,6 +16,7 @@ import { CalendarIcon, Save, X, User, GraduationCap, Contact, AlertTriangle, Use
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { GENDER_OPTIONS } from '@/lib/constants/gender';
 
 interface StudentFormProps {
   student?: any;
@@ -853,10 +854,11 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {GENDER_OPTIONS.map((g) => (
+                        <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                      ))}
                     </SelectContent>
+
                   </Select>
                 </div>
               </div>

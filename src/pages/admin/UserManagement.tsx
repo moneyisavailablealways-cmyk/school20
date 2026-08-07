@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+import { GENDER_OPTIONS, normalizeGender } from '@/lib/constants/gender';
 import {
   Users,
   UserPlus,
@@ -327,7 +328,7 @@ const UserManagement = () => {
             profile_id: result.profile_id,
             date_of_birth: data.dateOfBirth!,
             admission_date: new Date().toISOString().slice(0, 10),
-            gender: data.gender || null,
+            gender: normalizeGender(data.gender),
             address: data.address || null,
             house: data.house || null,
             photo_url: photoUrl,
@@ -715,9 +716,11 @@ const UserManagement = () => {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="male">Male</SelectItem>
-                                <SelectItem value="female">Female</SelectItem>
+                                {GENDER_OPTIONS.map((g) => (
+                                  <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                                ))}
                               </SelectContent>
+
                             </Select>
                             <FormMessage />
                           </FormItem>

@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Eye, CheckCircle, XCircle, Clock, GraduationCap, Briefcase } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { GENDER_OPTIONS, normalizeGender, GENDER_ERROR_MESSAGE } from '@/lib/constants/gender';
 
 const STAGES = [
   { value: 'pending', label: 'Pending' },
@@ -131,7 +132,10 @@ const Admissions = () => {
         parent_relationship: form.parent_relationship || null,
         parent_national_id: form.parent_national_id || null,
         date_of_birth: form.date_of_birth || null,
-        gender: form.gender || null,
+        gender: (() => {
+          if (form.gender && !normalizeGender(form.gender)) throw new Error(GENDER_ERROR_MESSAGE);
+          return normalizeGender(form.gender);
+        })(),
         address: form.address || null,
         previous_school: form.previous_school || null,
         class_applying_for: tab === 'learner' ? form.class_applying_for : 'N/A',
@@ -340,9 +344,11 @@ const Admissions = () => {
                 <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
+                    {GENDER_OPTIONS.map((g) => (
+                      <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                    ))}
                   </SelectContent>
+
                 </Select>
               </div>
               {tab === 'learner' && (

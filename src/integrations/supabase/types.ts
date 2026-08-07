@@ -5165,6 +5165,7 @@ export type Database = {
         }
         Returns: string
       }
+      normalize_gender: { Args: { p_gender: string }; Returns: string }
       notify_next_in_queue: {
         Args: { p_library_item_id: string }
         Returns: undefined

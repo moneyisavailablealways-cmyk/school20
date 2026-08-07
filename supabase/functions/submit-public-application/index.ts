@@ -60,6 +60,11 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    if (gender && !normalizeGender(gender)) {
+      return new Response(JSON.stringify({ error: 'Please select a valid gender (Male or Female).' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,

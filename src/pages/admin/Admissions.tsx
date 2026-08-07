@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Eye, CheckCircle, XCircle, Clock, GraduationCap, Briefcase } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { GENDER_OPTIONS, normalizeGender, GENDER_ERROR_MESSAGE } from '@/lib/constants/gender';
 
 const STAGES = [
   { value: 'pending', label: 'Pending' },

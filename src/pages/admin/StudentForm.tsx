@@ -16,6 +16,7 @@ import { CalendarIcon, Save, X, User, GraduationCap, Contact, AlertTriangle, Use
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { GENDER_OPTIONS } from '@/lib/constants/gender';
 
 interface StudentFormProps {
   student?: any;

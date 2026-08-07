@@ -132,7 +132,10 @@ const Admissions = () => {
         parent_relationship: form.parent_relationship || null,
         parent_national_id: form.parent_national_id || null,
         date_of_birth: form.date_of_birth || null,
-        gender: form.gender || null,
+        gender: (() => {
+          if (form.gender && !normalizeGender(form.gender)) throw new Error(GENDER_ERROR_MESSAGE);
+          return normalizeGender(form.gender);
+        })(),
         address: form.address || null,
         previous_school: form.previous_school || null,
         class_applying_for: tab === 'learner' ? form.class_applying_for : 'N/A',

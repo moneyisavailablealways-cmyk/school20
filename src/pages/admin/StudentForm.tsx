@@ -853,10 +853,11 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSuccess, onCancel 
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {GENDER_OPTIONS.map((g) => (
+                        <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                      ))}
                     </SelectContent>
+
                   </Select>
                 </div>
               </div>

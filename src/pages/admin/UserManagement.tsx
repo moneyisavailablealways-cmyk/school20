@@ -715,9 +715,11 @@ const UserManagement = () => {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="male">Male</SelectItem>
-                                <SelectItem value="female">Female</SelectItem>
+                                {GENDER_OPTIONS.map((g) => (
+                                  <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                                ))}
                               </SelectContent>
+
                             </Select>
                             <FormMessage />
                           </FormItem>

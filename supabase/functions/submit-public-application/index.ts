@@ -6,6 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Must match DB check constraint students_gender_check -> ('male','female')
+const normalizeGender = (value: unknown): string | null => {
+  const v = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!v) return null;
+  if (['m', 'male', 'boy'].includes(v)) return 'male';
+  if (['f', 'female', 'girl'].includes(v)) return 'female';
+  return null;
+};
+
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') {
@@ -86,7 +96,7 @@ Deno.serve(async (req) => {
         parent_national_id: parent_national_id || null,
         parent_relationship: parent_relationship || null,
         date_of_birth: date_of_birth || null,
-        gender: gender || null,
+        gender: normalizeGender(gender),
         address: address || null,
         previous_school: previous_school || null,
         class_applying_for: class_applying_for || (application_type === 'staff' ? 'N/A' : ''),

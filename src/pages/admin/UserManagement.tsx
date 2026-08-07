@@ -328,7 +328,7 @@ const UserManagement = () => {
             profile_id: result.profile_id,
             date_of_birth: data.dateOfBirth!,
             admission_date: new Date().toISOString().slice(0, 10),
-            gender: data.gender || null,
+            gender: normalizeGender(data.gender),
             address: data.address || null,
             house: data.house || null,
             photo_url: photoUrl,

@@ -3,8 +3,8 @@ import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   BookOpen, 
-  User,
-  MessageSquares, 
+  Users,
+  MessageSquare,
   BarChart3, 
   Home,
   Library,

@@ -3,7 +3,8 @@ import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   BookOpen, 
-  Users, 
+  Users,
+  MessageSquare,
   BarChart3, 
   Home,
   Library,
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Reservations', href: '/librarian/reservations', icon: Bookmark },
   { name: 'Fines', href: '/librarian/fines', icon: AlertTriangle },
   { name: 'Reports', href: '/librarian/reports', icon: BarChart3 },
+  { name: 'Communication', href: '/librarian/communication', icon: MessageSquare },
   { name: 'Appointments', href: '/librarian/appointments', icon: CalendarCheck },
   { name: 'Profile', href: '/librarian/profile', icon: User },
 ];

@@ -10,7 +10,8 @@ import {
   CalendarCheck,
   ClipboardCheck,
   FileText,
-  Brain
+  Brain,
+  MessageSquare
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -26,6 +27,7 @@ const buildNavigation = (t: { Students: string; studentAttendance: string }) => 
   { name: 'My Attendance', href: '/teacher/my-attendance', icon: User },
   { name: 'Submit Marks', href: '/teacher/marks', icon: FileText },
   { name: 'Academic Risk', href: '/teacher/academic-risk', icon: Brain },
+  { name: 'Communication', href: '/teacher/communication', icon: MessageSquare },
   { name: 'Appointments', href: '/teacher/appointments', icon: CalendarCheck },
   { name: 'Profile', href: '/teacher/profile', icon: User },
 ];

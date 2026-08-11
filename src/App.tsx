@@ -52,6 +52,7 @@ import Schedule from "./pages/teacher/Schedule";
 import TeacherAttendance from "./pages/teacher/Attendance";
 import TeacherMyAttendance from "./pages/teacher/MyAttendance";
 import TeacherAppointments from "./pages/teacher/Appointments";
+import CommunicationPage from "./pages/shared/CommunicationPage";
 import AdminTeacherAttendance from "./pages/admin/TeacherAttendance";
 import AdminReportCards from "./pages/admin/ReportCards";
 import AcademicRiskDetection from "./pages/admin/AcademicRiskDetection";
@@ -208,6 +209,7 @@ const App = () => (
               <Route path="attendance" element={<TeacherAttendance />} />
               <Route path="my-attendance" element={<TeacherMyAttendance />} />
               <Route path="appointments" element={<TeacherAppointments />} />
+              <Route path="communication" element={<CommunicationPage />} />
               <Route path="marks" element={<TeacherMarksSubmission />} />
               <Route path="academic-risk" element={<TeacherAcademicRisk />} />
               <Route path="profile" element={<TeacherProfile />} />
@@ -233,6 +235,7 @@ const App = () => (
               <Route path="reports" element={<AcademicReports />} />
               <Route path="academic-risk" element={<HeadTeacherAcademicRisk />} />
               <Route path="appointments" element={<HeadTeacherAppointments />} />
+              <Route path="communication" element={<CommunicationPage />} />
               <Route path="profile" element={<HeadTeacherProfile />} />
             </Route>
             
@@ -274,6 +277,7 @@ const App = () => (
               <Route path="scholarships" element={<Scholarships />} />
               <Route path="reports" element={<BursarReports />} />
               <Route path="appointments" element={<BursarAppointments />} />
+              <Route path="communication" element={<CommunicationPage />} />
               <Route path="salaries" element={<SalaryManagement />} />
               <Route path="salary-payments" element={<Navigate to="/bursar/salaries" replace />} />
               <Route path="finance" element={<FinanceDashboard />} />
@@ -319,6 +323,7 @@ const App = () => (
               <Route path="fines" element={<LibraryFines />} />
               <Route path="reports" element={<LibraryReports />} />
               <Route path="appointments" element={<LibrarianAppointments />} />
+              <Route path="communication" element={<CommunicationPage />} />
               <Route path="profile" element={<LibrarianProfile />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

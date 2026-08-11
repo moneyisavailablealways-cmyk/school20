@@ -14,7 +14,8 @@ import {
   ClipboardList,
   Banknote,
   Wallet,
-  PieChart
+  PieChart,
+  MessageSquare
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Fees Management', href: '/bursar/fees', icon: Wallet },
   { name: 'Salary Management', href: '/bursar/salaries', icon: Banknote },
   { name: 'Reports', href: '/bursar/reports', icon: Receipt },
+  { name: 'Communication', href: '/bursar/communication', icon: MessageSquare },
   { name: 'Appointments', href: '/bursar/appointments', icon: CalendarCheck },
   { name: 'Profile', href: '/bursar/profile', icon: User },
 ];

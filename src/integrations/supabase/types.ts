@@ -2029,6 +2029,128 @@ export type Database = {
           },
         ]
       }
+      message_recipients: {
+        Row: {
+          created_at: string
+          id: string
+          is_archived: boolean
+          is_deleted: boolean
+          is_read: boolean
+          message_id: string
+          read_at: string | null
+          recipient_id: string
+          school_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          is_deleted?: boolean
+          is_read?: boolean
+          message_id: string
+          read_at?: string | null
+          recipient_id: string
+          school_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          is_deleted?: boolean
+          is_read?: boolean
+          message_id?: string
+          read_at?: string | null
+          recipient_id?: string
+          school_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_recipients_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_recipients_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_recipients_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          parent_message_id: string | null
+          school_id: string
+          sender_deleted: boolean
+          sender_id: string
+          subject: string
+          thread_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          parent_message_id?: string | null
+          school_id: string
+          sender_deleted?: boolean
+          sender_id: string
+          subject?: string
+          thread_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          parent_message_id?: string | null
+          school_id?: string
+          sender_deleted?: boolean
+          sender_id?: string
+          subject?: string
+          thread_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_parent_message_id_fkey"
+            columns: ["parent_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           category: string
@@ -5132,6 +5254,8 @@ export type Database = {
       is_admin_or_principal: { Args: never; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_bursar_user: { Args: never; Returns: boolean }
+      is_message_recipient: { Args: { _message_id: string }; Returns: boolean }
+      is_message_sender: { Args: { _message_id: string }; Returns: boolean }
       is_parent_of_student_profile: {
         Args: { target_profile_id: string }
         Returns: boolean

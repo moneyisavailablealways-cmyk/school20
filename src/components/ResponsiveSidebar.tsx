@@ -9,6 +9,7 @@ import { ConnectionStatusIndicator } from '@/components/ConnectionStatusIndicato
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { Badge } from '@/components/ui/badge';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+import NotificationBell from '@/components/NotificationBell';
 
 interface NavigationItem {
   name: string;
@@ -202,6 +203,9 @@ export function ResponsiveHeader({
               </p>
             )}
           </div>
+
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* Connection Status Indicator */}
           <ConnectionStatusIndicator />

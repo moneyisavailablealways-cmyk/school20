@@ -5161,6 +5161,10 @@ export type Database = {
         }
         Returns: number
       }
+      can_message_recipient: {
+        Args: { _recipient: string; _sender: string }
+        Returns: boolean
+      }
       cancel_library_reservation: {
         Args: { p_reason?: string; p_reservation_id: string }
         Returns: Json
@@ -5271,6 +5275,10 @@ export type Database = {
         Args: { student_profile_id: string }
         Returns: boolean
       }
+      is_thread_participant: {
+        Args: { _message_id: string; _profile_id: string }
+        Returns: boolean
+      }
       log_activity: {
         Args: {
           p_activity_type: string
@@ -5293,6 +5301,10 @@ export type Database = {
       notify_next_in_queue: {
         Args: { p_library_item_id: string }
         Returns: undefined
+      }
+      parent_linked_to_student_profile: {
+        Args: { _parent_profile: string; _student_profile: string }
+        Returns: boolean
       }
       reclassify_classes_level: {
         Args: {
@@ -5324,6 +5336,18 @@ export type Database = {
       }
       teacher_can_view_enrollment: {
         Args: { enrollment_class_id: string; enrollment_stream_id: string }
+        Returns: boolean
+      }
+      teacher_linked_to_parent: {
+        Args: { _parent_profile: string; _teacher_profile: string }
+        Returns: boolean
+      }
+      teacher_teaches_student_profile: {
+        Args: { _student_profile: string; _teacher_profile: string }
+        Returns: boolean
+      }
+      teacher_teaches_student_row: {
+        Args: { _student_id: string; _teacher_profile: string }
         Returns: boolean
       }
       transition_application: {

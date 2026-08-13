@@ -46,7 +46,7 @@ const TeacherLayout = () => {
 
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <ResponsiveHeader
         portalName="Teacher Portal"
@@ -56,7 +56,7 @@ const TeacherLayout = () => {
         navigation={navigation}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Desktop Sidebar */}
         {!isMobile && (
           <ResponsiveSidebar
@@ -69,7 +69,7 @@ const TeacherLayout = () => {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
           <Outlet />
         </main>
       </div>

@@ -134,7 +134,7 @@ export function ResponsiveSidebar({
 
   // Desktop: Fixed Sidebar
   return (
-    <aside className="hidden md:flex w-64 flex-col border-r bg-card/30 backdrop-blur supports-[backdrop-filter]:bg-card/30">
+    <aside className="hidden md:flex w-64 shrink-0 h-full min-h-0 flex-col overflow-hidden border-r bg-card/30 backdrop-blur supports-[backdrop-filter]:bg-card/30">
       <NavContent />
     </aside>
   );

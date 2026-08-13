@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,28 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PenSquare, Loader2, Search } from 'lucide-react';
+import { PenSquare, Loader2, Search, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { getAllowedRecipientRoles } from '@/lib/portalPaths';
-
-interface Recipient {
-  id: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  email: string;
-}
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Administrator',
-  principal: 'Principal',
-  head_teacher: 'Head Teacher',
-  teacher: 'Teacher',
-  bursar: 'Bursar',
-  librarian: 'Librarian',
-};
+import { useTerminology } from '@/hooks/useTerminology';
+import { useMessageRecipients } from '@/hooks/useMessageRecipients';
 
 interface Props {
   onSent?: () => void;
@@ -37,45 +21,52 @@ interface Props {
 const ComposeMessageDialog: React.FC<Props> = ({ onSent }) => {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const t = useTerminology();
   const [open, setOpen] = useState(false);
-  const [people, setPeople] = useState<Recipient[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      if (!open || !profile?.school_id) return;
-      const roles = getAllowedRecipientRoles(profile.role);
-      if (!roles.length) return;
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, role, email')
-        .eq('school_id', profile.school_id)
-        .eq('is_active', true)
-        .in('role', roles)
-        .neq('id', profile.id)
-        .order('first_name');
-      setPeople((data || []) as Recipient[]);
-    };
-    load();
-  }, [open, profile?.school_id, profile?.role, profile?.id]);
+  const { people, groups, loading } = useMessageRecipients(open);
+
+  const roleLabels: Record<string, string> = useMemo(
+    () => ({
+      admin: 'Administrator',
+      principal: 'Principal',
+      head_teacher: 'Head Teacher',
+      teacher: 'Teacher',
+      bursar: 'Bursar',
+      librarian: 'Librarian',
+      student: t.Student,
+      parent: 'Parent',
+    }),
+    [t.Student],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return people;
     return people.filter((p) =>
-      `${p.first_name} ${p.last_name} ${p.email} ${ROLE_LABELS[p.role] || p.role}`.toLowerCase().includes(q),
+      `${p.first_name} ${p.last_name} ${p.email} ${p.context || ''} ${roleLabels[p.role] || p.role}`
+        .toLowerCase()
+        .includes(q),
     );
-  }, [people, search]);
+  }, [people, search, roleLabels]);
 
   const reset = () => {
     setSelected([]);
     setSubject('');
     setBody('');
     setSearch('');
+  };
+
+  const toggleGroup = (memberIds: string[]) => {
+    const allSelected = memberIds.every((id) => selected.includes(id));
+    setSelected((prev) =>
+      allSelected ? prev.filter((id) => !memberIds.includes(id)) : Array.from(new Set([...prev, ...memberIds])),
+    );
   };
 
   const handleSend = async () => {
@@ -111,7 +102,13 @@ const ComposeMessageDialog: React.FC<Props> = ({ onSent }) => {
     );
     setSending(false);
     if (rErr) {
-      toast({ title: 'Could not deliver message', description: rErr.message, variant: 'destructive' });
+      toast({
+        title: 'Could not deliver message',
+        description: rErr.message.includes('row-level security')
+          ? 'You are not permitted to message one or more of the selected recipients.'
+          : rErr.message,
+        variant: 'destructive',
+      });
       return;
     }
     toast({ title: 'Message sent', description: `Delivered to ${selected.length} recipient(s).` });
@@ -139,11 +136,32 @@ const ComposeMessageDialog: React.FC<Props> = ({ onSent }) => {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 className="pl-8"
-                placeholder="Search staff by name, role or email"
+                placeholder={`Search by name, class, role or email`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+
+            {groups.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {groups.map((g) => {
+                  const active = g.memberIds.every((id) => selected.includes(id));
+                  return (
+                    <Button
+                      key={g.id}
+                      type="button"
+                      size="sm"
+                      variant={active ? 'default' : 'outline'}
+                      onClick={() => toggleGroup(g.memberIds)}
+                    >
+                      <Users className="h-3.5 w-3.5 mr-1" />
+                      {g.name} ({g.memberIds.length})
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+
             {selected.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {selected.map((id) => {
@@ -157,8 +175,11 @@ const ComposeMessageDialog: React.FC<Props> = ({ onSent }) => {
                 })}
               </div>
             )}
+
             <ScrollArea className="h-48 rounded-md border">
-              {filtered.length === 0 ? (
+              {loading ? (
+                <p className="p-4 text-sm text-muted-foreground">Loading recipients…</p>
+              ) : filtered.length === 0 ? (
                 <p className="p-4 text-sm text-muted-foreground">No authorized recipients found.</p>
               ) : (
                 <ul className="divide-y">
@@ -173,9 +194,11 @@ const ComposeMessageDialog: React.FC<Props> = ({ onSent }) => {
                       />
                       <Label htmlFor={`rec-${p.id}`} className="flex-1 cursor-pointer font-normal">
                         <span className="font-medium">{p.first_name} {p.last_name}</span>
-                        <span className="text-muted-foreground text-xs block">{p.email}</span>
+                        <span className="text-muted-foreground text-xs block">
+                          {p.context ? `${p.context} • ${p.email}` : p.email}
+                        </span>
                       </Label>
-                      <Badge variant="outline" className="text-[10px]">{ROLE_LABELS[p.role] || p.role}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{roleLabels[p.role] || p.role}</Badge>
                     </li>
                   ))}
                 </ul>

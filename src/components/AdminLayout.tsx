@@ -42,7 +42,8 @@ const buildNavigation = (isPrimary: boolean) => {
     { name: 'Report Cards', href: '/admin/report-cards', icon: FileText },
     { name: 'Academic Risk', href: '/admin/academic-risk', icon: Brain },
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
-    { name: 'Communications', href: '/admin/communications', icon: MessageCircle },
+    { name: 'Communication', href: '/admin/communication', icon: MessageCircle },
+    { name: 'Announcements', href: '/admin/communications', icon: MessageCircle },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 };

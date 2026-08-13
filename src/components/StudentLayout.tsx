@@ -9,7 +9,8 @@ import {
   Library,
   BarChart3,
   CalendarCheck,
-  ClipboardCheck
+  ClipboardCheck,
+  MessageSquare
 } from 'lucide-react';
 import { ResponsiveSidebar, ResponsiveHeader } from '@/components/ResponsiveSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Attendance', href: '/student/attendance', icon: ClipboardCheck },
   { name: 'Grades', href: '/student/grades', icon: BarChart3 },
   { name: 'Library', href: '/student/library', icon: Library },
+  { name: 'Communication', href: '/student/communication', icon: MessageSquare },
   { name: 'Appointments', href: '/student/appointments', icon: CalendarCheck },
   { name: 'Profile', href: '/student/profile', icon: User },
 ];

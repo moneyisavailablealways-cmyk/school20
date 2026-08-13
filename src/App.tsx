@@ -189,6 +189,7 @@ const App = () => (
               <Route path="academic-risk" element={<AcademicRiskDetection />} />
               <Route path="reports" element={<Reports />} />
               <Route path="communications" element={<Communications />} />
+              <Route path="communication" element={<CommunicationPage />} />
               <Route path="settings" element={<Settings />} />
             </Route>
             
@@ -255,6 +256,7 @@ const App = () => (
               <Route path="library" element={<StudentLibrary />} />
               <Route path="attendance" element={<StudentAttendance />} />
               <Route path="appointments" element={<StudentAppointments />} />
+              <Route path="communication" element={<CommunicationPage />} />
               <Route path="profile" element={<StudentProfile />} />
             </Route>
             
@@ -302,6 +304,7 @@ const App = () => (
               <Route path="payments" element={<FeesPayments />} />
               <Route path="appointments" element={<Appointments />} />
               <Route path="announcements" element={<Announcements />} />
+              <Route path="communication" element={<CommunicationPage />} />
               <Route path="library" element={<ChildrenLibrary />} />
               <Route path="admissions" element={<ParentAdmissions />} />
               <Route path="profile" element={<ParentProfile />} />

@@ -53,7 +53,7 @@ const AddBehaviorNoteDialog: React.FC<AddBehaviorNoteDialogProps> = ({
   const { toast } = useToast();
   const { profile } = useAuth();
   const terminology = useTerminology();
-  const studentLabel = (terminology as any)?.student ?? 'Student';
+  const studentLabel = terminology.Student;
 
   const categories = [
     { value: 'disciplinary', label: 'Disciplinary' },

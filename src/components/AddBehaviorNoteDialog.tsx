@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,12 +8,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useToast } from '@/hooks/use-toast';
-import { FileText } from 'lucide-react';
+import { useTerminology } from '@/hooks/useTerminology';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Student {
   id: string;
   student_id: string;
+  class_id?: string | null;
+  class_name?: string | null;
   profile?: {
     first_name: string;
     last_name: string;
@@ -31,6 +38,9 @@ const AddBehaviorNoteDialog: React.FC<AddBehaviorNoteDialogProps> = ({
   onSuccess
 }) => {
   const [students, setStudents] = useState<Student[]>([]);
+  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [studentPickerOpen, setStudentPickerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     student_id: '',
@@ -41,6 +51,9 @@ const AddBehaviorNoteDialog: React.FC<AddBehaviorNoteDialogProps> = ({
     is_private: false
   });
   const { toast } = useToast();
+  const { profile } = useAuth();
+  const terminology = useTerminology();
+  const studentLabel = terminology.Student;
 
   const categories = [
     { value: 'disciplinary', label: 'Disciplinary' },
@@ -57,13 +70,28 @@ const AddBehaviorNoteDialog: React.FC<AddBehaviorNoteDialogProps> = ({
 
   useEffect(() => {
     if (open) {
+      fetchClasses();
       fetchStudents();
     }
-  }, [open]);
+  }, [open, profile?.school_id]);
+
+  const fetchClasses = async () => {
+    if (!profile?.school_id) return;
+    const { data, error } = await supabase
+      .from('classes')
+      .select('id, name')
+      .eq('school_id', profile.school_id)
+      .order('name');
+    if (error) {
+      console.error('Error fetching classes:', error);
+      return;
+    }
+    setClasses(data || []);
+  };
 
   const fetchStudents = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('students')
         .select(`
           id,
@@ -71,22 +99,53 @@ const AddBehaviorNoteDialog: React.FC<AddBehaviorNoteDialogProps> = ({
           profile:profiles!students_profile_id_fkey(
             first_name,
             last_name
+          ),
+          enrollments:student_enrollments(
+            class_id,
+            status,
+            classes(name)
           )
         `)
         .eq('enrollment_status', 'active')
         .order('student_id');
 
+      if (profile?.school_id) {
+        query = query.eq('school_id', profile.school_id);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
-      setStudents(data || []);
+
+      const mapped: Student[] = (data || []).map((s: any) => {
+        const active = (s.enrollments || []).find((e: any) => e.status === 'active') || (s.enrollments || [])[0];
+        return {
+          id: s.id,
+          student_id: s.student_id,
+          profile: s.profile,
+          class_id: active?.class_id ?? null,
+          class_name: active?.classes?.name ?? null,
+        };
+      });
+
+      setStudents(mapped);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load students',
+        description: `Failed to load ${studentLabel.toLowerCase()}s`,
         variant: 'destructive'
       });
     }
   };
+
+  const filteredStudents = useMemo(() => {
+    if (selectedClass === 'all') return students;
+    return students.filter((s) => s.class_id === selectedClass);
+  }, [students, selectedClass]);
+
+  const selectedStudent = students.find((s) => s.id === formData.student_id);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,20 +222,83 @@ const AddBehaviorNoteDialog: React.FC<AddBehaviorNoteDialogProps> = ({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="student">Student *</Label>
-            <Select value={formData.student_id} onValueChange={(value) => setFormData(prev => ({ ...prev, student_id: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select student" />
+            <Label htmlFor="class">Class</Label>
+            <Select
+              value={selectedClass}
+              onValueChange={(value) => {
+                setSelectedClass(value);
+                setFormData(prev => ({ ...prev, student_id: '' }));
+              }}
+            >
+              <SelectTrigger id="class">
+                <SelectValue placeholder="Filter by class" />
               </SelectTrigger>
               <SelectContent>
-                {students.map((student) => (
-                  <SelectItem key={student.id} value={student.id}>
-                    {student.profile?.first_name} {student.profile?.last_name} ({student.student_id})
-                  </SelectItem>
+                <SelectItem value="all">All Classes</SelectItem>
+                {classes.map((cls) => (
+                  <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="student">{studentLabel} *</Label>
+            <Popover open={studentPickerOpen} onOpenChange={setStudentPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  id="student"
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={studentPickerOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  <span className={cn(!selectedStudent && 'text-muted-foreground', 'truncate')}>
+                    {selectedStudent
+                      ? `${selectedStudent.profile?.first_name ?? ''} ${selectedStudent.profile?.last_name ?? ''} (${selectedStudent.student_id})`
+                      : `Select or search ${studentLabel.toLowerCase()}`}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder={`Search ${studentLabel.toLowerCase()} by name or ID...`} />
+                  <CommandList>
+                    <CommandEmpty>No {studentLabel.toLowerCase()} found.</CommandEmpty>
+                    <CommandGroup>
+                      {filteredStudents.map((student) => {
+                        const name = `${student.profile?.first_name ?? ''} ${student.profile?.last_name ?? ''}`.trim();
+                        return (
+                          <CommandItem
+                            key={student.id}
+                            value={`${name} ${student.student_id} ${student.class_name ?? ''}`}
+                            onSelect={() => {
+                              setFormData(prev => ({ ...prev, student_id: student.id }));
+                              setStudentPickerOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                formData.student_id === student.id ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            <span className="truncate">
+                              {name} ({student.student_id})
+                              {student.class_name ? ` — ${student.class_name}` : ''}
+                            </span>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
 
           <div className="space-y-2">
             <Label htmlFor="date">Date *</Label>

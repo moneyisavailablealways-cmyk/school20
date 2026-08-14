@@ -20,6 +20,7 @@ import {
   Phone
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import TeacherDetailsDialog from '@/components/head-teacher/TeacherDetailsDialog';
 
 interface Teacher {
   id: string;
@@ -40,6 +41,7 @@ interface Teacher {
 const TeacherSupervision = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -361,7 +363,7 @@ const TeacherSupervision = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setSelectedTeacher(teacher)}
+                            onClick={() => { setSelectedTeacher(teacher); setDetailsOpen(true); }}
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             View
@@ -474,6 +476,15 @@ const TeacherSupervision = () => {
           )}
         </div>
       </div>
+
+      <TeacherDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        teacherProfileId={selectedTeacher?.profile_id ?? null}
+        teacherName={selectedTeacher?.name}
+        department={selectedTeacher?.department}
+        qualification={selectedTeacher?.qualification}
+      />
     </div>
   );
 };

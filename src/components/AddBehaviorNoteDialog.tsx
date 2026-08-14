@@ -222,20 +222,83 @@ const AddBehaviorNoteDialog: React.FC<AddBehaviorNoteDialogProps> = ({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="student">Student *</Label>
-            <Select value={formData.student_id} onValueChange={(value) => setFormData(prev => ({ ...prev, student_id: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select student" />
+            <Label htmlFor="class">Class</Label>
+            <Select
+              value={selectedClass}
+              onValueChange={(value) => {
+                setSelectedClass(value);
+                setFormData(prev => ({ ...prev, student_id: '' }));
+              }}
+            >
+              <SelectTrigger id="class">
+                <SelectValue placeholder="Filter by class" />
               </SelectTrigger>
               <SelectContent>
-                {students.map((student) => (
-                  <SelectItem key={student.id} value={student.id}>
-                    {student.profile?.first_name} {student.profile?.last_name} ({student.student_id})
-                  </SelectItem>
+                <SelectItem value="all">All Classes</SelectItem>
+                {classes.map((cls) => (
+                  <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="student">{studentLabel} *</Label>
+            <Popover open={studentPickerOpen} onOpenChange={setStudentPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  id="student"
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={studentPickerOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  <span className={cn(!selectedStudent && 'text-muted-foreground', 'truncate')}>
+                    {selectedStudent
+                      ? `${selectedStudent.profile?.first_name ?? ''} ${selectedStudent.profile?.last_name ?? ''} (${selectedStudent.student_id})`
+                      : `Select or search ${studentLabel.toLowerCase()}`}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder={`Search ${studentLabel.toLowerCase()} by name or ID...`} />
+                  <CommandList>
+                    <CommandEmpty>No {studentLabel.toLowerCase()} found.</CommandEmpty>
+                    <CommandGroup>
+                      {filteredStudents.map((student) => {
+                        const name = `${student.profile?.first_name ?? ''} ${student.profile?.last_name ?? ''}`.trim();
+                        return (
+                          <CommandItem
+                            key={student.id}
+                            value={`${name} ${student.student_id} ${student.class_name ?? ''}`}
+                            onSelect={() => {
+                              setFormData(prev => ({ ...prev, student_id: student.id }));
+                              setStudentPickerOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                formData.student_id === student.id ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            <span className="truncate">
+                              {name} ({student.student_id})
+                              {student.class_name ? ` — ${student.class_name}` : ''}
+                            </span>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
 
           <div className="space-y-2">
             <Label htmlFor="date">Date *</Label>

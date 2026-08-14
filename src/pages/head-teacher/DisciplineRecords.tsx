@@ -126,7 +126,7 @@ const DisciplineRecords = () => {
         </Button>
       </div>
 
-      <div className="grid gap-4">
+      <div className={behaviorNotes.length === 0 ? 'grid gap-4' : 'grid gap-4 md:grid-cols-2'}>
         {behaviorNotes.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center p-8">

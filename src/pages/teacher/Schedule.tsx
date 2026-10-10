@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { exportTimetablePdf } from '@/lib/timetablePdf';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -176,12 +179,34 @@ const Schedule = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">My Schedule</h1>
-        <p className="text-muted-foreground">
-          Your weekly teaching schedule
-        </p>
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">My Schedule</h1>
+          <p className="text-muted-foreground">
+            Your weekly teaching schedule
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() =>
+            exportTimetablePdf({
+              title: 'My Teaching Timetable',
+              subtitle: profile ? `${profile.first_name} ${profile.last_name}` : undefined,
+              days: daysOfWeek,
+              entries: scheduleData.flatMap((d) =>
+                d.classes.map((c) => {
+                  const [s, e] = c.time.split(' - ');
+                  return { day: d.day, startTime: s, endTime: e, lines: [c.subject, c.class, c.room] };
+                })
+              ),
+            })
+          }
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Download PDF
+        </Button>
       </div>
+
 
       {/* Schedule Overview */}
       <div className="grid gap-4 md:grid-cols-2">

@@ -5,7 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, Clock, MapPin, User } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { exportTimetablePdf } from '@/lib/timetablePdf';
+
 
 const StudentSchedule = () => {
   const { profile } = useAuth();
@@ -127,12 +130,38 @@ const StudentSchedule = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">My Schedule</h1>
-        <p className="text-muted-foreground mt-2">
-          View your weekly class timetable
-        </p>
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">My Schedule</h1>
+          <p className="text-muted-foreground mt-2">
+            View your weekly class timetable
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() =>
+            exportTimetablePdf({
+              title: 'My Class Timetable',
+              subtitle: profile ? `${profile.first_name} ${profile.last_name}` : undefined,
+              days: daysOfWeek.slice(0, 5),
+              entries: (timetable || []).map((item: any) => ({
+                day: daysOfWeek[item.day_of_week - 1],
+                startTime: item.start_time,
+                endTime: item.end_time,
+                lines: [
+                  item.subjects?.name || '',
+                  item.teachers?.profiles ? `${item.teachers.profiles.first_name} ${item.teachers.profiles.last_name}` : '',
+                  item.room_number ? `Room ${item.room_number}` : '',
+                ],
+              })),
+            })
+          }
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Download PDF
+        </Button>
       </div>
+
 
       <div className="grid gap-6">
         {daysOfWeek.map((day) => (

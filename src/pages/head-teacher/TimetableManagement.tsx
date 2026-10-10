@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Calendar, Edit, Trash2 } from 'lucide-react';
+import { Plus, Calendar, Edit, Trash2, Download } from 'lucide-react';
+import { exportTimetablePdf } from '@/lib/timetablePdf';
+
 import { useToast } from '@/hooks/use-toast';
 import AddTimetableDialog from '@/components/AddTimetableDialog';
 import EditTimetableDialog from '@/components/EditTimetableDialog';
@@ -171,10 +173,37 @@ const TimetableManagement = () => {
           <h1 className="text-3xl font-bold">Timetable Management</h1>
           <p className="text-muted-foreground">Manage class schedules and time slots</p>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Schedule
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() =>
+              exportTimetablePdf({
+                title: 'Weekly Timetable',
+                subtitle: `Class: ${selectedClass === 'all' ? 'All Classes' : selectedClass}`,
+                days: days.slice(0, 5),
+                entries: filteredEntries.map((e) => ({
+                  day: getDayName(e.day_of_week),
+                  startTime: e.start_time,
+                  endTime: e.end_time,
+                  lines: [
+                    e.subject?.name || '',
+                    selectedClass === 'all' ? e.class?.name || '' : '',
+                    e.teacher ? `${e.teacher.first_name} ${e.teacher.last_name}` : '',
+                    e.room_number ? `Room ${e.room_number}` : '',
+                  ],
+                })),
+              })
+            }
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Schedule
+          </Button>
+        </div>
+
       </div>
 
       <AddTimetableDialog

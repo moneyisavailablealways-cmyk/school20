@@ -5123,6 +5123,10 @@ export type Database = {
         Args: { p_app_id: string; p_class_id?: string; p_stream_id?: string }
         Returns: Json
       }
+      attendance_class_access: {
+        Args: { p_class_id: string }
+        Returns: boolean
+      }
       calculate_grade: {
         Args: { p_marks: number }
         Returns: {
@@ -5255,6 +5259,7 @@ export type Database = {
         Args: { p_library_item_id: string }
         Returns: number
       }
+      get_weekly_attendance_config: { Args: { p_date: string }; Returns: Json }
       is_admin_or_principal: { Args: never; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_bursar_user: { Args: never; Returns: boolean }
@@ -5322,6 +5327,10 @@ export type Database = {
         Args: { p_school_id: string }
         Returns: Json
       }
+      save_weekly_attendance: {
+        Args: { p_kind: string; p_records: Json }
+        Returns: number
+      }
       send_term_notifications: {
         Args: {
           p_custom_message?: string
@@ -5376,6 +5385,7 @@ export type Database = {
         | "vacation_leave"
         | "half_day"
         | "pending_approval"
+        | "excused"
       user_role:
         | "admin"
         | "principal"
@@ -5529,6 +5539,7 @@ export const Constants = {
         "vacation_leave",
         "half_day",
         "pending_approval",
+        "excused",
       ],
       user_role: [
         "admin",

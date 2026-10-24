@@ -101,38 +101,20 @@ const TeacherAttendanceMarking = () => {
   // Save attendance mutation
   const saveAttendance = useMutation({
     mutationFn: async () => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-        .single();
-
-      if (!profile || !schoolProfile?.school_id) throw new Error('Profile not found');
-
+      if (!schoolProfile?.school_id) throw new Error('School account not found.');
       const records = Object.values(attendanceData).map(att => ({
-        school_id: schoolProfile.school_id,
-        teacher_id: att.teacherId,
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        status: att.status,
-        check_in_time: att.checkInTime || null,
-        check_out_time: att.checkOutTime || null,
-        late_reason: att.lateReason || null,
-        remarks: att.remarks || null,
-        marked_by: profile.id,
-        is_approved: true,
-        is_self_marked: false,
+        person_id: att.teacherId, date: format(selectedDate, 'yyyy-MM-dd'), status: att.status,
+        check_in_time: att.checkInTime || null, check_out_time: att.checkOutTime || null,
+        late_reason: att.lateReason || null, remarks: att.remarks || null,
       }));
-
-      const { error } = await supabase
-        .from('teacher_attendance')
-        .upsert(records, { onConflict: 'teacher_id,date' });
-
+      const { error } = await supabase.rpc('save_weekly_attendance', { p_kind: 'teacher', p_records: records });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success('Attendance saved successfully');
       setHasChanges(false);
       queryClient.invalidateQueries({ queryKey: ['teacher-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-records'] });
     },
     onError: (error) => {
       toast.error(`Failed to save attendance: ${error.message}`);

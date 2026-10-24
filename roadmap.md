@@ -1,5 +1,6 @@
 # Weekly attendance
-- [ ] Add shared weekly grids, navigation, filters, summaries, and cell editing.
-- [ ] Enforce school working days, holidays, permissions, sessions, and atomic saving.
-- [ ] Integrate grids without removing existing attendance views and reports.
-- [ ] Run rule tests and preview checks; document any authentication verification limits.
+- [x] Add shared weekly grids, navigation, filters, summaries, and cell editing.
+- [x] Enforce school working days, holidays, permissions, sessions, and atomic saving.
+- [x] Integrate grids without removing existing attendance views and reports.
+- [x] Run rule tests and signed-out preview checks; document authentication verification limits.
+- [ ] Verify signed-in saving/readback and populated desktop/mobile grids — blocked by external Supabase authentication unavailable in this environment.

@@ -5127,6 +5127,7 @@ export type Database = {
         Args: { p_class_id: string }
         Returns: boolean
       }
+      attendance_working_date: { Args: { p_date: string }; Returns: boolean }
       calculate_grade: {
         Args: { p_marks: number }
         Returns: {

@@ -50,8 +50,9 @@ const TeacherLeaveRequests = ({ isTeacherView = false }: TeacherLeaveRequestsPro
 
   // Fetch leave requests
   const { data: leaveRequests, isLoading } = useQuery({
-    queryKey: ['teacher-leave-requests', isTeacherView ? profile?.id : 'all'],
+    queryKey: ['teacher-leave-requests', profile?.school_id, isTeacherView ? profile?.id : 'all'],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       let query = supabase
         .from('teacher_leave_requests')
         .select(`
@@ -59,6 +60,7 @@ const TeacherLeaveRequests = ({ isTeacherView = false }: TeacherLeaveRequestsPro
           teacher:profiles!teacher_leave_requests_teacher_id_fkey(first_name, last_name, email),
           approver:profiles!teacher_leave_requests_approved_by_fkey(first_name, last_name)
         `)
+        .eq('school_id', profile.school_id)
         .order('created_at', { ascending: false });
 
       if (isTeacherView && profile?.id) {
@@ -69,17 +71,18 @@ const TeacherLeaveRequests = ({ isTeacherView = false }: TeacherLeaveRequestsPro
       if (error) throw error;
       return data;
     },
-    enabled: isTeacherView ? !!profile?.id : true,
+    enabled: !!profile?.school_id && (!isTeacherView || !!profile?.id),
   });
 
   // Create leave request mutation
   const createRequest = useMutation({
     mutationFn: async () => {
-      if (!profile?.id) throw new Error('Not authenticated');
+      if (!profile?.id || !profile?.school_id) throw new Error('Not authenticated');
 
       const { error } = await supabase
         .from('teacher_leave_requests')
         .insert({
+          school_id: profile.school_id,
           teacher_id: profile.id,
           leave_type: formData.leaveType,
           start_date: formData.startDate,
@@ -94,7 +97,7 @@ const TeacherLeaveRequests = ({ isTeacherView = false }: TeacherLeaveRequestsPro
       toast.success('Leave request submitted successfully');
       setIsDialogOpen(false);
       setFormData({ leaveType: '', startDate: '', endDate: '', reason: '' });
-      queryClient.invalidateQueries({ queryKey: ['teacher-leave-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['teacher-leave-requests', profile?.school_id] });
     },
     onError: (error) => {
       toast.error(`Failed to submit request: ${error.message}`);
@@ -104,7 +107,7 @@ const TeacherLeaveRequests = ({ isTeacherView = false }: TeacherLeaveRequestsPro
   // Approve/Reject mutation
   const handleRequestAction = useMutation({
     mutationFn: async ({ requestId, action, reason }: { requestId: string; action: 'approve' | 'reject'; reason?: string }) => {
-      if (!profile?.id) throw new Error('Not authenticated');
+      if (!profile?.id || !profile?.school_id) throw new Error('Not authenticated');
 
       const updateData: any = {
         status: action === 'approve' ? 'approved' : 'rejected',
@@ -119,6 +122,7 @@ const TeacherLeaveRequests = ({ isTeacherView = false }: TeacherLeaveRequestsPro
       const { data: request, error: fetchError } = await supabase
         .from('teacher_leave_requests')
         .select('*')
+        .eq('school_id', profile.school_id)
         .eq('id', requestId)
         .single();
 
@@ -127,6 +131,7 @@ const TeacherLeaveRequests = ({ isTeacherView = false }: TeacherLeaveRequestsPro
       const { error } = await supabase
         .from('teacher_leave_requests')
         .update(updateData)
+        .eq('school_id', profile.school_id)
         .eq('id', requestId);
 
       if (error) throw error;
@@ -142,26 +147,29 @@ const TeacherLeaveRequests = ({ isTeacherView = false }: TeacherLeaveRequestsPro
           const date = new Date(startDate);
           date.setDate(date.getDate() + i);
           attendanceRecords.push({
+            school_id: profile.school_id,
             teacher_id: request.teacher_id,
             date: format(date, 'yyyy-MM-dd'),
-            status: request.leave_type === 'half_day' ? 'half_day' : request.leave_type,
+            status: request.leave_type === 'other' ? 'excused' : request.leave_type,
             is_approved: true,
             marked_by: profile.id,
             approved_by: profile.id,
           });
         }
 
-        await supabase
+        const { error: attendanceError } = await supabase
           .from('teacher_attendance')
           .upsert(attendanceRecords, { onConflict: 'teacher_id,date' });
+        if (attendanceError) throw attendanceError;
       }
     },
     onSuccess: (_, { action }) => {
       toast.success(`Leave request ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
       setActionDialog(null);
       setRejectionReason('');
-      queryClient.invalidateQueries({ queryKey: ['teacher-leave-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['teacher-leave-requests', profile?.school_id] });
       queryClient.invalidateQueries({ queryKey: ['teacher-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-records'] });
     },
     onError: (error) => {
       toast.error(`Failed to process request: ${error.message}`);

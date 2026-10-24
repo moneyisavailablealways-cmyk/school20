@@ -7,6 +7,7 @@ import TeacherAttendanceCalendar from './TeacherAttendanceCalendar';
 import TeacherLeaveRequests from './TeacherLeaveRequests';
 import TeacherAttendanceReports from './TeacherAttendanceReports';
 import TeacherAttendanceAnalytics from './TeacherAttendanceAnalytics';
+import WeeklyAttendanceGrid from '@/components/attendance/WeeklyAttendanceGrid';
 
 interface TeacherAttendanceManagementProps {
   title?: string;
@@ -19,7 +20,7 @@ const TeacherAttendanceManagement = ({
   description = "Manage teacher attendance, leave requests, and view reports",
   isTeacherView = false
 }: TeacherAttendanceManagementProps) => {
-  const [activeTab, setActiveTab] = useState(isTeacherView ? 'calendar' : 'mark');
+  const [activeTab, setActiveTab] = useState('weekly');
 
   return (
     <div className="space-y-6">
@@ -29,7 +30,8 @@ const TeacherAttendanceManagement = ({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="flex w-full justify-start overflow-x-auto">
+          <TabsTrigger value="weekly" className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /><span>Weekly Grid</span></TabsTrigger>
           {!isTeacherView && (
             <TabsTrigger value="mark" className="flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
@@ -55,6 +57,7 @@ const TeacherAttendanceManagement = ({
             </TabsTrigger>
           )}
         </TabsList>
+        <TabsContent value="weekly"><WeeklyAttendanceGrid kind="teacher" personal={isTeacherView} /></TabsContent>
 
         {!isTeacherView && (
           <TabsContent value="mark">

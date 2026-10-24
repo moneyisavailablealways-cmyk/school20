@@ -15,8 +15,9 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { CalendarIcon, Check, X, Clock, UserCheck, AlertCircle, Search, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
-type AttendanceStatus = 'present' | 'absent' | 'late' | 'sick_leave' | 'vacation_leave' | 'half_day' | 'pending_approval';
+type AttendanceStatus = 'present' | 'absent' | 'late' | 'sick_leave' | 'vacation_leave' | 'half_day' | 'pending_approval' | 'excused';
 
 interface TeacherAttendance {
   teacherId: string;
@@ -28,6 +29,7 @@ interface TeacherAttendance {
 }
 
 const statusConfig: Record<AttendanceStatus, { label: string; color: string; icon: React.ReactNode }> = {
+  excused: { label: 'Excused', color: 'attendance-excused', icon: <AlertCircle className="h-4 w-4" /> },
   present: { label: 'Present', color: 'bg-green-500', icon: <Check className="h-4 w-4" /> },
   absent: { label: 'Absent', color: 'bg-red-500', icon: <X className="h-4 w-4" /> },
   late: { label: 'Late', color: 'bg-yellow-500', icon: <Clock className="h-4 w-4" /> },
@@ -38,6 +40,7 @@ const statusConfig: Record<AttendanceStatus, { label: string; color: string; ico
 };
 
 const TeacherAttendanceMarking = () => {
+  const { profile: schoolProfile } = useAuth();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,11 +49,13 @@ const TeacherAttendanceMarking = () => {
 
   // Fetch all teachers
   const { data: teachers, isLoading: loadingTeachers } = useQuery({
-    queryKey: ['teachers-for-attendance'],
+    queryKey: ['teachers-for-attendance', schoolProfile?.school_id],
     queryFn: async () => {
+      if (!schoolProfile?.school_id) return [];
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email, phone')
+        .eq('school_id', schoolProfile.school_id)
         .eq('role', 'teacher')
         .eq('is_active', true)
         .order('first_name');
@@ -58,16 +63,19 @@ const TeacherAttendanceMarking = () => {
       if (error) throw error;
       return data;
     },
+    enabled: !!schoolProfile?.school_id,
   });
 
   // Fetch existing attendance for the selected date
   const { data: existingAttendance, isLoading: loadingAttendance } = useQuery({
-    queryKey: ['teacher-attendance', format(selectedDate, 'yyyy-MM-dd')],
+    queryKey: ['teacher-attendance', schoolProfile?.school_id, format(selectedDate, 'yyyy-MM-dd')],
     queryFn: async () => {
+      if (!schoolProfile?.school_id) return [];
       const { data, error } = await supabase
         .from('teacher_attendance')
         .select('*')
-        .eq('date', format(selectedDate, 'yyyy-MM-dd'));
+        .eq('date', format(selectedDate, 'yyyy-MM-dd'))
+        .eq('school_id', schoolProfile.school_id);
       
       if (error) throw error;
       
@@ -87,7 +95,7 @@ const TeacherAttendanceMarking = () => {
       setHasChanges(false);
       return data;
     },
-    enabled: !!selectedDate,
+    enabled: !!selectedDate && !!schoolProfile?.school_id,
   });
 
   // Save attendance mutation
@@ -99,9 +107,10 @@ const TeacherAttendanceMarking = () => {
         .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
         .single();
 
-      if (!profile) throw new Error('Profile not found');
+      if (!profile || !schoolProfile?.school_id) throw new Error('Profile not found');
 
       const records = Object.values(attendanceData).map(att => ({
+        school_id: schoolProfile.school_id,
         teacher_id: att.teacherId,
         date: format(selectedDate, 'yyyy-MM-dd'),
         status: att.status,

@@ -9,6 +9,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar as CalendarIcon, TrendingUp, Check, X, Clock, AlertCircle } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
+import WeeklyAttendanceGrid from '@/components/attendance/WeeklyAttendanceGrid';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const StudentAttendance = () => {
   const { profile } = useAuth();
@@ -16,22 +18,25 @@ const StudentAttendance = () => {
 
   // Fetch student data
   const { data: studentData } = useQuery({
-    queryKey: ['student', profile?.id],
+    queryKey: ['student', profile?.school_id, profile?.id],
     queryFn: async () => {
+      if (!profile?.school_id || !profile?.id) return null;
       const { data } = await supabase
         .from('students')
         .select('id')
         .eq('profile_id', profile?.id)
+        .eq('school_id', profile.school_id)
         .single();
       return data;
     },
-    enabled: !!profile?.id
+    enabled: !!profile?.id && !!profile?.school_id
   });
 
   // Fetch attendance records for selected month
   const { data: attendanceRecords, isLoading } = useQuery({
-    queryKey: ['student-attendance', studentData?.id, format(selectedMonth, 'yyyy-MM')],
+    queryKey: ['student-attendance', profile?.school_id, studentData?.id, format(selectedMonth, 'yyyy-MM')],
     queryFn: async () => {
+      if (!profile?.school_id || !studentData?.id) return [];
       const start = startOfMonth(selectedMonth);
       const end = endOfMonth(selectedMonth);
       
@@ -39,6 +44,7 @@ const StudentAttendance = () => {
         .from('attendance_records')
         .select('*')
         .eq('student_id', studentData?.id)
+        .eq('school_id', profile.school_id)
         .gte('date', format(start, 'yyyy-MM-dd'))
         .lte('date', format(end, 'yyyy-MM-dd'))
         .order('date', { ascending: false });
@@ -116,6 +122,10 @@ const StudentAttendance = () => {
   });
 
   return (
+    <Tabs defaultValue="weekly" className="min-w-0 space-y-4">
+      <TabsList><TabsTrigger value="weekly">Weekly Grid</TabsTrigger><TabsTrigger value="monthly">Monthly Records</TabsTrigger></TabsList>
+      <TabsContent value="weekly"><h1 className="mb-5 text-3xl font-bold">My Attendance</h1><WeeklyAttendanceGrid kind="student" personal /></TabsContent>
+      <TabsContent value="monthly">
     <div className="container mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">My Attendance</h1>
@@ -279,6 +289,8 @@ const StudentAttendance = () => {
         </Card>
       </div>
     </div>
+      </TabsContent>
+    </Tabs>
   );
 };
 

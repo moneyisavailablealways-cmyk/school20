@@ -11,9 +11,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
-type AttendanceStatus = 'present' | 'absent' | 'late' | 'sick_leave' | 'vacation_leave' | 'half_day' | 'pending_approval';
+type AttendanceStatus = 'present' | 'absent' | 'late' | 'sick_leave' | 'vacation_leave' | 'half_day' | 'pending_approval' | 'excused';
 
 const statusColors: Record<AttendanceStatus, string> = {
+  excused: 'attendance-excused',
   present: 'bg-green-500',
   absent: 'bg-red-500',
   late: 'bg-yellow-500',
@@ -24,6 +25,7 @@ const statusColors: Record<AttendanceStatus, string> = {
 };
 
 const statusLabels: Record<AttendanceStatus, string> = {
+  excused: 'Excused',
   present: 'Present',
   absent: 'Absent',
   late: 'Late',
@@ -44,11 +46,13 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
 
   // Fetch teachers list (for admin/head teacher view)
   const { data: teachers } = useQuery({
-    queryKey: ['teachers-list'],
+    queryKey: ['teachers-list', profile?.school_id],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
+        .eq('school_id', profile.school_id)
         .eq('role', 'teacher')
         .eq('is_active', true)
         .order('first_name');
@@ -56,19 +60,21 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
       if (error) throw error;
       return data;
     },
-    enabled: !isTeacherView,
+    enabled: !isTeacherView && !!profile?.school_id,
   });
 
   // Fetch attendance for the month
   const { data: attendanceRecords, isLoading } = useQuery({
-    queryKey: ['teacher-attendance-calendar', format(currentMonth, 'yyyy-MM'), selectedTeacherId],
+    queryKey: ['teacher-attendance-calendar', profile?.school_id, format(currentMonth, 'yyyy-MM'), selectedTeacherId],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
       let query = supabase
         .from('teacher_attendance')
         .select('*, teacher:profiles!teacher_attendance_teacher_id_fkey(first_name, last_name)')
+        .eq('school_id', profile.school_id)
         .gte('date', monthStart)
         .lte('date', monthEnd);
 
@@ -82,19 +88,21 @@ const TeacherAttendanceCalendar = ({ isTeacherView = false }: TeacherAttendanceC
       if (error) throw error;
       return data;
     },
-    enabled: isTeacherView ? !!profile?.id : true,
+    enabled: !!profile?.school_id && (!isTeacherView || !!profile?.id),
   });
 
   // Fetch school calendar events (holidays, public days)
   const { data: calendarEvents } = useQuery({
-    queryKey: ['school-calendar-events', format(currentMonth, 'yyyy-MM')],
+    queryKey: ['school-calendar-events', profile?.school_id, format(currentMonth, 'yyyy-MM')],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
       const { data, error } = await supabase
         .from('school_calendar')
         .select('*')
+        .eq('school_id', profile.school_id)
         .gte('date', monthStart)
         .lte('date', monthEnd);
 

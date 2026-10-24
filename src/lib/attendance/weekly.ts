@@ -1,7 +1,7 @@
 import { addDays, format, startOfWeek } from 'date-fns';
 
 export const DEFAULT_WORKING_DAYS = [1, 2, 3, 4, 5];
-export const HOLIDAY_TYPES = ['holiday', 'public_holiday', 'school_holiday', 'non_working_day'];
+export const HOLIDAY_TYPES = ['holiday', 'break', 'public_holiday', 'school_holiday', 'non_working_day'];
 
 export function workingDates(date: Date, configuredDays: number[] | null | undefined, holidays: string[] = []) {
   const monday = startOfWeek(date, { weekStartsOn: 1 });

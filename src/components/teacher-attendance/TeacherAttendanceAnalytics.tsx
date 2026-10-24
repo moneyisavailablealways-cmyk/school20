@@ -1,3 +1,4 @@
+import { useAuth } from '@/hooks/useAuth';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,10 +13,12 @@ import { TrendingUp, TrendingDown, AlertTriangle, Users, Clock, Calendar } from 
 const COLORS = ['#22c55e', '#ef4444', '#eab308', '#3b82f6', '#a855f7', '#f97316'];
 
 const TeacherAttendanceAnalytics = () => {
+  const { profile } = useAuth();
   // Fetch attendance data for the past 6 months
   const { data: attendanceData, isLoading } = useQuery({
-    queryKey: ['teacher-attendance-analytics'],
+    queryKey: ['teacher-attendance-analytics', profile?.school_id],
     queryFn: async () => {
+      if (!profile?.school_id) return null;
       const sixMonthsAgo = startOfMonth(subMonths(new Date(), 5));
       const { data, error } = await supabase
         .from('teacher_attendance')
@@ -23,6 +26,7 @@ const TeacherAttendanceAnalytics = () => {
           *,
           teacher:profiles!teacher_attendance_teacher_id_fkey(first_name, last_name, email)
         `)
+        .eq('school_id', profile.school_id)
         .gte('date', format(sixMonthsAgo, 'yyyy-MM-dd'))
         .order('date');
 
@@ -33,11 +37,13 @@ const TeacherAttendanceAnalytics = () => {
 
   // Fetch total teachers count
   const { data: teachersCount } = useQuery({
-    queryKey: ['teachers-count'],
+    queryKey: ['teachers-count', profile?.school_id],
     queryFn: async () => {
+      if (!profile?.school_id) return null;
       const { count, error } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
+        .eq('school_id', profile.school_id)
         .eq('role', 'teacher')
         .eq('is_active', true);
 
@@ -76,13 +82,15 @@ const TeacherAttendanceAnalytics = () => {
         present: monthPresent,
         absent: monthRecords.filter(r => r.status === 'absent').length,
         late: monthRecords.filter(r => r.status === 'late').length,
-        leave: monthRecords.filter(r => ['sick_leave', 'vacation_leave', 'half_day'].includes(r.status)).length,
+        leave: monthRecords.filter(r => ['sick_leave', 'vacation_leave', 'half_day', 'excused'].includes(r.status)).length,
         rate: monthRecords.length > 0 ? Math.round((monthPresent / monthRecords.length) * 100) : 0,
       };
     });
 
     // Pie chart data
     const pieData = [
+      { name: 'Excused', value: statusCounts['excused'] || 0, color: 'hsl(var(--attendance-excused-fg))' },
+      { name: 'Pending', value: statusCounts['pending_approval'] || 0, color: 'hsl(var(--muted-foreground))' },
       { name: 'Present', value: statusCounts['present'] || 0, color: '#22c55e' },
       { name: 'Absent', value: statusCounts['absent'] || 0, color: '#ef4444' },
       { name: 'Late', value: statusCounts['late'] || 0, color: '#eab308' },

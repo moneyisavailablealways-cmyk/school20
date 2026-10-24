@@ -19,6 +19,7 @@ interface TeacherAttendanceReportsProps {
 }
 
 const statusLabels: Record<string, string> = {
+  excused: 'Excused',
   present: 'Present',
   absent: 'Absent',
   late: 'Late',
@@ -29,6 +30,7 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
+  excused: 'attendance-excused',
   present: 'bg-green-500',
   absent: 'bg-red-500',
   late: 'bg-yellow-500',
@@ -49,7 +51,7 @@ const TeacherAttendanceReports = ({ isTeacherView = false }: TeacherAttendanceRe
     const now = new Date();
     switch (dateRange) {
       case 'week':
-        return { start: startOfWeek(now), end: endOfWeek(now) };
+        return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
       case 'month':
         return { start: startOfMonth(now), end: endOfMonth(now) };
       case 'year':
@@ -66,11 +68,13 @@ const TeacherAttendanceReports = ({ isTeacherView = false }: TeacherAttendanceRe
 
   // Fetch teachers
   const { data: teachers } = useQuery({
-    queryKey: ['teachers-for-reports'],
+    queryKey: ['teachers-for-reports', profile?.school_id],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email')
+        .eq('school_id', profile.school_id)
         .eq('role', 'teacher')
         .eq('is_active', true)
         .order('first_name');
@@ -78,13 +82,14 @@ const TeacherAttendanceReports = ({ isTeacherView = false }: TeacherAttendanceRe
       if (error) throw error;
       return data;
     },
-    enabled: !isTeacherView,
+    enabled: !isTeacherView && !!profile?.school_id,
   });
 
   // Fetch attendance data
   const { data: attendanceData, isLoading } = useQuery({
-    queryKey: ['teacher-attendance-reports', dateRange, customStartDate, customEndDate, selectedTeacherId],
+    queryKey: ['teacher-attendance-reports', profile?.school_id, dateRange, customStartDate, customEndDate, selectedTeacherId],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       const { start, end } = getDateRange();
       
       let query = supabase
@@ -93,6 +98,7 @@ const TeacherAttendanceReports = ({ isTeacherView = false }: TeacherAttendanceRe
           *,
           teacher:profiles!teacher_attendance_teacher_id_fkey(first_name, last_name, email)
         `)
+        .eq('school_id', profile.school_id)
         .gte('date', format(start, 'yyyy-MM-dd'))
         .lte('date', format(end, 'yyyy-MM-dd'))
         .order('date', { ascending: false });

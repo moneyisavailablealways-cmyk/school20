@@ -25,7 +25,7 @@ const statuses = [
   { value: 'late', label: 'Late', icon: Clock, style: 'attendance-late' },
   { value: 'excused', label: 'Excused', icon: ShieldCheck, style: 'attendance-excused' },
 ];
-const labelFor = (value: string) => statuses.find(s => s.value === value)?.label || value.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+const labelFor = (value: string) => statuses.find(s => s.value === value)?.label || value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
 // Read every page rather than silently truncating large school rosters at 1000 rows.
 async function readPages<T>(fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {

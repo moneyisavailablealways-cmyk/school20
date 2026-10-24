@@ -40,18 +40,21 @@ const TeacherAttendance = () => {
 
   // Fetch teacher's classes
   const { data: classes, isLoading: classesLoading } = useQuery({
-    queryKey: ['teacher-classes', profile?.id],
+    queryKey: ['teacher-classes', profile?.school_id, profile?.id],
     queryFn: async () => {
+      if (!profile?.school_id) return null;
       // Get classes where teacher is class teacher
       const { data: classTeacherClasses } = await supabase
         .from('classes')
         .select('id, name')
+        .eq('school_id', profile.school_id)
         .eq('class_teacher_id', profile?.id);
 
       // Get classes where teacher is section teacher
       const { data: sectionTeacherStreams } = await supabase
         .from('streams')
         .select('class_id, classes(id, name)')
+        .eq('school_id', profile.school_id)
         .eq('section_teacher_id', profile?.id);
 
       const allClasses = new Map();
@@ -68,8 +71,9 @@ const TeacherAttendance = () => {
 
   // Fetch students for selected class
   const { data: students, isLoading: studentsLoading } = useQuery({
-    queryKey: ['class-students-attendance', selectedClass],
+    queryKey: ['class-students-attendance', profile?.school_id, selectedClass],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       const { data } = await supabase
         .from('student_enrollments')
         .select(`
@@ -80,6 +84,7 @@ const TeacherAttendance = () => {
             profiles!inner (first_name, last_name)
           )
         `)
+        .eq('school_id', profile.school_id)
         .eq('class_id', selectedClass)
         .eq('status', 'active');
 
@@ -94,11 +99,13 @@ const TeacherAttendance = () => {
 
   // Fetch existing attendance for date/class
   const { data: existingAttendance, isLoading: attendanceLoading } = useQuery({
-    queryKey: ['existing-attendance', selectedClass, format(selectedDate, 'yyyy-MM-dd'), selectedSession],
+    queryKey: ['existing-attendance', profile?.school_id, selectedClass, format(selectedDate, 'yyyy-MM-dd'), selectedSession],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       const { data } = await supabase
         .from('attendance_records')
         .select('*')
+        .eq('school_id', profile.school_id)
         .eq('class_id', selectedClass)
         .eq('date', format(selectedDate, 'yyyy-MM-dd'))
         .eq('session', selectedSession);
@@ -110,11 +117,13 @@ const TeacherAttendance = () => {
 
   // Fetch attendance settings
   const { data: settings } = useQuery({
-    queryKey: ['attendance-settings'],
+    queryKey: ['attendance-settings', profile?.school_id],
     queryFn: async () => {
+      if (!profile?.school_id) return null;
       const { data } = await supabase
         .from('attendance_settings')
         .select('*')
+        .eq('school_id', profile.school_id)
         .single();
       return data;
     }
@@ -122,14 +131,16 @@ const TeacherAttendance = () => {
 
   // Fetch holidays
   const { data: holidays } = useQuery({
-    queryKey: ['school-calendar', format(selectedDate, 'yyyy-MM')],
+    queryKey: ['school-calendar', profile?.school_id, format(selectedDate, 'yyyy-MM')],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
       const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
       
       const { data } = await supabase
         .from('school_calendar')
         .select('*')
+        .eq('school_id', profile.school_id)
         .gte('date', format(startOfMonth, 'yyyy-MM-dd'))
         .lte('date', format(endOfMonth, 'yyyy-MM-dd'));
 
@@ -196,56 +207,20 @@ const TeacherAttendance = () => {
   // Save attendance mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!profile?.school_id) throw new Error('School account not found.');
       const records = Array.from(attendanceData.values()).map(student => ({
-        id: student.existingId || undefined,
-        student_id: student.studentId,
-        class_id: selectedClass,
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        session: selectedSession,
-        status: student.status,
-        remarks: student.remarks || null,
-        marked_by: profile?.id,
-        marked_at: new Date().toISOString(),
-        is_locked: false
+        person_id: student.studentId, class_id: selectedClass,
+        date: format(selectedDate, 'yyyy-MM-dd'), session: selectedSession,
+        status: student.status, remarks: student.remarks || null,
       }));
-
-      // Upsert records
-      for (const record of records) {
-        if (record.id) {
-          const { error } = await supabase
-            .from('attendance_records')
-            .update({
-              status: record.status,
-              remarks: record.remarks,
-              last_modified_by: profile?.id,
-              last_modified_at: new Date().toISOString()
-            })
-            .eq('id', record.id);
-
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from('attendance_records')
-            .insert({
-              student_id: record.student_id,
-              class_id: record.class_id,
-              date: record.date,
-              session: record.session,
-              status: record.status,
-              remarks: record.remarks,
-              marked_by: record.marked_by,
-              marked_at: record.marked_at,
-              is_locked: false
-            });
-
-          if (error) throw error;
-        }
-      }
+      const { error } = await supabase.rpc('save_weekly_attendance', { p_kind: 'student', p_records: records });
+      if (error) throw error;
     },
     onSuccess: () => {
       toast.success('Attendance saved successfully');
       setHasChanges(false);
       queryClient.invalidateQueries({ queryKey: ['existing-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-records'] });
     },
     onError: (error: Error) => {
       toast.error(`Failed to save attendance: ${error.message}`);

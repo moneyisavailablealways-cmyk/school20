@@ -178,7 +178,9 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     onSuccess: (_, { lock }) => {
       toast.success(lock ? 'Attendance locked' : 'Attendance unlocked');
       queryClient.invalidateQueries({ queryKey: ['admin-attendance'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ['weekly-records'] });
+    },
+    onError: (error: Error) => toast.error(`Attendance lock was not changed: ${error.message}`)
   });
 
   // Override attendance mutation
@@ -202,7 +204,10 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
       toast.success('Attendance overridden');
       setOverrideReason('');
       queryClient.invalidateQueries({ queryKey: ['admin-attendance'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ['weekly-records'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-audit-logs'] });
+    },
+    onError: (error: Error) => toast.error(`Attendance was not overridden: ${error.message}`)
   });
 
   const getStatusBadge = (status: string, isLocked: boolean) => {

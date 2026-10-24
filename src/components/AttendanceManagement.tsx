@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 import { Calendar as CalendarIcon, Lock, Unlock, Settings, Users, FileText, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import WeeklyAttendanceGrid from '@/components/attendance/WeeklyAttendanceGrid';
+import { useTerminology } from '@/hooks/useTerminology';
 
 interface AttendanceManagementProps {
   title?: string;
@@ -27,6 +29,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   description = "Manage attendance records, settings, and view reports"
 }) => {
   const { profile } = useAuth();
+  const t = useTerminology();
   const queryClient = useQueryClient();
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -57,8 +60,9 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 
   // Fetch attendance records for date/class
   const { data: attendanceRecords, isLoading: recordsLoading } = useQuery({
-    queryKey: ['admin-attendance', selectedClass, format(selectedDate, 'yyyy-MM-dd')],
+    queryKey: ['admin-attendance', profile?.school_id, selectedClass, format(selectedDate, 'yyyy-MM-dd')],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
       let query = supabase
         .from('attendance_records')
         .select(`
@@ -69,7 +73,8 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
             profiles!inner (first_name, last_name)
           )
         `)
-        .eq('date', format(selectedDate, 'yyyy-MM-dd'));
+        .eq('date', format(selectedDate, 'yyyy-MM-dd'))
+        .eq('school_id', profile.school_id);
 
       if (selectedClass) {
         query = query.eq('class_id', selectedClass);
@@ -78,32 +83,40 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
       const { data } = await query.order('created_at', { ascending: false });
       return data || [];
     },
-    enabled: true
+    enabled: !!profile?.school_id
   });
 
   // Fetch audit logs
   const { data: auditLogs, isLoading: logsLoading } = useQuery({
-    queryKey: ['attendance-audit-logs'],
+    queryKey: ['attendance-audit-logs', profile?.school_id],
     queryFn: async () => {
+      if (!profile?.school_id) return [];
+      const { data: scopedRecords, error: recordError } = await supabase.from('attendance_records').select('id').eq('school_id', profile.school_id);
+      if (recordError) throw recordError;
+      if (!scopedRecords?.length) return [];
       const { data } = await supabase
         .from('attendance_audit_log')
         .select('*')
+        .in('attendance_record_id', scopedRecords.map(record => record.id))
         .order('changed_at', { ascending: false })
         .limit(50);
       return data || [];
-    }
+    },
+    enabled: !!profile?.school_id
   });
 
   // Fetch attendance stats
   const { data: attendanceStats } = useQuery({
-    queryKey: ['attendance-stats', selectedClass, format(selectedDate, 'yyyy-MM')],
+    queryKey: ['attendance-stats', profile?.school_id, selectedClass, format(selectedDate, 'yyyy-MM')],
     queryFn: async () => {
+      if (!profile?.school_id) return { present: 0, absent: 0, late: 0, total: 0 };
       const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
       const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
       
       let query = supabase
         .from('attendance_records')
         .select('status')
+        .eq('school_id', profile.school_id)
         .gte('date', format(startOfMonth, 'yyyy-MM-dd'))
         .lte('date', format(endOfMonth, 'yyyy-MM-dd'));
 
@@ -127,9 +140,11 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   // Update settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (updates: Partial<typeof settings>) => {
+      if (!profile?.school_id || !settings?.id) throw new Error('Attendance settings are not configured for this school.');
       const { error } = await supabase
         .from('attendance_settings')
         .update(updates)
+        .eq('school_id', profile.school_id)
         .eq('id', settings?.id);
       if (error) throw error;
     },
@@ -145,6 +160,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   // Lock/Unlock attendance mutation
   const toggleLockMutation = useMutation({
     mutationFn: async ({ recordIds, lock }: { recordIds: string[]; lock: boolean }) => {
+      if (!profile?.school_id) throw new Error('School account not found.');
       const { error } = await supabase
         .from('attendance_records')
         .update({
@@ -154,7 +170,8 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
           last_modified_by: profile?.id,
           last_modified_at: new Date().toISOString()
         })
-        .in('id', recordIds);
+        .in('id', recordIds)
+        .eq('school_id', profile.school_id);
       
       if (error) throw error;
     },
@@ -167,6 +184,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   // Override attendance mutation
   const overrideMutation = useMutation({
     mutationFn: async ({ recordId, newStatus, reason }: { recordId: string; newStatus: string; reason: string }) => {
+      if (!profile?.school_id) throw new Error('School account not found.');
       const { error } = await supabase
         .from('attendance_records')
         .update({
@@ -175,7 +193,8 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
           last_modified_at: new Date().toISOString(),
           remarks: reason
         })
-        .eq('id', recordId);
+        .eq('id', recordId)
+        .eq('school_id', profile.school_id);
       
       if (error) throw error;
     },
@@ -209,17 +228,19 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">{title}</h1>
+        <h1 className="text-3xl font-bold">{t.studentAttendance}</h1>
         <p className="text-muted-foreground">{description}</p>
       </div>
 
-      <Tabs defaultValue="records" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="weekly" className="w-full">
+        <TabsList className="flex w-full justify-start overflow-x-auto">
+          <TabsTrigger value="weekly">Weekly Grid</TabsTrigger>
           <TabsTrigger value="records">Records</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="audit">Audit Log</TabsTrigger>
         </TabsList>
+        <TabsContent value="weekly"><WeeklyAttendanceGrid kind="student" /></TabsContent>
 
         {/* Records Tab */}
         <TabsContent value="records" className="space-y-4">

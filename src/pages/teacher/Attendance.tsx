@@ -15,6 +15,8 @@ import { Calendar as CalendarIcon, Users, Check, X, Clock, AlertCircle, Lock, Sa
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/hooks/useTerminology';
+import WeeklyAttendanceGrid from '@/components/attendance/WeeklyAttendanceGrid';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused' | 'left_early';
 
@@ -274,6 +276,10 @@ const TeacherAttendance = () => {
   };
 
   return (
+    <Tabs defaultValue="weekly" className="min-w-0 space-y-4">
+      <TabsList><TabsTrigger value="weekly">Weekly Grid</TabsTrigger><TabsTrigger value="daily">Daily Marking</TabsTrigger></TabsList>
+      <TabsContent value="weekly"><h1 className="mb-5 text-3xl font-bold">{t.studentAttendance}</h1><WeeklyAttendanceGrid kind="student" /></TabsContent>
+      <TabsContent value="daily">
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
@@ -472,6 +478,8 @@ const TeacherAttendance = () => {
         </Card>
       )}
     </div>
+      </TabsContent>
+    </Tabs>
   );
 };
 

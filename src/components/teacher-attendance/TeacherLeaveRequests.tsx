@@ -159,7 +159,6 @@ const TeacherLeaveRequests = ({ isTeacherView = false }: TeacherLeaveRequestsPro
 
         const { error: attendanceError } = await supabase
           .from('teacher_attendance')
-        .eq('school_id', profile.school_id)
           .upsert(attendanceRecords, { onConflict: 'teacher_id,date' });
         if (attendanceError) throw attendanceError;
       }

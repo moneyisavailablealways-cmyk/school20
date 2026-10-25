@@ -4797,6 +4797,7 @@ export type Database = {
           class_id: string | null
           created_at: string
           id: string
+          school_id: string
           subject_id: string
           teacher_id: string
           updated_at: string
@@ -4805,6 +4806,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           id?: string
+          school_id: string
           subject_id: string
           teacher_id: string
           updated_at?: string
@@ -4813,6 +4815,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           id?: string
+          school_id?: string
           subject_id?: string
           teacher_id?: string
           updated_at?: string
@@ -4823,6 +4826,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_specializations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
           {
@@ -4853,7 +4863,7 @@ export type Database = {
           level_type: Database["public"]["Enums"]["section_level_type"]
           profile_id: string
           qualification: string | null
-          school_id: string | null
+          school_id: string
           specialization: string | null
           updated_at: string
         }
@@ -4868,7 +4878,7 @@ export type Database = {
           level_type?: Database["public"]["Enums"]["section_level_type"]
           profile_id: string
           qualification?: string | null
-          school_id?: string | null
+          school_id: string
           specialization?: string | null
           updated_at?: string
         }
@@ -4883,7 +4893,7 @@ export type Database = {
           level_type?: Database["public"]["Enums"]["section_level_type"]
           profile_id?: string
           qualification?: string | null
-          school_id?: string | null
+          school_id?: string
           specialization?: string | null
           updated_at?: string
         }
@@ -5326,6 +5336,15 @@ export type Database = {
       reset_school_finance_data: {
         Args: { p_school_id: string }
         Returns: Json
+      }
+      save_teacher_subject_assignments: {
+        Args: {
+          p_assignments: Json
+          p_replace?: boolean
+          p_school_id: string
+          p_teacher_id: string
+        }
+        Returns: number
       }
       save_weekly_attendance: {
         Args: { p_kind: string; p_records: Json }

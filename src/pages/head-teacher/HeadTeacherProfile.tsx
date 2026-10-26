@@ -56,13 +56,14 @@ const HeadTeacherProfile = () => {
   }, [profile]);
 
   const fetchTeacherDetails = async () => {
-    if (!profile?.id) return;
+    if (!profile?.id || !profile.school_id) return;
 
     try {
       const { data, error } = await supabase
         .from('teachers')
         .select('*')
         .eq('profile_id', profile.id)
+        .eq('school_id', profile.school_id)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -88,7 +89,7 @@ const HeadTeacherProfile = () => {
   };
 
   const handleSave = async () => {
-    if (!profile) return;
+    if (!profile?.school_id) return;
 
     setSaving(true);
     try {
@@ -111,6 +112,7 @@ const HeadTeacherProfile = () => {
       // Update or create teacher details
       const teacherData = {
         profile_id: profile.id,
+        school_id: profile.school_id,
         department: formData.department,
         qualification: formData.qualification,
         specialization: formData.specialization,
@@ -121,7 +123,7 @@ const HeadTeacherProfile = () => {
         const { error } = await supabase
           .from('teachers')
           .update(teacherData)
-          .eq('id', teacherDetails.id);
+          .eq('id', teacherDetails.id).eq('school_id', profile.school_id);
 
         if (error) {
           toast({

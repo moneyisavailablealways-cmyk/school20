@@ -47,6 +47,11 @@ serve(async (req) => {
     }
 
     const { email, password, firstName, lastName, phone, role, teacherDetails, parentDetails } = await req.json()
+    if (typeof email !== 'string' || !email.includes('@') || typeof password !== 'string' || password.length < 6 ||
+        !['teacher','head_teacher','parent','student','bursar','librarian','admin','principal'].includes(role) ||
+        (teacherDetails && (typeof teacherDetails.employeeId !== 'string' || !teacherDetails.employeeId.trim()))) {
+      return new Response(JSON.stringify({ error: 'Enter a valid email, password, account type, and employee ID.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
 
     if (profile.role === 'head_teacher' && !['teacher','head_teacher'].includes(role)) {
       return new Response(JSON.stringify({ error: 'Insufficient permissions for this account type' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

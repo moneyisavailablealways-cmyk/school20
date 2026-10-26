@@ -13,6 +13,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
+import { useAuth } from '@/hooks/useAuth';
+import { assignmentRows, saveTeacherAssignments, teacherAssignmentError } from '@/lib/teacherAssignments';
 import PhotoUpload from '@/components/PhotoUpload';
 import { uploadAvatarForProfile } from '@/lib/uploadAvatar';
 import {
@@ -114,30 +116,28 @@ const TeacherManagement = () => {
   const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null);
   const { toast } = useToast();
   const { schoolLevel } = useSchoolLevel();
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id;
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadTeachers();
-  }, []);
+    if (schoolId) loadTeachers();
+  }, [schoolId]);
 
   const getAvailableClassesForEdit = () =>
     classes.filter((classItem) => !classItem.class_teacher_id || classItem.class_teacher_id === editingTeacher?.id);
 
   const loadTeachers = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('school_id')
-        .eq('user_id', user?.id)
-        .single();
-      const currentSchoolId = profile?.school_id;
+      if (!schoolId) throw new Error('Your school could not be identified. Please sign in again.');
+      const currentSchoolId = schoolId;
 
       const query = supabase
         .from('profiles')
         .select('*')
         .in('role', ['teacher', 'head_teacher'])
         .order('created_at', { ascending: false });
-      if (currentSchoolId) query.eq('school_id', currentSchoolId);
+      query.eq('school_id', currentSchoolId);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -155,45 +155,40 @@ const TeacherManagement = () => {
   };
 
   const openEditDialog = async (teacher: Teacher) => {
-    setEditingTeacher(teacher);
-    
-    // Fetch teacher details
-    const { data: teacherDetails } = await supabase
-      .from('teachers')
-      .select('*')
-      .eq('profile_id', teacher.id)
-      .single();
-
-    // Fetch teacher specializations
-    const { data: specializations } = await supabase
-      .from('teacher_specializations')
-      .select('*')
-      .eq('teacher_id', teacherDetails?.id);
-
-    // Fetch subjects and classes filtered by school
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: currentProfile } = await supabase
-      .from('profiles')
-      .select('school_id')
-      .eq('user_id', user?.id)
-      .single();
-    const currentSchoolId = currentProfile?.school_id;
+    if (!schoolId) return;
+    try {
+    setTeacherDetailsId(null);
+    const currentSchoolId = schoolId;
+    const { data: teacherDetails, error: detailsError } = await supabase.from('teachers')
+      .select('*').eq('profile_id', teacher.id).eq('school_id', schoolId).maybeSingle();
+    if (detailsError) throw detailsError;
+    let specializations: { subject_id: string; class_id: string | null }[] = [];
+    if (teacherDetails) {
+      const { data, error } = await supabase.from('teacher_specializations').select('*')
+        .eq('teacher_id', teacherDetails.id).eq('school_id', schoolId);
+      if (error) throw error;
+      specializations = data || [];
+    }
 
     const subjectsQuery = supabase
       .from('subjects')
       .select(`*, level:levels(name)`)
       .eq('is_active', true)
       .order('name');
-    if (currentSchoolId) subjectsQuery.eq('school_id', currentSchoolId);
+    subjectsQuery.eq('school_id', currentSchoolId);
     if (schoolLevel) subjectsQuery.eq('education_level', schoolLevel);
 
     const classesQuery = supabase
       .from('classes')
       .select('id, name, level_id, class_teacher_id, levels(name)')
       .order('name');
-    if (currentSchoolId) classesQuery.eq('school_id', currentSchoolId);
+    classesQuery.eq('school_id', currentSchoolId);
 
-    const [{ data: subjectsData }, { data: classesData }] = await Promise.all([subjectsQuery, classesQuery]);
+    const [subjectsResult, classesResult] = await Promise.all([subjectsQuery, classesQuery]);
+    if (subjectsResult.error) throw subjectsResult.error;
+    if (classesResult.error) throw classesResult.error;
+    const subjectsData = subjectsResult.data;
+    const classesData = classesResult.data;
     setSubjects(subjectsData || []);
     setClasses(classesData || []);
 
@@ -206,7 +201,7 @@ const TeacherManagement = () => {
         subjectId,
         classIds: specializations
           .filter(s => s.subject_id === subjectId && s.class_id)
-          .map(s => s.class_id!)
+          .flatMap(s => s.class_id ? [s.class_id] : [])
       }));
       setSubjectClassAssignments(assignments);
     } else {
@@ -232,13 +227,17 @@ const TeacherManagement = () => {
 
       assigned_class_id: classesData?.find(c => c.class_teacher_id === teacher.id)?.id || ''
     });
+    setEditingTeacher(teacher);
     setEditDialogOpen(true);
+    } catch (error: any) {
+      toast({ title: 'Unable to load teacher', description: teacherAssignmentError(error), variant: 'destructive' });
+    }
   };
 
   const handleSubjectToggle = (subjectId: string, checked: boolean) => {
     if (checked) {
-      setSelectedSubjects(prev => [...prev, subjectId]);
-      setSubjectClassAssignments(prev => [...prev, { subjectId, classIds: [] }]);
+      setSelectedSubjects(prev => prev.includes(subjectId) ? prev : [...prev, subjectId]);
+      setSubjectClassAssignments(prev => prev.some(a => a.subjectId === subjectId) ? prev : [...prev, { subjectId, classIds: [] }]);
     } else {
       setSelectedSubjects(prev => prev.filter(id => id !== subjectId));
       setSubjectClassAssignments(prev => prev.filter(assignment => assignment.subjectId !== subjectId));
@@ -252,7 +251,7 @@ const TeacherManagement = () => {
           return {
             ...assignment,
             classIds: checked 
-              ? [...assignment.classIds, classId]
+              ? [...new Set([...assignment.classIds, classId])]
               : assignment.classIds.filter(id => id !== classId)
           };
         }
@@ -262,17 +261,18 @@ const TeacherManagement = () => {
   };
 
   const handleEditSubmit = async () => {
-    if (!editingTeacher) return;
-
+    if (!editingTeacher || !schoolId || saving) return;
+    setSaving(true);
     try {
-      // Validate at least one subject is selected
-      if (selectedSubjects.length === 0) {
-        toast({
-          title: 'Error',
-          description: 'Please select at least one subject specialization',
-          variant: 'destructive',
-        });
-        return;
+      assignmentRows(schoolId, teacherDetailsId || editingTeacher.id, subjectClassAssignments);
+      const { data: existingDetails, error: lookupError } = await supabase.from('teachers').select('id')
+        .eq('profile_id', editingTeacher.id).eq('school_id', schoolId).maybeSingle();
+      if (lookupError) throw lookupError;
+      const employeeId = editForm.employee_id.trim() || null;
+      if (employeeId) {
+        const { data: conflict, error } = await supabase.from('teachers').select('id').eq('school_id', schoolId).eq('employee_id', employeeId).maybeSingle();
+        if (error) throw error;
+        if (conflict && conflict.id !== existingDetails?.id) throw new Error('This employee ID belongs to another teacher in your school.');
       }
 
       // Update profile
@@ -286,7 +286,7 @@ const TeacherManagement = () => {
           role: editForm.role,
           is_active: editForm.is_active
         })
-        .eq('user_id', editingTeacher.user_id);
+        .eq('user_id', editingTeacher.user_id).eq('school_id', schoolId);
 
       if (profileError) throw profileError;
 
@@ -302,7 +302,8 @@ const TeacherManagement = () => {
       // Update or insert teacher details
       const teacherDetailsData = {
         profile_id: editingTeacher.id,
-        employee_id: editForm.employee_id,
+        school_id: schoolId,
+        employee_id: employeeId,
         qualification: editForm.qualification,
         experience_years: editForm.experience_years,
         joining_date: editForm.joining_date,
@@ -312,13 +313,13 @@ const TeacherManagement = () => {
         specialization: selectedSubjects.map(id => subjects.find(s => s.id === id)?.name).join(', ')
       };
 
-      let finalTeacherDetailsId = teacherDetailsId;
+      let finalTeacherDetailsId = existingDetails?.id || null;
 
-      if (teacherDetailsId) {
+      if (finalTeacherDetailsId) {
         const { error: teacherError } = await supabase
           .from('teachers')
           .update(teacherDetailsData)
-          .eq('id', teacherDetailsId);
+          .eq('id', finalTeacherDetailsId).eq('school_id', schoolId);
 
         if (teacherError) throw teacherError;
       } else {
@@ -337,14 +338,14 @@ const TeacherManagement = () => {
         const { error: clearClassError } = await supabase
           .from('classes')
           .update({ class_teacher_id: null })
-          .eq('class_teacher_id', editingTeacher.id);
+          .eq('class_teacher_id', editingTeacher.id).eq('school_id', schoolId);
 
         if (clearClassError) throw clearClassError;
 
         const { error: classError } = await supabase
           .from('classes')
           .update({ class_teacher_id: editingTeacher.id })
-          .eq('id', editForm.assigned_class_id);
+          .eq('id', editForm.assigned_class_id).eq('school_id', schoolId);
 
         if (classError) throw classError;
       } else {
@@ -352,49 +353,13 @@ const TeacherManagement = () => {
         const { error: classError } = await supabase
           .from('classes')
           .update({ class_teacher_id: null })
-          .eq('class_teacher_id', editingTeacher.id);
+          .eq('class_teacher_id', editingTeacher.id).eq('school_id', schoolId);
 
         if (classError) throw classError;
       }
 
-      // Update teacher specializations
-      if (finalTeacherDetailsId) {
-        // Delete existing specializations
-        const { error: deleteError } = await supabase
-          .from('teacher_specializations')
-          .delete()
-          .eq('teacher_id', finalTeacherDetailsId);
-
-        if (deleteError) throw deleteError;
-
-        // Insert new specializations
-        const specializationInserts = [];
-        for (const assignment of subjectClassAssignments) {
-          if (assignment.classIds.length === 0) {
-            specializationInserts.push({
-              teacher_id: finalTeacherDetailsId,
-              subject_id: assignment.subjectId,
-              class_id: null
-            });
-          } else {
-            for (const classId of assignment.classIds) {
-              specializationInserts.push({
-                teacher_id: finalTeacherDetailsId,
-                subject_id: assignment.subjectId,
-                class_id: classId
-              });
-            }
-          }
-        }
-
-        if (specializationInserts.length > 0) {
-          const { error: specializationError } = await supabase
-            .from('teacher_specializations')
-            .insert(specializationInserts);
-
-          if (specializationError) throw specializationError;
-        }
-      }
+      if (!finalTeacherDetailsId) throw new Error('Teacher record could not be loaded.');
+      await saveTeacherAssignments(schoolId, finalTeacherDetailsId, subjectClassAssignments, true);
 
       toast({
         title: 'Success',
@@ -408,9 +373,11 @@ const TeacherManagement = () => {
       console.error('Error updating teacher:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update teacher',
+        description: teacherAssignmentError(error),
         variant: 'destructive',
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -915,8 +882,8 @@ const TeacherManagement = () => {
             <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleEditSubmit}>
-              Save Changes
+            <Button type="button" onClick={handleEditSubmit} disabled={saving}>
+              {saving ? 'Saving…' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>

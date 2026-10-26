@@ -16,6 +16,8 @@ import { useNavigate } from 'react-router-dom';
 import { useSchoolLevel } from '@/hooks/useSchoolLevel';
 import PhotoUpload from '@/components/PhotoUpload';
 import { uploadAvatarForProfile } from '@/lib/uploadAvatar';
+import { useAuth } from '@/hooks/useAuth';
+import { assignmentRows, saveTeacherAssignments, teacherAssignmentError } from '@/lib/teacherAssignments';
 
 const addTeacherSchema = z.object({
   // Profile fields
@@ -88,6 +90,8 @@ const AddTeacher = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { schoolLevel } = useSchoolLevel();
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id;
 
   const form = useForm<AddTeacherForm>({
     resolver: zodResolver(addTeacherSchema),
@@ -111,19 +115,13 @@ const AddTeacher = () => {
   });
 
   useEffect(() => {
-    fetchSubjectsAndClasses();
-  }, [schoolLevel]);
+    if (schoolId) fetchSubjectsAndClasses();
+  }, [schoolLevel, schoolId]);
 
   const fetchSubjectsAndClasses = async () => {
     try {
-      // Get current user's school_id
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('school_id')
-        .eq('user_id', user?.id)
-        .single();
-      const currentSchoolId = profile?.school_id;
+      if (!schoolId) throw new Error('Your school could not be identified. Please sign in again.');
+      const currentSchoolId = schoolId;
 
       // Fetch subjects filtered by school
       const subjectsQuery = supabase
@@ -131,7 +129,7 @@ const AddTeacher = () => {
         .select(`*, level:levels(name)`)
         .eq('is_active', true)
         .order('name', { ascending: true });
-      if (currentSchoolId) subjectsQuery.eq('school_id', currentSchoolId);
+      subjectsQuery.eq('school_id', currentSchoolId);
       if (schoolLevel) subjectsQuery.eq('education_level', schoolLevel);
 
       const { data: subjectsData, error: subjectsError } = await subjectsQuery;
@@ -143,7 +141,7 @@ const AddTeacher = () => {
         .from('classes')
         .select('id, name, level_id, class_teacher_id, max_students, academic_year_id, created_at, updated_at, levels(name)')
         .order('name');
-      if (currentSchoolId) classesQuery.eq('school_id', currentSchoolId);
+      classesQuery.eq('school_id', currentSchoolId);
 
       const { data: classesData, error: classesError } = await classesQuery;
       if (classesError) throw classesError;
@@ -160,8 +158,8 @@ const AddTeacher = () => {
 
   const handleSubjectToggle = (subjectId: string, checked: boolean) => {
     if (checked) {
-      setSelectedSubjects(prev => [...prev, subjectId]);
-      setSubjectClassAssignments(prev => [...prev, { subjectId, classIds: [] }]);
+      setSelectedSubjects(prev => prev.includes(subjectId) ? prev : [...prev, subjectId]);
+      setSubjectClassAssignments(prev => prev.some(a => a.subjectId === subjectId) ? prev : [...prev, { subjectId, classIds: [] }]);
     } else {
       setSelectedSubjects(prev => prev.filter(id => id !== subjectId));
       setSubjectClassAssignments(prev => prev.filter(assignment => assignment.subjectId !== subjectId));
@@ -175,7 +173,7 @@ const AddTeacher = () => {
           return {
             ...assignment,
             classIds: checked 
-              ? [...assignment.classIds, classId]
+              ? [...new Set([...assignment.classIds, classId])]
               : assignment.classIds.filter(id => id !== classId)
           };
         }
@@ -185,8 +183,11 @@ const AddTeacher = () => {
   };
 
   const createTeacher = async (data: AddTeacherForm) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
+      if (!schoolId) throw new Error('Your school could not be identified. Please sign in again.');
+      assignmentRows(schoolId, 'pending', subjectClassAssignments);
       // Validate at least one subject is selected
       if (selectedSubjects.length === 0) {
         toast({
@@ -197,101 +198,46 @@ const AddTeacher = () => {
         return;
       }
 
-      // Get the current user's session
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.access_token) {
-        throw new Error('No valid session found');
-      }
-
-      // Call our edge function to create the user with teacher details
-      const response = await fetch('https://lbserxuqjcxmuvucokyc.supabase.co/functions/v1/create-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.session.access_token}`,
-        },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          role: data.role,
-          teacherDetails: {
-            employeeId: data.employeeId,
-            specialization: selectedSubjects.map(id => subjects.find(s => s.id === id)?.name).join(', '),
-            qualification: data.qualification,
-            experienceYears: data.experienceYears,
-            joiningDate: data.joiningDate,
-            department: data.department,
-            isClassTeacher: data.isClassTeacher,
-
+      const { data: matchingProfile, error: matchError } = await supabase.from('profiles').select('id,role')
+        .eq('school_id', schoolId).ilike('email', data.email.trim()).maybeSingle();
+      if (matchError) throw matchError;
+      let result: { teacher_id: string; profile_id: string; reused?: boolean };
+      if (matchingProfile && ['teacher','head_teacher'].includes(matchingProfile.role)) {
+        const { data: existingTeacher, error } = await supabase.from('teachers').select('id')
+          .eq('school_id', schoolId).eq('profile_id', matchingProfile.id).maybeSingle();
+        if (error) throw error;
+        if (!existingTeacher) throw new Error('This account has no teacher details. Open Teacher Management and edit the teacher first.');
+        result = { teacher_id: existingTeacher.id, profile_id: matchingProfile.id, reused: true };
+      } else {
+        const { data: employeeConflict, error } = await supabase.from('teachers').select('id')
+          .eq('school_id', schoolId).eq('employee_id', data.employeeId.trim()).maybeSingle();
+        if (error) throw error;
+        if (employeeConflict) throw new Error('This employee ID belongs to an existing teacher in your school. Open Teacher Management to assign their subjects.');
+        const response = await supabase.functions.invoke('create-user', { body: {
+          email: data.email.trim(), password: data.password, firstName: data.firstName, lastName: data.lastName,
+          phone: data.phone, role: data.role, teacherDetails: {
+            employeeId: data.employeeId.trim(), specialization: selectedSubjects.map(id => subjects.find(s => s.id === id)?.name).join(', '),
+            qualification: data.qualification, experienceYears: data.experienceYears, joiningDate: data.joiningDate,
+            department: data.department, isClassTeacher: data.isClassTeacher,
           },
-        }),
-      });
-
-      // Check if response is ok before parsing JSON
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to create teacher: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const result = await response.json();
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      const teacherId = result.teacher_id;
-
-      if (!teacherId) {
-        throw new Error('Failed to retrieve teacher ID from response');
-      }
-
-      // Insert teacher specializations
-      const specializationInserts = [];
-      
-      for (const assignment of subjectClassAssignments) {
-        if (assignment.classIds.length === 0) {
-          // Subject selected but no classes - insert with null class_id
-          specializationInserts.push({
-            teacher_id: teacherId,
-            subject_id: assignment.subjectId,
-            class_id: null
-          });
-        } else {
-          // Insert for each selected class
-          for (const classId of assignment.classIds) {
-            specializationInserts.push({
-              teacher_id: teacherId,
-              subject_id: assignment.subjectId,
-              class_id: classId
-            });
-          }
+        }});
+        if (response.error) {
+          const context = response.error.context;
+          const detail = context instanceof Response ? await context.json().catch(() => null) : null;
+          throw new Error(detail?.error || response.error.message);
         }
+        if (response.data?.error) throw new Error(response.data.error);
+        if (!response.data?.teacher_id || !response.data?.profile_id) throw new Error('Teacher details were not returned. Please reload Teacher Management.');
+        result = response.data;
       }
-
-      if (specializationInserts.length > 0) {
-        const { error: specializationError } = await supabase
-          .from('teacher_specializations')
-          .insert(specializationInserts);
-
-        if (specializationError) {
-          console.error('Error inserting teacher specializations:', specializationError);
-          toast({
-            title: 'Warning',
-            description: 'Teacher created but specializations assignment failed',
-            variant: 'destructive',
-          });
-        }
-      }
+      await saveTeacherAssignments(schoolId, result.teacher_id, subjectClassAssignments);
 
       // If teacher is assigned as class teacher, update the class
-      if (data.isClassTeacher && data.assignedClassId && result.profile_id) {
+      if (!result.reused && data.isClassTeacher && data.assignedClassId && result.profile_id) {
         const { error: classUpdateError } = await supabase
           .from('classes')
           .update({ class_teacher_id: result.profile_id })
-          .eq('id', data.assignedClassId);
+          .eq('id', data.assignedClassId).eq('school_id', schoolId);
 
         if (classUpdateError) {
           console.error('Error assigning class to teacher:', classUpdateError);
@@ -319,7 +265,7 @@ const AddTeacher = () => {
 
       toast({
         title: 'Success',
-        description: 'Teacher created successfully with specializations',
+        description: result.reused ? 'Subjects assigned successfully to the existing teacher.' : 'Teacher created successfully with specializations',
       });
 
       // Reset form and navigate
@@ -332,7 +278,7 @@ const AddTeacher = () => {
       console.error('Error creating teacher:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create teacher',
+        description: teacherAssignmentError(error),
         variant: 'destructive',
       });
     } finally {

@@ -1,0 +1,1 @@
+ALTER FUNCTION public.save_teacher_subject_assignments(uuid,uuid,jsonb,boolean) SET row_security=on;

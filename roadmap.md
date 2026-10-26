@@ -1,7 +1,8 @@
 # Teacher subject assignments
-- [ ] Inspect existing teacher records, assignment relationships, and uniqueness rules.
-- [ ] Reuse existing teachers and validate school-scoped assignment duplicates across add/edit/remove flows.
-- [ ] Test assignment rules and document signed-in verification limits.
+- [x] Inspect existing teacher records, assignment relationships, and uniqueness rules.
+- [x] Reuse existing teachers and validate school-scoped assignment duplicates across add/edit/remove flows.
+- [x] Test assignment rules and document signed-in verification limits.
+- [ ] Verify populated Primary and Secondary add/edit/remove workflows — blocked by unavailable external Supabase signed-in testing.
 
 # Weekly attendance
 - [x] Add shared weekly grids, navigation, filters, summaries, and cell editing.

@@ -20,7 +20,8 @@ serve(async (req) => {
     )
 
     // Verify the requesting user is an admin
-    const authHeader = req.headers.get('Authorization')!
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     const token = authHeader.replace('Bearer ', '')
     
     const { data: user, error: authError } = await supabase.auth.getUser(token)
@@ -34,11 +35,11 @@ serve(async (req) => {
     // Check if user is admin and get their school_id
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, school_id')
+      .select('role, school_id, is_active')
       .eq('user_id', user.user.id)
       .single()
 
-    if (!profile || !['admin', 'principal'].includes(profile.role)) {
+    if (!profile?.is_active || !profile.school_id || !['admin', 'principal', 'head_teacher'].includes(profile.role)) {
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -47,9 +48,46 @@ serve(async (req) => {
 
     const { email, password, firstName, lastName, phone, role, teacherDetails, parentDetails } = await req.json()
 
+    if (profile.role === 'head_teacher' && !['teacher','head_teacher'].includes(role)) {
+      return new Response(JSON.stringify({ error: 'Insufficient permissions for this account type' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    // Resolve identity within this school before any auth or profile changes.
+    if ((role === 'teacher' || role === 'head_teacher') && teacherDetails) {
+      const { data: sameSchoolProfile, error: identityError } = await supabase.from('profiles').select('id,role,is_active')
+        .eq('school_id', profile.school_id).ilike('email', email.trim()).maybeSingle()
+      if (identityError) throw identityError
+      if (sameSchoolProfile && ['teacher','head_teacher'].includes(sameSchoolProfile.role)) {
+        const { data: existingTeacher, error } = await supabase.from('teachers').select('id')
+          .eq('school_id', profile.school_id).eq('profile_id', sameSchoolProfile.id).maybeSingle()
+        if (error) throw error
+        if (existingTeacher && sameSchoolProfile.is_active) {
+          return new Response(JSON.stringify({ success: true, reused: true, profile_id: sameSchoolProfile.id, teacher_id: existingTeacher.id }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+      }
+      const { data: employeeConflict, error: employeeError } = await supabase.from('teachers').select('id,profile_id')
+        .eq('school_id', profile.school_id).eq('employee_id', teacherDetails.employeeId?.trim()).maybeSingle()
+      if (employeeError) throw employeeError
+      if (employeeConflict && employeeConflict.profile_id !== sameSchoolProfile?.id) {
+        return new Response(JSON.stringify({ error: 'This employee ID belongs to another teacher in your school. Select the existing teacher or use a different employee ID.' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+    }
+    const { data: existingEmailProfile, error: emailProfileError } = await supabase.from('profiles').select('id,school_id').ilike('email', email.trim()).maybeSingle()
+    if (emailProfileError) throw emailProfileError
+    if (existingEmailProfile && existingEmailProfile.school_id !== profile.school_id) {
+      return new Response(JSON.stringify({ error: 'This email cannot be used for an account in your school.' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     // First check if user already exists by email
-    const { data: existingUsers } = await supabase.auth.admin.listUsers()
-    const existingAuthUser = existingUsers?.users?.find(u => u.email === email)
+    let existingAuthUser = null
+    for (let page = 1; ; page++) {
+      const { data: usersPage, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
+      if (error) throw error
+      existingAuthUser = usersPage.users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase()) || null
+      if (existingAuthUser || usersPage.users.length < 1000) break
+    }
+    if (existingAuthUser && !existingEmailProfile) {
+      return new Response(JSON.stringify({ error: 'An account with this email already exists and cannot be reassigned to this school.' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     
     let authUserId: string
     
@@ -156,7 +194,7 @@ serve(async (req) => {
           is_active: true,
           school_id: profile.school_id || null,
         })
-        .eq('id', existingProfile.id)
+        .eq('id', existingProfile.id).eq('school_id', profile.school_id)
 
       if (updateProfileError) {
         console.error('Error updating profile:', updateProfileError)
@@ -173,25 +211,28 @@ serve(async (req) => {
     
     // Create teacher details if role is teacher or head_teacher
     if ((role === 'teacher' || role === 'head_teacher') && teacherDetails) {
-      const { data: teacherData, error: teacherError } = await supabase
-        .from('teachers')
-        .insert({
-          profile_id: profileData.id,
-          employee_id: teacherDetails.employeeId,
-          specialization: teacherDetails.specialization,
-          qualification: teacherDetails.qualification,
-          experience_years: teacherDetails.experienceYears,
-          joining_date: teacherDetails.joiningDate,
-          department: teacherDetails.department,
-          is_class_teacher: teacherDetails.isClassTeacher || false,
-
-        })
-        .select('id')
-        .single()
+      const { data: existingTeacher, error: teacherLookupError } = await supabase.from('teachers').select('id')
+        .eq('school_id', profile.school_id).eq('profile_id', profileData.id).maybeSingle()
+      if (teacherLookupError) throw teacherLookupError
+      const details = {
+        profile_id: profileData.id,
+        school_id: profile.school_id,
+        employee_id: teacherDetails.employeeId?.trim() || null,
+        specialization: teacherDetails.specialization,
+        qualification: teacherDetails.qualification,
+        experience_years: teacherDetails.experienceYears,
+        joining_date: teacherDetails.joiningDate,
+        department: teacherDetails.department,
+        is_class_teacher: teacherDetails.isClassTeacher || false,
+      }
+      const teacherQuery = existingTeacher
+        ? supabase.from('teachers').update(details).eq('id', existingTeacher.id).eq('school_id', profile.school_id)
+        : supabase.from('teachers').insert(details)
+      const { data: teacherData, error: teacherError } = await teacherQuery.select('id').single()
 
       if (teacherError) {
         return new Response(
-          JSON.stringify({ error: teacherError.message }),
+          JSON.stringify({ error: teacherError.code === '23505' ? 'This employee ID belongs to another teacher in your school.' : teacherError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }

@@ -123,6 +123,11 @@ All colors MUST be HSL.
 .attendance-late { background-color: hsl(var(--attendance-late-bg)); color: hsl(var(--attendance-late-fg)); }
 .attendance-excused { background-color: hsl(var(--attendance-excused-bg)); color: hsl(var(--attendance-excused-fg)); }
 
+.student-directory { background-color: hsl(var(--secondary) / 0.55); }
+.student-directory-details { box-shadow: 0 2px 12px hsl(var(--primary) / 0.05); }
+.directory-tabs [role="tab"] { height: 40px; padding: 0 3px; font-size: 11px; border-radius: 0; box-shadow: none; }
+.directory-tabs [role="tab"][data-state="active"] { color: hsl(var(--primary)); border-bottom: 2px solid hsl(var(--primary)); background: transparent; }
+
 @layer base {
   * {
     @apply border-border;

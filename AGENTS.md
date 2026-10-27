@@ -4,5 +4,6 @@
 - Keep student sessions and teacher leave/time metadata in their existing separate attendance models, because they have different uniqueness and approval rules.
 
 # Teacher assignments
+- Keep the teacher student directory's detail panel separate from its roster fetching and filtering, so the reference layout stays reusable without changing assignment rules.
 - Keep teacher specializations as the assignment source and save changes through the shared assignment helper and atomic caller-authorized RPC, because edits must preserve existing rows on validation failure.
 - Resolve teacher identity by school and profile before creating teacher details, because assignment actions must never create a second teacher record or transfer accounts between schools.

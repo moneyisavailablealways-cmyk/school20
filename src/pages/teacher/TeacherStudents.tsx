@@ -11,6 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import StudentDirectoryDetails, { DirectoryStudent, DirectoryAttendance, attendanceBadge, StudentPhoto } from '@/components/teacher/StudentDirectoryDetails';
 import { useToast } from '@/hooks/use-toast';
 import { useTerminology } from '@/hooks/useTerminology';
+import { uniqueSubjects, splitSubjects } from '@/lib/subjectDisplay';
+
 
 interface StudentProfile {
   first_name: string;
@@ -38,6 +40,16 @@ interface ClassData {
 }
 
 const cap = (v: string) => v.charAt(0).toUpperCase() + v.slice(1);
+
+const SubjectBadges = ({ subjects }: { subjects: { id: string; name: string }[] }) => {
+  const { unique, shown, hidden } = splitSubjects(subjects, 3);
+  if (!unique.length) return <span className="text-muted-foreground">—</span>;
+  return <div className="flex flex-wrap gap-1" title={unique.map(s => s.name).join(', ')}>
+    {shown.map(subject => <span key={subject.id} className="inline-flex max-w-full items-center break-words rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium leading-tight text-primary">{subject.name}</span>)}
+    {hidden > 0 && <span className="inline-flex items-center rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-medium leading-tight text-muted-foreground" title={unique.slice(3).map(s => s.name).join(', ')}>+{hidden}</span>}
+  </div>;
+};
+
 
 const TeacherStudents = () => {
   const { profile } = useAuth();
@@ -133,7 +145,7 @@ const TeacherStudents = () => {
             profiles: { first_name: pr.first_name, last_name: pr.last_name, email: pr.email, phone: pr.phone, avatar_url: pr.avatar_url },
             class_id: e.class_id, class_name: className,
             stream_name: e.stream_id ? streamMap.get(e.stream_id) : undefined,
-            subjects: [...(classSubjects.get(e.class_id) || [])],
+            subjects: uniqueSubjects(classSubjects.get(e.class_id) || []),
           } as DirectoryStudent);
         });
         return [...roster.values()].sort((a, b) => `${a.profiles.first_name} ${a.profiles.last_name}`.localeCompare(`${b.profiles.first_name} ${b.profiles.last_name}`));
@@ -149,6 +161,8 @@ const TeacherStudents = () => {
   };
 
   const rows = tab === 'subject' ? subjectRows : classRows;
+  const columnCount = tab === 'subject' ? 10 : 9;
+
   useEffect(() => {
     if (!profile?.school_id || !rows.length) { setAttendance([]); return; }
     let active = true;
@@ -186,14 +200,14 @@ const TeacherStudents = () => {
           </div>
           <div className="rounded-md border bg-card p-3">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[740px] table-fixed text-left text-xs">
+              <table className={`w-full table-fixed text-left text-xs ${tab === 'subject' ? 'min-w-[900px]' : 'min-w-[740px]'}`}>
                 <thead className="bg-secondary text-foreground"><tr className="h-11">
                   <th className="w-8 pl-2"><Checkbox aria-label="Select all on this page" checked={visible.length > 0 && visible.every(r => checked.has(r.id))} onCheckedChange={value => setChecked(prev => { const next = new Set(prev); visible.forEach(r => value ? next.add(r.id) : next.delete(r.id)); return next; })} /></th>
-                  <th className="w-7">#</th><th className="w-12">Photo</th><th className="w-[19%]">Name</th><th className="w-[14%]">Admission No.</th><th className="w-[14%]">Class / Stream</th><th>Email</th><th className="w-[90px]">Status</th><th className="w-[105px]">Actions</th>
+                  <th className="w-7">#</th><th className="w-12">Photo</th><th className={tab === 'subject' ? 'w-[15%]' : 'w-[19%]'}>Name</th><th className={tab === 'subject' ? 'w-[12%]' : 'w-[14%]'}>Admission No.</th><th className={tab === 'subject' ? 'w-[12%]' : 'w-[14%]'}>Class / Stream</th>{tab === 'subject' && <th className="w-[190px]">Subjects Taught</th>}<th>Email</th><th className="w-[90px]">Status</th><th className="w-[105px]">Actions</th>
                 </tr></thead>
-                <tbody>{loading ? <tr><td colSpan={9} className="py-16 text-center text-muted-foreground">Loading {t.students}…</td></tr> : !visible.length ? <tr><td colSpan={9} className="py-16 text-center text-muted-foreground"><Users className="mx-auto mb-3 h-8 w-8" />{t.noStudents}</td></tr> : visible.map((student, index) => <tr key={student.id} className={`h-[58px] border-b transition-colors hover:bg-secondary/50 ${selectedId === student.id ? 'bg-secondary/40' : ''}`}>
+                <tbody>{loading ? <tr><td colSpan={columnCount} className="py-16 text-center text-muted-foreground">Loading {t.students}…</td></tr> : !visible.length ? <tr><td colSpan={columnCount} className="py-16 text-center text-muted-foreground"><Users className="mx-auto mb-3 h-8 w-8" />{t.noStudents}</td></tr> : visible.map((student, index) => <tr key={student.id} className={`h-[58px] border-b transition-colors hover:bg-secondary/50 ${selectedId === student.id ? 'bg-secondary/40' : ''}`}>
                   <td className="pl-2"><Checkbox aria-label={`Select ${student.profiles.first_name} ${student.profiles.last_name}`} checked={checked.has(student.id)} onCheckedChange={() => toggleChecked(student.id)} /></td><td className="text-muted-foreground">{(currentPage - 1) * pageSize + index + 1}</td><td><StudentPhoto student={student} /></td>
-                  <td className="pr-2 font-medium break-words">{student.profiles.first_name} {student.profiles.last_name}{student.subjects.length > 0 && <span className="block text-[10px] font-normal text-muted-foreground">{student.subjects.map(sub => sub.name).join(', ')}</span>}</td><td className="pr-2 text-muted-foreground break-words">{student.student_id}</td><td className="pr-2 text-muted-foreground break-words">{[student.class_name, student.stream_name].filter(Boolean).join(' • ')}</td><td className="truncate pr-3 text-muted-foreground" title={student.profiles.email}>{student.profiles.email || '—'}</td><td>{attendanceBadge(attendance.find(a => a.student_id === student.id)?.status)}</td>
+                  <td className="pr-2 font-medium break-words">{student.profiles.first_name} {student.profiles.last_name}{tab === 'class' && student.subjects.length > 0 && <span className="block text-[10px] font-normal text-muted-foreground">{student.subjects.map(sub => sub.name).join(', ')}</span>}</td><td className="pr-2 text-muted-foreground break-words">{student.student_id}</td><td className="pr-2 text-muted-foreground break-words">{[student.class_name, student.stream_name].filter(Boolean).join(' • ')}</td>{tab === 'subject' && <td className="pr-2"><SubjectBadges subjects={student.subjects} /></td>}<td className="truncate pr-3 text-muted-foreground" title={student.profiles.email}>{student.profiles.email || '—'}</td><td>{attendanceBadge(attendance.find(a => a.student_id === student.id)?.status)}</td>
                   <td><div className="flex items-center gap-1"><Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-[11px]" onClick={() => setSelectedId(student.id)}><Eye className="h-3 w-3" />View</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-6" aria-label={`Actions for ${student.profiles.first_name}`}><MoreVertical /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => setSelectedId(student.id)}>View Details</DropdownMenuItem><DropdownMenuItem onClick={() => navigate('/teacher/communication')}>Send Message</DropdownMenuItem><DropdownMenuItem onClick={() => navigate(`/teacher/classes/${student.class_id}/students`)}>View Class</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div></td>
                 </tr>)}</tbody>
               </table>

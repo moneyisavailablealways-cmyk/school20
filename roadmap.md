@@ -10,6 +10,7 @@
 - [x] Integrate grids without removing existing attendance views and reports.
 - [x] Run rule tests and signed-out preview checks; document authentication verification limits.
 - [ ] Verify signed-in saving/readback and populated desktop/mobile grids — blocked by external Supabase authentication unavailable in this environment.
+
 # Subjects Taught column (teacher My Students)
 - [x] Show each learner/student's subjects from the teacher's own subject-class assignments as compact badges on the Subject tab only.
 - [x] Deduplicate subject names, collapse overflow into +N, and keep the My Class tab layout untouched.

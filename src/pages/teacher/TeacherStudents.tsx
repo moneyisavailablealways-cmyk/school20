@@ -120,7 +120,7 @@ const TeacherStudents = () => {
       const studentMap = new Map((students || []).map(s => [s.id, s]));
       const profileMap = new Map((profiles || []).map(p => [p.id, p]));
 
-      const build = (classIds: Set<string>, withSubjects: boolean) => {
+      const build = (classIds: Set<string>) => {
         const roster = new Map<string, DirectoryStudent>();
         enrollments.forEach(e => {
           if (!classIds.has(e.class_id) || roster.has(e.student_id)) return;
@@ -133,13 +133,13 @@ const TeacherStudents = () => {
             profiles: { first_name: pr.first_name, last_name: pr.last_name, email: pr.email, phone: pr.phone, avatar_url: pr.avatar_url },
             class_id: e.class_id, class_name: className,
             stream_name: e.stream_id ? streamMap.get(e.stream_id) : undefined,
-            subjects: withSubjects ? [...(classSubjects.get(e.class_id) || [])] : (classSubjects.get(e.class_id) || []).slice(),
+            subjects: [...(classSubjects.get(e.class_id) || [])],
           } as DirectoryStudent);
         });
         return [...roster.values()].sort((a, b) => `${a.profiles.first_name} ${a.profiles.last_name}`.localeCompare(`${b.profiles.first_name} ${b.profiles.last_name}`));
       };
-      setSubjectRows(build(subjectClassIds, true));
-      setClassRows(build(ctClassIds, false));
+      setSubjectRows(build(subjectClassIds));
+      setClassRows(build(ctClassIds));
     } catch (error: any) {
       console.error('Error fetching teacher students:', error);
       toast({ title: 'Error', description: error.message || `Failed to fetch ${t.students} data`, variant: 'destructive' });

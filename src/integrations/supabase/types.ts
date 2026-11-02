@@ -5133,6 +5133,10 @@ export type Database = {
         Args: { p_app_id: string; p_class_id?: string; p_stream_id?: string }
         Returns: Json
       }
+      approve_teacher_attendance: {
+        Args: { p_approve?: boolean; p_record_id: string }
+        Returns: boolean
+      }
       attendance_class_access: {
         Args: { p_class_id: string }
         Returns: boolean
@@ -5337,6 +5341,7 @@ export type Database = {
         Args: { p_school_id: string }
         Returns: Json
       }
+      save_attendance_settings: { Args: { p_settings: Json }; Returns: Json }
       save_teacher_subject_assignments: {
         Args: {
           p_assignments: Json

@@ -16,15 +16,22 @@ async function readPages<T>(fetchPage: (from: number, to: number) => PromiseLike
 export async function fetchAttendanceRange(kind: 'student' | 'teacher', schoolId: string, start: string, end: string, opts: { classId?: string; teacherId?: string } = {}): Promise<MonthRow[]> {
   if (kind === 'student') {
     const rows = await readPages((from, to) => {
-      let q = supabase.from('attendance_records').select('id,student_id,date,status,class_id,classes(name),students(student_id,profiles(first_name,last_name))')
+      let q = supabase.from('attendance_records').select('id,student_id,date,status,class_id,students(student_id,profiles(first_name,last_name))')
         .eq('school_id', schoolId).gte('date', start).lte('date', end);
       if (opts.classId && opts.classId !== 'all') q = q.eq('class_id', opts.classId);
       return q.order('id').range(from, to);
     });
+    const classIds = Array.from(new Set(rows.map((r: any) => r.class_id).filter(Boolean)));
+    const classNames = new Map<string, string>();
+    if (classIds.length) {
+      const { data, error } = await supabase.from('classes').select('id,name').eq('school_id', schoolId).in('id', classIds);
+      if (error) throw new Error(error.message);
+      data?.forEach(c => classNames.set(c.id, c.name));
+    }
     return rows.map((r: any) => ({
       recordId: r.id, personId: r.student_id, date: r.date, status: r.status,
       name: r.students?.profiles ? `${r.students.profiles.first_name} ${r.students.profiles.last_name}` : 'Unknown',
-      number: r.students?.student_id || '', className: r.classes?.name,
+      number: r.students?.student_id || '', className: classNames.get(r.class_id),
     }));
   }
   const rows = await readPages((from, to) => {

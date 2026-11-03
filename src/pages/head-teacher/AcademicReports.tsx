@@ -1,3 +1,4 @@
+import MonthlyAttendanceOverview from '@/components/attendance/MonthlyAttendanceOverview';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -234,6 +235,7 @@ const AcademicReports = () => {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
+          <MonthlyAttendanceOverview />
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {classStats.map((stat, index) => (
               <Card key={index}>

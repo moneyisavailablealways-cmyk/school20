@@ -1,3 +1,4 @@
+import MonthlyAttendanceOverview from '@/components/attendance/MonthlyAttendanceOverview';
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -139,6 +140,7 @@ const Reports = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          <MonthlyAttendanceOverview />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

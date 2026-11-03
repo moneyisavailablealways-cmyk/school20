@@ -58,7 +58,9 @@ export default function WeeklyAttendanceGrid({ kind, personal = false }: { kind:
   const start = format(monday, 'yyyy-MM-dd');
   const end = format(addDays(monday, 6), 'yyyy-MM-dd');
   const staff = !!profile?.is_active && ['admin', 'principal', 'head_teacher'].includes(profile.role);
-  const canMark = !personal && (staff || (kind === 'student' && profile?.role === 'teacher'));
+  // Head teachers have read-only access; admins/principals mark both kinds, class teachers mark their classes.
+  const recorder = !!profile?.is_active && ['admin', 'principal'].includes(profile.role);
+  const canMark = !personal && (recorder || (kind === 'student' && profile?.role === 'teacher'));
 
   const configQuery = useQuery({
     queryKey: ['weekly-config', schoolId, start], enabled: !!schoolId,

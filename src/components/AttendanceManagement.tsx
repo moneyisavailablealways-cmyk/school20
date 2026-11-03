@@ -18,6 +18,8 @@ import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import WeeklyAttendanceGrid from '@/components/attendance/WeeklyAttendanceGrid';
 import { useTerminology } from '@/hooks/useTerminology';
+import AttendanceMonthCalendar from '@/components/attendance/AttendanceMonthCalendar';
+import MonthlyAttendanceOverview from '@/components/attendance/MonthlyAttendanceOverview';
 
 interface AttendanceManagementProps {
   title?: string;
@@ -35,6 +37,9 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [overrideReason, setOverrideReason] = useState('');
+  const [lockTimeDraft, setLockTimeDraft] = useState<string | null>(null);
+  const canRecord = !!profile && ['admin', 'principal'].includes(profile.role);
+  const canEditSettings = !!profile && ['admin', 'principal', 'head_teacher'].includes(profile.role);
 
   // Fetch all classes
   const { data: classes } = useQuery({
@@ -139,18 +144,17 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
 
   // Update settings mutation
   const updateSettingsMutation = useMutation({
-    mutationFn: async (updates: Partial<typeof settings>) => {
-      if (!profile?.school_id || !settings?.id) throw new Error('Attendance settings are not configured for this school.');
-      const { error } = await supabase
-        .from('attendance_settings')
-        .update(updates)
-        .eq('school_id', profile.school_id)
-        .eq('id', settings?.id);
+    mutationFn: async (updates: Record<string, unknown>) => {
+      const { data, error } = await supabase.rpc('save_attendance_settings', { p_settings: updates as never });
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success('Settings updated');
+      queryClient.setQueryData(['attendance-settings', profile?.school_id], data);
+      setLockTimeDraft(null);
       queryClient.invalidateQueries({ queryKey: ['attendance-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-config'] });
     },
     onError: (error: Error) => {
       toast.error(`Failed to update settings: ${error.message}`);
@@ -240,12 +244,17 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
       <Tabs defaultValue="weekly" className="w-full">
         <TabsList className="flex w-full justify-start overflow-x-auto">
           <TabsTrigger value="weekly">Weekly Grid</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="records">Records</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="audit">Audit Log</TabsTrigger>
         </TabsList>
-        <TabsContent value="weekly"><WeeklyAttendanceGrid kind="student" /></TabsContent>
+        <TabsContent value="weekly">
+          {!canRecord && <p className="mb-3 text-sm text-muted-foreground">Read-only view: only administrators and class teachers can record attendance.</p>}
+          <WeeklyAttendanceGrid kind="student" />
+        </TabsContent>
+        <TabsContent value="calendar"><AttendanceMonthCalendar kind="student" /></TabsContent>
 
         {/* Records Tab */}
         <TabsContent value="records" className="space-y-4">
@@ -288,7 +297,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 </div>
 
                 <div className="flex items-end gap-2">
-                  {unlockedRecords.length > 0 && (
+                  {canRecord && unlockedRecords.length > 0 && (
                     <Button
                       variant="outline"
                       onClick={() => toggleLockMutation.mutate({ 
@@ -300,7 +309,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                       Lock All
                     </Button>
                   )}
-                  {lockedRecords.length > 0 && (
+                  {canRecord && lockedRecords.length > 0 && (
                     <Button
                       variant="outline"
                       onClick={() => toggleLockMutation.mutate({ 
@@ -347,7 +356,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                       </div>
                       <div className="flex items-center gap-3">
                         {getStatusBadge(record.status, record.is_locked)}
-                        <Dialog>
+                        {canRecord && <Dialog>
                           <DialogTrigger asChild>
                             <Button 
                               variant="outline" 
@@ -405,7 +414,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                               </Button>
                             </DialogFooter>
                           </DialogContent>
-                        </Dialog>
+                        </Dialog>}
                       </div>
                     </div>
                   ))}
@@ -444,7 +453,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                     </div>
                     <Switch
                       checked={settings?.enable_multiple_sessions || false}
-                      onCheckedChange={(checked) => updateSettingsMutation.mutate({ enable_multiple_sessions: checked })}
+                      disabled={!canEditSettings} onCheckedChange={(checked) => updateSettingsMutation.mutate({ enable_multiple_sessions: checked })}
                     />
                   </div>
 
@@ -455,7 +464,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                     </div>
                     <Switch
                       checked={settings?.auto_lock_enabled || false}
-                      onCheckedChange={(checked) => updateSettingsMutation.mutate({ auto_lock_enabled: checked })}
+                      disabled={!canEditSettings} onCheckedChange={(checked) => updateSettingsMutation.mutate({ auto_lock_enabled: checked })}
                     />
                   </div>
 
@@ -466,19 +475,28 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                     </div>
                     <Switch
                       checked={settings?.allow_future_attendance || false}
-                      onCheckedChange={(checked) => updateSettingsMutation.mutate({ allow_future_attendance: checked })}
+                      disabled={!canEditSettings} onCheckedChange={(checked) => updateSettingsMutation.mutate({ allow_future_attendance: checked })}
                     />
                   </div>
 
                   <div>
                     <label className="font-medium">Lock Time</label>
                     <p className="text-sm text-muted-foreground mb-2">Time after which attendance locks</p>
-                    <Input
-                      type="time"
-                      value={settings?.lock_time || '18:00:00'}
-                      onChange={(e) => updateSettingsMutation.mutate({ lock_time: e.target.value })}
-                      className="w-48"
-                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Input
+                        type="time"
+                        aria-label="Attendance lock time"
+                        value={lockTimeDraft ?? (settings?.lock_time || '18:00:00').slice(0, 5)}
+                        onChange={(e) => setLockTimeDraft(e.target.value)}
+                        disabled={!canEditSettings}
+                        className="w-48"
+                      />
+                      <Button
+                        disabled={!canEditSettings || !lockTimeDraft || updateSettingsMutation.isPending}
+                        onClick={() => lockTimeDraft && updateSettingsMutation.mutate({ lock_time: lockTimeDraft })}
+                      >{updateSettingsMutation.isPending ? 'Saving…' : 'Save Lock Time'}</Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Current: {(settings?.lock_time || '18:00:00').slice(0, 5)}{settings?.auto_lock_enabled ? ' (enforced)' : ' (enable Auto-Lock to enforce)'}</p>
                   </div>
                 </>
               )}
@@ -536,21 +554,8 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Monthly Overview
-              </CardTitle>
-              <CardDescription>Attendance trends for {format(selectedDate, 'MMMM yyyy')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Detailed charts coming soon</p>
-              </div>
-            </CardContent>
-          </Card>
+          <MonthlyAttendanceOverview key={`${selectedClass}-${format(selectedDate, 'yyyy-MM')}`} classId={selectedClass || undefined} initialMonth={selectedDate} />
+
         </TabsContent>
 
         {/* Audit Log Tab */}

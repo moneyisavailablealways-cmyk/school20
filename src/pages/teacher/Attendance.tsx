@@ -1,3 +1,4 @@
+import AttendanceMonthCalendar from '@/components/attendance/AttendanceMonthCalendar';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -252,7 +253,8 @@ const TeacherAttendance = () => {
 
   return (
     <Tabs defaultValue="weekly" className="min-w-0 space-y-4">
-      <TabsList><TabsTrigger value="weekly">Weekly Grid</TabsTrigger><TabsTrigger value="daily">Daily Marking</TabsTrigger></TabsList>
+      <TabsList><TabsTrigger value="weekly">Weekly Grid</TabsTrigger><TabsTrigger value="daily">Daily Marking</TabsTrigger><TabsTrigger value="calendar">Calendar</TabsTrigger></TabsList>
+      <TabsContent value="calendar"><AttendanceMonthCalendar kind="student" /></TabsContent>
       <TabsContent value="weekly"><h1 className="mb-5 text-3xl font-bold">{t.studentAttendance}</h1><WeeklyAttendanceGrid kind="student" /></TabsContent>
       <TabsContent value="daily">
     <div className="container mx-auto p-6 space-y-6">

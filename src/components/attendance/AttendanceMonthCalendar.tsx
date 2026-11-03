@@ -53,13 +53,8 @@ export default function AttendanceMonthCalendar({ kind }: { kind: 'student' | 't
   const recordsQuery = useQuery({
     queryKey: ['attendance-month', kind, schoolId, start, classId, teacherOnly ? classesQuery.data?.map(c => c.id).join() : ''],
     enabled: !!schoolId && (!teacherOnly || !!classesQuery.data),
-    queryFn: async () => {
-      const rows = await fetchAttendanceRange(kind, schoolId!, start, end, { classId });
-      if (!teacherOnly) return rows;
-      const allowed = new Set((classesQuery.data || []).map(c => c.id));
-      const classNames = new Set((classesQuery.data || []).map(c => c.name));
-      return rows.filter(r => r.className && classNames.has(r.className) && allowed.size > 0);
-    },
+    // Database policies already limit teachers to the classes they are authorised for.
+    queryFn: () => fetchAttendanceRange(kind, schoolId!, start, end, { classId }),
   });
   const counts = useMemo(() => dailyCounts(recordsQuery.data || []), [recordsQuery.data]);
   const cells = monthCells(month.getFullYear(), month.getMonth());

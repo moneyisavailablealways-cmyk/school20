@@ -8,6 +8,8 @@ import TeacherLeaveRequests from './TeacherLeaveRequests';
 import TeacherAttendanceReports from './TeacherAttendanceReports';
 import TeacherAttendanceAnalytics from './TeacherAttendanceAnalytics';
 import WeeklyAttendanceGrid from '@/components/attendance/WeeklyAttendanceGrid';
+import AttendanceMonthCalendar from '@/components/attendance/AttendanceMonthCalendar';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TeacherAttendanceManagementProps {
   title?: string;
@@ -21,6 +23,9 @@ const TeacherAttendanceManagement = ({
   isTeacherView = false
 }: TeacherAttendanceManagementProps) => {
   const [activeTab, setActiveTab] = useState('weekly');
+  const { profile } = useAuth();
+  // Head teachers view and approve teacher attendance but do not record it.
+  const canRecord = !isTeacherView && !!profile && ['admin', 'principal'].includes(profile.role);
 
   return (
     <div className="space-y-6">
@@ -32,7 +37,7 @@ const TeacherAttendanceManagement = ({
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="flex w-full justify-start overflow-x-auto">
           <TabsTrigger value="weekly" className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /><span>Weekly Grid</span></TabsTrigger>
-          {!isTeacherView && (
+          {canRecord && (
             <TabsTrigger value="mark" className="flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
               <span className="hidden sm:inline">Mark Attendance</span>
@@ -59,14 +64,14 @@ const TeacherAttendanceManagement = ({
         </TabsList>
         <TabsContent value="weekly"><WeeklyAttendanceGrid kind="teacher" personal={isTeacherView} /></TabsContent>
 
-        {!isTeacherView && (
+        {canRecord && (
           <TabsContent value="mark">
             <TeacherAttendanceMarking />
           </TabsContent>
         )}
 
         <TabsContent value="calendar">
-          <TeacherAttendanceCalendar isTeacherView={isTeacherView} />
+          {isTeacherView ? <TeacherAttendanceCalendar isTeacherView /> : <AttendanceMonthCalendar kind="teacher" />}
         </TabsContent>
 
         <TabsContent value="leave">

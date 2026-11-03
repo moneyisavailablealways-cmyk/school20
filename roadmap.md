@@ -15,3 +15,10 @@
 - [x] Show each learner/student's subjects from the teacher's own subject-class assignments as compact badges on the Subject tab only.
 - [x] Deduplicate subject names, collapse overflow into +N, and keep the My Class tab layout untouched.
 - [ ] Verify badges on a populated teacher account — blocked by external Supabase authentication unavailable in this environment.
+
+# Attendance corrections
+- [x] Head teachers read-only (UI + database); admin/class teachers record; head teacher approval of teacher attendance.
+- [x] Lock time saves via database and is enforced.
+- [x] Monthly Attendance Overview chart on Admin and Head Teacher reports.
+- [x] Monthly calendars (Present/Absent counts + per-date dialog) for learners and teachers.
+- [ ] Signed-in verification — blocked by external Supabase authentication unavailable here.

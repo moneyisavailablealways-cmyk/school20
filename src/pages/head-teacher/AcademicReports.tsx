@@ -138,6 +138,8 @@ const AcademicReports = () => {
         </Button>
       </div>
 
+      <MonthlyAttendanceOverview />
+
       <Tabs defaultValue="reports" className="space-y-4">
         <TabsList>
           <TabsTrigger value="reports">Student Reports</TabsTrigger>
@@ -235,7 +237,6 @@ const AcademicReports = () => {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
-          <MonthlyAttendanceOverview />
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {classStats.map((stat, index) => (
               <Card key={index}>
